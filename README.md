@@ -1,27 +1,49 @@
-# GesfunFrontend
+# GESFUN-FRONTEND
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.16.
+Aplicación de gestión funeraria desarrollada en Angular 16, con módulos para servicios, agenda, clientes, cotizaciones, facturación, inventario y administración de usuarios/sucursales.
 
-## Development server
+## Características
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- Desarrollo en Angular 16
+- Interfaz basada en Bootstrap 5
+- Gestión de:
+  - Servicios funerarios
+  - Cotizaciones y catálogo de planes
+  - Clientes / terceros
+  - Agenda de salas
+  - Inventario
+  - Facturación
+  - Administración de usuarios y sucursales
+- Basado en modelo de datos real: `USUARIO`, `SUCURSAL`, `TERCERO`, `SERVICIO`, `FACTURA`, `INVENTARIO_PRODUCTO`, etc.
+- Estructura modular con componentes y rutas bien definidas
 
-## Code scaffolding
+## Estructura del proyecto
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- `src/app/pages/` - páginas de la aplicación
+- `src/app/layout/` - sidebar y topbar
+- `src/app/data/` - modelos y datos de ejemplo
+- `src/app/ui/` - componentes UI reutilizables
 
-## Build
+## Desarrollo
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Instala dependencias:
 
-## Running unit tests
+```bash
+npm install
+```
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+Ejecuta la aplicación:
 
-## Running end-to-end tests
+```bash
+npm run start
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Construye el proyecto:
 
-## Further help
+```bash
+npm run build
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Notas
+
+Esta aplicación está pensada como frontend para un sistema de gestión funeraria y puede integrarse con una API backend que exponga los modelos de datos reales.
