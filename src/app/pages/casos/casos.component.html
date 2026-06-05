@@ -1,0 +1,58 @@
+<div class="content-wrap">
+  <app-page-head title="Servicios funerarios" sub="{{ cases.length }} servicios registrados · 4 activos esta semana">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Nuevo servicio</button>
+  </app-page-head>
+
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-4 flex-wrap">
+    <app-pills [tabs]="tabs" [active]="tab" (selected)="setTab($event)"></app-pills>
+    <div class="d-flex gap-2">
+      <app-filter-chip label="Sala" value="Todas"></app-filter-chip>
+      <app-filter-chip label="Encargado" value="Todos"></app-filter-chip>
+      <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"><i class="bi bi-funnel"></i>Filtros</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Folio</th>
+            <th>Fallecido</th>
+            <th>Familiar responsable</th>
+            <th>Plan</th>
+            <th>Sala</th>
+            <th>Velorio</th>
+            <th>Estado</th>
+            <th class="text-end pe-4">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of rows">
+            <td class="ps-4 tnum fw-bold text-primary">{{ c.folio }}</td>
+            <td>
+              <div class="fw-semibold">{{ c.fallecido }}</div>
+              <div class="text-secondary" style="font-size: .75rem">{{ c.rut }}</div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <app-avatar [name]="c.familiar" [size]="30"></app-avatar>
+                <div>
+                  <div class="fw-semibold" style="font-size: .82rem">{{ c.familiar }}</div>
+                  <div class="text-secondary" style="font-size: .72rem">{{ c.parentesco }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-body-secondary">{{ c.plan }}</td>
+            <td class="text-body-secondary">{{ c.sala }}</td>
+            <td class="tnum text-body-secondary">{{ c.velorio }}</td>
+            <td><app-estado-badge [estado]="c.estado"></app-estado-badge></td>
+            <td class="text-end pe-4 tnum fw-bold" [ngClass]="{ 'text-danger': c.total - c.pagado > 0, 'text-primary': c.total - c.pagado === 0 }">
+              {{ c.total - c.pagado > 0 ? clp(c.total - c.pagado) : 'Pagado' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

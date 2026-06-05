@@ -1,0 +1,44 @@
+<div class="content-wrap">
+  <app-page-head title="Agenda de salas" sub="Martes 2 de junio, 2026 · 4 salas de velatorio">
+    <div class="d-flex gap-2 align-items-center">
+      <ul class="nav nav-pills mb-0">
+        <li class="nav-item"><button type="button" class="nav-link">Día</button></li>
+        <li class="nav-item"><button type="button" class="nav-link active">Semana</button></li>
+        <li class="nav-item"><button type="button" class="nav-link">Mes</button></li>
+      </ul>
+      <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Reservar sala</button>
+    </div>
+  </app-page-head>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3" *ngFor="let sala of salas; index as i">
+      <div class="card room-card h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-bold" style="font-size: .85rem">{{ sala }}</div>
+          <app-badge [cls]="isOccupied(i) ? 'b-ok' : 'b-neutral'" [dot]="true">{{ isOccupied(i) ? 'Ocupada' : 'Disponible' }}</app-badge>
+        </div>
+        <div class="text-secondary mt-1" style="font-size: .78rem">{{ getEventsCount(i) }} evento{{ getEventsCount(i) !== 1 ? 's' : '' }} hoy</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div style="display: grid; grid-template-columns: 60px repeat(4, 1fr)">
+      <div style="border-bottom: 1px solid #e3e7e3; background: #f7f8f7"></div>
+      <div *ngFor="let sala of salas" class="fw-bold" style="border-bottom: 1px solid #e3e7e3; border-left: 1px solid #f0f2f0; background: #f7f8f7; padding: 12px 14px; font-size: .82rem">{{ sala }}</div>
+      <ng-container *ngFor="let hour of hours">
+        <div class="tnum text-secondary fw-semibold" style="border-right: 1px solid #f0f2f0; border-bottom: 1px solid #f0f2f0; font-size: .68rem; padding: 4px 8px; text-align: right; height: 46px">{{ hour.toString().padStart(2, '0') }}:00</div>
+        <div class="agenda-cell" *ngFor="let sala of salas; index as si" style="height: 46px;">
+          <ng-container *ngIf="eventAt(hour, si) as ev">
+            <div class="ag-event" [ngStyle]="getEventStyle(ev)">
+              <div class="fw-bold text-uppercase" style="font-size: .64rem; letter-spacing: .03em">{{ ev.tipo }}</div>
+              <div class="fw-bold" style="font-size: .78rem; margin-top: 1px">{{ ev.titulo }}</div>
+              <div class="text-secondary" style="font-size: .72rem">{{ ev.sub }}</div>
+              <div class="tnum text-secondary" style="font-size: .68rem; margin-top: 2px">{{ formatHour(ev.start) }}–{{ formatHour(ev.end) }}</div>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,44 @@
+<div class="content-wrap">
+  <app-page-head title="Facturación" sub="Estado de cobranza de los servicios">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Emitir factura</button>
+  </app-page-head>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><app-stat label="Cobrado este mes" icon="check-circle-fill" [value]="clp(cobrado)" delta="+14%" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Por cobrar" icon="clock-fill" [value]="clp(porCobrar)" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Facturas vencidas" icon="exclamation-octagon-fill" [value]="vencidas" delta="gestionar" deltaDir="down" tintBg="#f6e6e3" tintFg="#9a3b2c"></app-stat></div>
+  </div>
+
+  <div class="mb-4"><app-pills [tabs]="tabs" [active]="tab" (selected)="tab = $event"></app-pills></div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Folio</th>
+            <th>Caso</th>
+            <th>Cliente</th>
+            <th>Emitida</th>
+            <th>Vence</th>
+            <th>Estado</th>
+            <th class="text-end">Monto</th>
+            <th class="text-end pe-4">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let invoice of rows">
+            <td class="ps-4 tnum fw-bold text-primary">{{ invoice.folio }}</td>
+            <td class="tnum text-secondary">{{ invoice.caso }}</td>
+            <td class="fw-semibold">{{ invoice.cliente }}</td>
+            <td class="tnum text-body-secondary">{{ invoice.emitida }}</td>
+            <td class="tnum" [ngClass]="{ 'text-danger fw-bold': invoice.estado === 'Vencida', 'text-body-secondary': invoice.estado !== 'Vencida' }">{{ invoice.vence }}</td>
+            <td><app-badge [cls]="invEstado[invoice.estado]" [dot]="true">{{ invoice.estado }}</app-badge></td>
+            <td class="text-end tnum fw-semibold">{{ clp(invoice.monto) }}</td>
+            <td class="text-end pe-4 tnum fw-bold" [ngClass]="{ 'text-danger': invoice.monto - invoice.abonado > 0, 'text-primary': invoice.monto - invoice.abonado === 0 }">{{ invoice.monto - invoice.abonado > 0 ? clp(invoice.monto - invoice.abonado) : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

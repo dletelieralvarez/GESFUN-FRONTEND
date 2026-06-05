@@ -1,7 +1,30 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { AgendaComponent } from './pages/agenda/agenda.component';
+import { CatalogoComponent } from './pages/catalogo/catalogo.component';
+import { CasosComponent } from './pages/casos/casos.component';
+import { ClientesComponent } from './pages/clientes/clientes.component';
+import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { FacturacionComponent } from './pages/facturacion/facturacion.component';
+import { InventarioComponent } from './pages/inventario/inventario.component';
+import { SucursalesComponent } from './pages/sucursales/sucursales.component';
+import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 
-const routes: Routes = [];
+const routes: Routes = [
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: 'dashboard', component: DashboardComponent, data: { title: 'Panel general', crumb: 'Inicio' } },
+  { path: 'casos', component: CasosComponent, data: { title: 'Servicios funerarios', crumb: 'Operación / Servicios' } },
+  { path: 'agenda', component: AgendaComponent, data: { title: 'Agenda de salas', crumb: 'Operación / Agenda' } },
+  { path: 'catalogo', component: CatalogoComponent, data: { title: 'Catálogo y planes', crumb: 'Comercial / Catálogo' } },
+  { path: 'cotizacion', component: CotizacionComponent, data: { title: 'Cotizaciones', crumb: 'Comercial / Cotizaciones' } },
+  { path: 'clientes', component: ClientesComponent, data: { title: 'Clientes', crumb: 'Comercial / Clientes' } },
+  { path: 'usuarios', component: UsuariosComponent, data: { title: 'Administración de usuarios', crumb: 'Administración / Usuarios' } },
+  { path: 'sucursales', component: SucursalesComponent, data: { title: 'Administración de sucursales', crumb: 'Administración / Sucursales' } },
+  { path: 'inventario', component: InventarioComponent, data: { title: 'Inventario', crumb: 'Recursos / Inventario' } },
+  { path: 'facturacion', component: FacturacionComponent, data: { title: 'Facturación', crumb: 'Finanzas / Facturación' } },
+  { path: '**', redirectTo: 'dashboard' },
+];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],

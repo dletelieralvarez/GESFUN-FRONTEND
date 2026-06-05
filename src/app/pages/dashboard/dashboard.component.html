@@ -1,0 +1,93 @@
+<div class="content-wrap">
+  <app-page-head title="Buenos días, Carla" sub="Lunes 2 de junio, 2026 · Resumen operativo de la jornada">
+    <div class="d-flex gap-2">
+      <app-filter-chip label="Periodo" value="Este mes"></app-filter-chip>
+      <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"><i class="bi bi-download"></i>Exportar</button>
+    </div>
+  </app-page-head>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><app-stat label="Servicios activos" icon="folder-fill" [value]="activos" delta="+2" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
+    <div class="col-6 col-xl-3"><app-stat label="Eventos hoy" icon="calendar3" [value]="hoy" delta="3 salas" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
+    <div class="col-6 col-xl-3"><app-stat label="Ingresos del mes" icon="cash-stack" [value]="clp(ingresos)" delta="+14%" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
+    <div class="col-6 col-xl-3"><app-stat label="Alertas de stock" icon="exclamation-triangle-fill" [value]="lowStock.length" delta="revisar" deltaDir="down" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-xl-7">
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div>
+            <div class="fw-bold">Servicios en curso</div>
+            <div class="text-secondary fw-normal" style="font-size: .78rem">Casos que requieren seguimiento hoy</div>
+          </div>
+          <button class="btn btn-soft btn-sm">Ver todos <i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Folio / Fallecido</th>
+                <th>Sala</th>
+                <th>Estado</th>
+                <th class="text-end pe-4">Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of activeCases">
+                <td class="ps-4">
+                  <div class="fw-bold">{{ c.fallecido }}</div>
+                  <div class="tnum text-secondary" style="font-size: .75rem">{{ c.folio }} · {{ c.plan }}</div>
+                </td>
+                <td class="text-body-secondary">{{ c.sala }}</td>
+                <td><app-estado-badge [estado]="c.estado"></app-estado-badge></td>
+                <td class="text-end pe-4">
+                  <div class="tnum fw-bold">{{ clp(math.round((c.pagado / c.total) * 100)) }}</div>
+                  <div style="width: 70px; margin-left: auto; margin-top: 4px"><app-progress [value]="(c.pagado / c.total) * 100"></app-progress></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+      <div class="d-flex flex-column gap-4">
+        <div class="card">
+          <div class="card-header"><div class="fw-bold">Agenda de hoy</div></div>
+          <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex align-items-center gap-3 border-0" *ngFor="let item of todayAgenda; let i = index" [ngStyle]="{ borderBottom: i < 3 ? '1px solid #f0f2f0' : 'none' }">
+              <div [ngStyle]="{ width: '4px', height: '38px', borderRadius: '4px', background: item.color === 'ok' ? 'var(--brand)' : item.color === 'info' ? 'var(--info)' : item.color === 'warn' ? 'oklch(0.50 0.090 60)' : 'var(--faint)', flex: 'none' }"></div>
+              <div class="flex-grow-1">
+                <div class="fw-bold" style="font-size: .85rem">{{ item.tipo }} · {{ item.titulo }}</div>
+                <div class="text-secondary" style="font-size: .78rem">{{ item.sub }}</div>
+              </div>
+              <div class="tnum fw-bold text-body-secondary" style="font-size: .82rem">{{ formatHour(item.start) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span class="fw-bold">Inventario bajo mínimo</span>
+            <app-badge cls="b-warn" [dot]="true">{{ lowStock.length }}</app-badge>
+          </div>
+          <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex align-items-center gap-3 border-0" *ngFor="let item of lowStock.slice(0,4); let i = index" [ngStyle]="{ borderBottom: i < math.min(3, lowStock.length - 1) ? '1px solid #f0f2f0' : 'none' }">
+              <div class="icon-tile" style="width: 32px; height: 32px; background: #f6efdf; color: #8a6a1f; font-size: 1rem"><i class="bi bi-exclamation-triangle-fill"></i></div>
+              <div class="flex-grow-1">
+                <div class="fw-semibold" style="font-size: .82rem">{{ item.item }}</div>
+                <div class="tnum text-secondary" style="font-size: .75rem">{{ item.sku }}</div>
+              </div>
+              <div class="text-end">
+                <span class="tnum fw-800 text-danger">{{ item.stock }}</span>
+                <span class="tnum text-secondary" style="font-size: .75rem"> / {{ item.min }} mín</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

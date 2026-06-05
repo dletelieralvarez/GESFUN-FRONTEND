@@ -1,0 +1,73 @@
+<div class="content-wrap">
+  <app-page-head title="Nueva cotización" sub="Arma una propuesta de servicio para la familia"></app-page-head>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="d-flex flex-column gap-4">
+        <div class="card">
+          <div class="card-header"><span class="fw-bold">Datos de la familia</span></div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label fw-semibold small">Familiar responsable</label><input class="form-control" value="Roberto Soto Vidal" /></div>
+              <div class="col-md-6"><label class="form-label fw-semibold small">RUT</label><input class="form-control" value="10.224.881-5" /></div>
+              <div class="col-md-6"><label class="form-label fw-semibold small">Teléfono</label><input class="form-control" value="+56 9 8421 5530" /></div>
+              <div class="col-md-6"><label class="form-label fw-semibold small">Comuna</label><input class="form-control" value="Ñuñoa" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="fw-bold">Plan base</span></div>
+          <div class="card-body d-flex flex-column gap-2">
+            <label *ngFor="let plan of plans" class="d-flex align-items-center gap-3 p-3 rounded-3" [ngStyle]="{ border: '1.5px solid ' + (selectedPlan.name === plan.name ? 'var(--brand)' : '#e3e7e3'), background: selectedPlan.name === plan.name ? 'var(--brand-faint)' : '#fff', cursor: 'pointer' }" (click)="setPlan(plan)">
+              <div style="width: 19px; height: 19px; border-radius: 50%; border: 2px solid {{ selectedPlan.name === plan.name ? 'var(--brand)' : '#c3cac3' }}; display: grid; place-items: center; flex: none;">
+                <div *ngIf="selectedPlan.name === plan.name" style="width: 9px; height: 9px; border-radius: 50%; background: var(--brand)"></div>
+              </div>
+              <div class="flex-grow-1"><div class="fw-bold">{{ plan.name }}</div><div class="text-secondary" style="font-size: .78rem">{{ plan.items.length }} prestaciones incluidas</div></div>
+              <div class="tnum fw-800">{{ clp(plan.price) }}</div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="fw-bold">Servicios adicionales</span></div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <tbody>
+                <tr *ngFor="let service of servicios; index as i" (click)="toggleExtra(i)" style="cursor: pointer;">
+                  <td class="ps-4" style="width: 50px;">
+                    <div [ngStyle]="{ width: '20px', height: '20px', borderRadius: '6px', border: '2px solid ' + (extras.has(i) ? 'var(--brand)' : '#c3cac3'), background: extras.has(i) ? 'var(--brand)' : 'transparent', display: 'grid', placeItems: 'center' }">
+                      <i *ngIf="extras.has(i)" class="bi bi-check-lg" style="color: #fff; font-size: .8rem;"></i>
+                    </div>
+                  </td>
+                  <td class="fw-semibold">{{ service.name }}</td>
+                  <td><app-badge cls="b-neutral">{{ service.cat }}</app-badge></td>
+                  <td class="text-end pe-4 tnum fw-bold">{{ clp(service.price) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card" style="position: sticky; top: 0;">
+        <div class="card-header"><span class="fw-bold">Resumen de cotización</span></div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">{{ selectedPlan.name }}</span><span class="tnum fw-semibold">{{ clp(selectedPlan.price) }}</span></div>
+          <ng-container *ngFor="let service of servicios; index as i">
+            <div *ngIf="extras.has(i)" class="d-flex justify-content-between mb-2 text-secondary" style="font-size: .82rem"><span>+ {{ service.name }}</span><span class="tnum">{{ clp(service.price) }}</span></div>
+          </ng-container>
+          <hr class="text-body-tertiary" />
+          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">Subtotal</span><span class="tnum fw-semibold">{{ clp(subtotal) }}</span></div>
+          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">IVA (19%)</span><span class="tnum fw-semibold">{{ clp(iva) }}</span></div>
+          <hr class="text-body-tertiary" />
+          <div class="d-flex justify-content-between align-items-baseline mb-3"><span class="fw-bold">Total</span><span class="tnum fw-800 text-primary" style="font-size: 1.5rem">{{ clp(total) }}</span></div>
+          <button class="btn btn-primary w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"><i class="bi bi-check-lg"></i>Generar cotización</button>
+          <button class="btn btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-2"><i class="bi bi-printer"></i>Imprimir / PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

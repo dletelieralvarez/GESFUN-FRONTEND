@@ -1,0 +1,57 @@
+<div class="content-wrap">
+  <app-page-head title="Catálogo y planes" sub="Planes de servicio y prestaciones adicionales">
+    <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
+  </app-page-head>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-4" *ngFor="let plan of plans">
+      <div class="card h-100 position-relative" [ngClass]="{ 'border-2': plan.popular }" [ngStyle]="plan.popular ? { borderColor: 'var(--brand)' } : {}">
+        <span *ngIf="plan.popular" class="badge text-bg-light position-absolute" style="top: -11px; left: 20px; background: var(--brand); color: #fff">MÁS SOLICITADO</span>
+        <div class="card-body pb-2">
+          <app-badge [cls]="plan.tag">{{ plan.name }}</app-badge>
+          <div class="tnum fw-800 ls-tight mt-2" style="font-size: 1.85rem">{{ clp(plan.price) }}</div>
+          <p class="text-secondary mt-2 mb-0" style="font-size: .84rem; overflow-wrap: break-word">{{ plan.desc }}</p>
+        </div>
+        <hr class="my-2 text-body-tertiary" />
+        <div class="card-body pt-2 flex-grow-1">
+          <div class="d-flex flex-column gap-2">
+            <div *ngFor="let item of plan.items" class="d-flex gap-2" style="font-size: .84rem">
+              <i class="bi bi-check-lg" style="color: var(--brand); margin-top: 1px"></i>
+              <span class="text-body-secondary">{{ item }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body pt-0">
+          <button class="btn w-100 d-inline-flex align-items-center justify-content-center gap-2" [ngClass]="plan.popular ? 'btn-primary' : 'btn-outline-secondary'"><i class="bi bi-file-earmark-text"></i>Cotizar este plan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="fw-bold">Servicios y prestaciones adicionales</div>
+      <div class="text-secondary fw-normal" style="font-size: .78rem">Se agregan a cualquier plan según necesidad de la familia</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th class="ps-4">Servicio</th>
+            <th>Categoría</th>
+            <th class="text-end">Valor</th>
+            <th class="pe-4" style="width: 110px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let servicio of servicios">
+            <td class="ps-4 fw-semibold">{{ servicio.name }}</td>
+            <td><app-badge cls="b-neutral">{{ servicio.cat }}</app-badge></td>
+            <td class="text-end tnum fw-bold">{{ clp(servicio.price) }}</td>
+            <td class="text-end pe-4"><button class="btn btn-soft btn-sm d-inline-flex align-items-center gap-1"><i class="bi bi-plus-lg"></i>Agregar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

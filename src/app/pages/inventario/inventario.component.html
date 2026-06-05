@@ -1,0 +1,51 @@
+<div class="content-wrap">
+  <app-page-head title="Inventario" sub="Control de existencias de ataúdes, urnas, flores e insumos">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Ingresar stock</button>
+  </app-page-head>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><app-stat label="Ítems en catálogo" icon="box-seam-fill" [value]="inventory.length" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Valor del inventario" icon="cash-stack" [value]="clp(valorTotal)" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Bajo el mínimo" icon="exclamation-triangle-fill" [value]="lowCount" delta="reponer" deltaDir="down" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <app-pills [tabs]="categories" [active]="activeCategory" (selected)="activeCategory = $event"></app-pills>
+    <div class="input-group input-group-sm" style="width: 260px">
+      <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+      <input class="form-control border-start-0 ps-0" placeholder="Buscar por SKU o nombre…" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">SKU</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th class="text-center">Existencias</th>
+            <th>Nivel</th>
+            <th class="text-end pe-4">Valor unit.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of rows; trackBy: trackBySku">
+            <td class="ps-4 tnum fw-bold text-secondary">{{ item.sku }}</td>
+            <td class="fw-semibold">{{ item.item }}</td>
+            <td><app-badge cls="b-neutral">{{ item.cat }}</app-badge></td>
+            <td class="text-center"><span class="tnum fw-800" [ngClass]="{ 'text-danger': item.stock < item.min }" style="font-size: 1rem">{{ item.stock }}</span><span class="tnum text-secondary" style="font-size: .75rem"> / {{ item.min }}</span></td>
+            <td style="width: 180px">
+              <div class="d-flex align-items-center gap-2">
+                <div class="flex-grow-1"><app-progress [value]="math.min(100, (item.stock / (item.min * 2)) * 100)" [color]="item.stock < item.min ? '#b5402f' : (item.stock / (item.min * 2) * 100 < 60 ? '#c79a3a' : 'var(--brand)')"></app-progress></div>
+                <app-badge cls="b-danger" *ngIf="item.stock < item.min" [dot]="true">Bajo</app-badge>
+              </div>
+            </td>
+            <td class="text-end pe-4 tnum fw-bold">{{ clp(item.price) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
