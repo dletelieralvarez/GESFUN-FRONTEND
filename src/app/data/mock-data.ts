@@ -37,14 +37,16 @@ export const PRODUCTOS_SERVICIOS = [
 ];
 
 // Terceros (Clientes)
-export const TERCEROS = [
-  { id: 1, uuid: "uuid-t-1", apellido_paterno: "Soto", apellido_materno: "Vidal", dv: "5", email: "rsoto@correo.cl", fecha_nacimiento: "1950-03-15", nombre_completo: "Roberto Soto Vidal", nombres: "Roberto", razon_social: null, ruc: "10224881", telefono: "+56 9 8421 5530", tipo_persona: "persona_natural", comuna_id: 1, empresa_id: 1 },
-  { id: 2, uuid: "uuid-t-2", apellido_paterno: "Cárcamo", apellido_materno: "Reyes", dv: "2", email: "pcarcamo@correo.cl", fecha_nacimiento: "1965-07-22", nombre_completo: "Patricia Cárcamo Reyes", nombres: "Patricia", razon_social: null, ruc: "12554019", telefono: "+56 9 7712 4408", tipo_persona: "persona_natural", comuna_id: 2, empresa_id: 1 },
-  { id: 3, uuid: "uuid-t-3", apellido_paterno: "Villalobos", apellido_materno: "", dv: "4", email: "mvilla@correo.cl", fecha_nacimiento: "1958-11-08", nombre_completo: "Manuel Villalobos", nombres: "Manuel", razon_social: null, ruc: "9881220", telefono: "+56 9 9032 1187", tipo_persona: "persona_natural", comuna_id: 3, empresa_id: 1 },
-  { id: 4, uuid: "uuid-t-4", apellido_paterno: "Aguilera", apellido_materno: "Sanz", dv: "9", email: "caguilera@correo.cl", fecha_nacimiento: "1972-05-30", nombre_completo: "Claudia Aguilera Sanz", nombres: "Claudia", razon_social: null, ruc: "14005772", telefono: "+56 9 6650 9921", tipo_persona: "persona_natural", comuna_id: 4, empresa_id: 1 },
-  { id: 5, uuid: "uuid-t-5", apellido_paterno: "Pérez", apellido_materno: "", dv: "6", email: "fperez@correo.cl", fecha_nacimiento: "1960-09-14", nombre_completo: "Felipe Pérez", nombres: "Felipe", razon_social: null, ruc: "11778330", telefono: "+56 9 8890 3345", tipo_persona: "persona_natural", comuna_id: 5, empresa_id: 1 },
-  { id: 6, uuid: "uuid-t-6", apellido_paterno: "Bravo", apellido_materno: "", dv: "8", email: "vbravo@correo.cl", fecha_nacimiento: "1955-12-05", nombre_completo: "Verónica Bravo", nombres: "Verónica", razon_social: null, ruc: "13220114", telefono: "+56 9 7045 6612", tipo_persona: "persona_natural", comuna_id: 6, empresa_id: 1 },
-  { id: 7, uuid: "uuid-t-7", apellido_paterno: "Riquelme", apellido_materno: "", dv: "0", email: "sriquelme@correo.cl", fecha_nacimiento: "1968-01-20", nombre_completo: "Sergio Riquelme", nombres: "Sergio", razon_social: null, ruc: "8443901", telefono: "+56 9 6678 2210", tipo_persona: "persona_natural", comuna_id: 7, empresa_id: 1 },
+import { Tercero } from './models';
+
+export const TERCEROS: Tercero[] = [
+  { id: 1, uuid: "uuid-t-1", apellido_paterno: "Soto", apellido_materno: "Vidal", rol: 'CLIENTE', dv: "5", email: "rsoto@correo.cl", fecha_nacimiento: "1950-03-15", nombre_completo: "Roberto Soto Vidal", nombres: "Roberto", razon_social: null, ruc: "10224881", telefono: "+56 9 8421 5530", tipo_persona: "persona_natural", comuna_id: 1, empresa_id: 1 },
+  { id: 2, uuid: "uuid-t-2", apellido_paterno: "Cárcamo", apellido_materno: "Reyes", rol: 'CLIENTE', dv: "2", email: "pcarcamo@correo.cl", fecha_nacimiento: "1965-07-22", nombre_completo: "Patricia Cárcamo Reyes", nombres: "Patricia", razon_social: null, ruc: "12554019", telefono: "+56 9 7712 4408", tipo_persona: "persona_natural", comuna_id: 2, empresa_id: 1 },
+  { id: 3, uuid: "uuid-t-3", apellido_paterno: "Villalobos", apellido_materno: "", rol: 'EMPLEADO', dv: "4", email: "mvilla@correo.cl", fecha_nacimiento: "1958-11-08", nombre_completo: "Manuel Villalobos", nombres: "Manuel", razon_social: null, ruc: "9881220", telefono: "+56 9 9032 1187", tipo_persona: "persona_natural", comuna_id: 3, empresa_id: 1 },
+  { id: 4, uuid: "uuid-t-4", apellido_paterno: "Aguilera", apellido_materno: "Sanz", rol: 'CLIENTE', dv: "9", email: "caguilera@correo.cl", fecha_nacimiento: "1972-05-30", nombre_completo: "Claudia Aguilera Sanz", nombres: "Claudia", razon_social: null, ruc: "14005772", telefono: "+56 9 6650 9921", tipo_persona: "persona_natural", comuna_id: 4, empresa_id: 1 },
+  { id: 5, uuid: "uuid-t-5", apellido_paterno: "Pérez", apellido_materno: "", rol: 'PROVEEDOR', dv: "6", email: "fperez@correo.cl", fecha_nacimiento: "1960-09-14", nombre_completo: "Felipe Pérez", nombres: "Felipe", razon_social: null, ruc: "11778330", telefono: "+56 9 8890 3345", tipo_persona: "persona_natural", comuna_id: 5, empresa_id: 1 },
+  { id: 6, uuid: "uuid-t-6", apellido_paterno: "Bravo", apellido_materno: "", rol: 'CLIENTE', dv: "8", email: "vbravo@correo.cl", fecha_nacimiento: "1955-12-05", nombre_completo: "Verónica Bravo", nombres: "Verónica", razon_social: null, ruc: "13220114", telefono: "+56 9 7045 6612", tipo_persona: "persona_natural", comuna_id: 6, empresa_id: 1 },
+  { id: 7, uuid: "uuid-t-7", apellido_paterno: "Riquelme", apellido_materno: "", rol: 'CLIENTE', dv: "0", email: "sriquelme@correo.cl", fecha_nacimiento: "1968-01-20", nombre_completo: "Sergio Riquelme", nombres: "Sergio", razon_social: null, ruc: "8443901", telefono: "+56 9 6678 2210", tipo_persona: "persona_natural", comuna_id: 7, empresa_id: 1 },
 ];
 
 // Servicios (Casos)
@@ -178,6 +180,17 @@ export const SALAS = [
   "Sala Los Aromos",
   "Sala El Sauce",
   "Sala Santa Clara",
+];
+
+// Comunas (muestra básica para selects)
+export const COMUNAS = [
+  { id: 1, uuid: 'c-1', codigo: '001', nombre: 'Ñuñoa', region_id: 1 },
+  { id: 2, uuid: 'c-2', codigo: '002', nombre: 'Maipú', region_id: 1 },
+  { id: 3, uuid: 'c-3', codigo: '003', nombre: 'La Florida', region_id: 1 },
+  { id: 4, uuid: 'c-4', codigo: '004', nombre: 'Providencia', region_id: 1 },
+  { id: 5, uuid: 'c-5', codigo: '005', nombre: 'Puente Alto', region_id: 1 },
+  { id: 6, uuid: 'c-6', codigo: '006', nombre: 'San Miguel', region_id: 1 },
+  { id: 7, uuid: 'c-7', codigo: '007', nombre: 'Macul', region_id: 1 }
 ];
 
 export const AGENDA = [

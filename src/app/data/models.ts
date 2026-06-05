@@ -5,13 +5,14 @@ export interface Tercero {
   uuid: string;
   apellido_paterno: string;
   apellido_materno: string;
+  rol?: 'CLIENTE' | 'PROVEEDOR' | 'EMPLEADO' | 'FALLECIDO';
   dv?: string;
   email: string;
   fecha_nacimiento?: string;
   nombre_completo: string;
   nombre_fantasia?: string;
   nombres: string;
-  razon_social?: string;
+  razon_social?: string | null;
   ruc?: string;
   telefono: string;
   tipo_persona: 'persona_natural' | 'empresa';

@@ -1,4 +1,4 @@
-<div class="app-grid">
+<div class="app-grid" *ngIf="showShell">
   <app-sidebar></app-sidebar>
   <div class="d-flex flex-column overflow-hidden">
     <app-topbar></app-topbar>
@@ -7,3 +7,6 @@
     </div>
   </div>
 </div>
+<ng-container *ngIf="!showShell">
+  <router-outlet></router-outlet>
+</ng-container>
