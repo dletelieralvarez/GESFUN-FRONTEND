@@ -1,0 +1,142 @@
+<div class="content-wrap">
+  <app-page-head title="Planes" sub="{{ titleCount }} planes registrados">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
+  </app-page-head>
+
+  <div class="row gy-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Plan</th>
+                <th>Sucursal</th>
+                <th>Items</th>
+                <th class="text-end">Total</th>
+                <th>Activo</th>
+                <th class="pe-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let plan of planes; trackBy: trackById">
+                <td class="ps-4">
+                  <div class="fw-bold">{{ plan.nombre }}</div>
+                  <div class="text-secondary" style="font-size: .75rem">{{ plan.descripcion }}</div>
+                </td>
+                <td class="text-body-secondary">{{ getSucursalName(plan.sucursal_id) }}</td>
+                <td class="tnum text-body-secondary">{{ plan.kit.length }}</td>
+                <td class="text-end tnum fw-bold">{{ clp(plan.valor) }}</td>
+                <td><app-badge [cls]="plan.activo ? 'b-ok' : 'b-neutral'">{{ plan.activo ? 'Si' : 'No' }}</app-badge></td>
+                <td class="pe-4">
+                  <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(plan)">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(plan)">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5" *ngIf="formVisible">
+      <div class="card p-4">
+        <h5 class="mb-3">{{ isEditing ? 'Editar plan' : 'Nuevo plan' }}</h5>
+
+        <div class="mb-3">
+          <label class="form-label">Sucursal</label>
+          <select class="form-select" [(ngModel)]="form.sucursal_id">
+            <option *ngFor="let sucursal of sucursales" [value]="sucursal.id">{{ sucursal.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Nombre</label>
+          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Plan personalizado" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Descripcion</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="form.descripcion" placeholder="Alcance del plan que arma el cliente"></textarea>
+        </div>
+
+        <div class="border rounded p-3 mb-3">
+          <div class="fw-bold mb-3">Productos y servicios del plan</div>
+
+          <div class="mb-2">
+            <label class="form-label">Producto o servicio</label>
+            <select class="form-select" [(ngModel)]="selectedProductoServicioId">
+              <option *ngFor="let item of productosServicios" [value]="item.id">
+                {{ item.codigo }} - {{ item.nombre }} ({{ clp(item.precio) }})
+              </option>
+            </select>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label">Cantidad</label>
+              <input class="form-control" type="number" [(ngModel)]="selectedCantidad" min="1" />
+            </div>
+            <div class="col-8">
+              <label class="form-label">Observacion</label>
+              <input class="form-control" type="text" [(ngModel)]="selectedObservacion" placeholder="Opcional" />
+            </div>
+          </div>
+
+          <button class="btn btn-outline-primary w-100 mb-3" type="button" (click)="addKitItem()">
+            <i class="bi bi-plus-lg"></i> Agregar al plan
+          </button>
+
+          <div class="table-responsive" *ngIf="form.kit?.length">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style="width: 86px">Cant.</th>
+                  <th class="text-end">Total</th>
+                  <th style="width: 42px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of form.kit; trackBy: trackByProductoServicio">
+                  <td>
+                    <div class="fw-semibold">{{ item.nombre }}</div>
+                    <div class="text-secondary" style="font-size: .72rem">{{ item.codigo }} · {{ item.tipo_item }}</div>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" min="1" [(ngModel)]="item.cantidad" (ngModelChange)="updateKitItem(item)" />
+                  </td>
+                  <td class="text-end tnum fw-semibold">{{ clp(item.total) }}</td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-secondary small" *ngIf="!form.kit?.length">Agrega al menos un producto o servicio.</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2 mb-3">
+          <span class="fw-semibold">Total del plan</span>
+          <span class="tnum fw-800">{{ clp(kitTotal) }}</span>
+        </div>
+
+        <div class="form-check mb-4">
+          <input class="form-check-input" type="checkbox" id="activoPlan" [(ngModel)]="form.activo" />
+          <label class="form-check-label" for="activoPlan">Activo</label>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary w-100" type="button" (click)="save()">Guardar</button>
+          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

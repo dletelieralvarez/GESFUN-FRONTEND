@@ -1,6 +1,6 @@
 <div class="content-wrap">
-  <app-page-head title="Clientes" sub="{{ titleCount }} familias registradas">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()"><i class="bi bi-plus-lg"></i>Nuevo cliente</button>
+  <app-page-head title="Empleados" sub="{{ titleCount }} empleados registrados">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()"><i class="bi bi-plus-lg"></i>Nuevo empleado</button>
   </app-page-head>
 
   <div class="row gy-3">
@@ -10,37 +10,37 @@
           <table class="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th class="ps-4">Cliente</th>
+                <th class="ps-4">Empleado</th>
                 <th>RUT</th>
                 <th>Rol</th>
                 <th>Tipo</th>
                 <th>Contacto</th>
-                <th>Región</th>
+                <th>Region</th>
                 <th>Comuna</th>
                 <th class="pe-4">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let cliente of clientes; trackBy: trackById">
+              <tr *ngFor="let empleado of empleados; trackBy: trackById">
                 <td class="ps-4">
                   <div class="d-flex align-items-center gap-2">
-                    <app-avatar [name]="cliente.nombre_completo" [size]="34"></app-avatar>
+                    <app-avatar [name]="empleado.nombre_completo" [size]="34"></app-avatar>
                     <div>
-                      <div class="fw-bold">{{ cliente.nombre_completo }}</div>
-                      <div class="text-secondary" style="font-size: .75rem">{{ cliente.email }}</div>
+                      <div class="fw-bold">{{ empleado.nombre_completo }}</div>
+                      <div class="text-secondary" style="font-size: .75rem">{{ empleado.email }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="tnum text-body-secondary">{{ formatRut(cliente) }}</td>
-                <td class="text-body-secondary">{{ cliente.rol }}</td>
-                <td class="text-body-secondary">{{ cliente.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
-                <td class="tnum text-body-secondary">{{ cliente.telefono }}</td>
-                <td class="text-body-secondary">{{ getRegionName(cliente.region_id || 1) }}</td>
-                <td class="text-body-secondary">{{ getComunaName(cliente.comuna_id) }}</td>
+                <td class="tnum text-body-secondary">{{ formatRut(empleado) }}</td>
+                <td class="text-body-secondary">{{ empleado.rol }}</td>
+                <td class="text-body-secondary">{{ empleado.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
+                <td class="tnum text-body-secondary">{{ empleado.telefono }}</td>
+                <td class="text-body-secondary">{{ getRegionName(empleado.region_id || 1) }}</td>
+                <td class="text-body-secondary">{{ getComunaName(empleado.comuna_id) }}</td>
                 <td class="pe-4">
                   <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(cliente)">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(cliente)">Eliminar</button>
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(empleado)">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(empleado)">Eliminar</button>
                   </div>
                 </td>
               </tr>
@@ -52,7 +52,7 @@
 
     <div class="col-lg-4" *ngIf="formVisible">
       <div class="card p-4">
-        <h5 class="mb-3">{{ isEditing ? 'Editar cliente' : 'Nuevo cliente' }}</h5>
+        <h5 class="mb-3">{{ isEditing ? 'Editar empleado' : 'Nuevo empleado' }}</h5>
 
         <div class="mb-3">
           <label class="form-label">Tipo de persona</label>
@@ -64,12 +64,12 @@
 
         <div class="mb-3">
           <label class="form-label">Rol</label>
-          <input class="form-control" type="text" value="Cliente" disabled />
+          <input class="form-control" type="text" value="Empleado" disabled />
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Nombre completo / Razón social</label>
-          <input class="form-control" type="text" [(ngModel)]="form.nombre_completo" placeholder="Ej: María Pérez" />
+          <label class="form-label">Nombre completo / Razon social</label>
+          <input class="form-control" type="text" [(ngModel)]="form.nombre_completo" placeholder="Ej: Maria Perez" />
         </div>
 
         <div class="row g-2 mb-3">
@@ -85,17 +85,17 @@
 
         <div class="mb-3">
           <label class="form-label">Email</label>
-          <input class="form-control" type="email" [(ngModel)]="form.email" placeholder="cliente@correo.cl" />
+          <input class="form-control" type="email" [(ngModel)]="form.email" placeholder="empleado@correo.cl" />
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Teléfono</label>
+          <label class="form-label">Telefono</label>
           <input class="form-control" type="text" [(ngModel)]="form.telefono" placeholder="+56 9 1234 5678" />
         </div>
 
         <div class="row g-2 mb-3">
           <div class="col-6">
-            <label class="form-label">Región</label>
+            <label class="form-label">Region</label>
             <select class="form-select" [(ngModel)]="form.region_id" (ngModelChange)="onRegionChange()">
               <option *ngFor="let r of regiones" [value]="r.id">{{ r.nombre }}</option>
             </select>

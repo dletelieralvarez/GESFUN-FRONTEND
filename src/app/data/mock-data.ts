@@ -151,6 +151,10 @@ export const NAV_BS = [
   ]},
   { group: "Administración", items: [
     { id: "usuarios", label: "Usuarios", icon: "person-badge-fill" },
+    { id: "empleados", label: "Empleados", icon: "person-workspace" },
+    { id: "proveedores", label: "Proveedores", icon: "truck" },
+    { id: "productos-servicios", label: "Productos y servicios", icon: "boxes" },
+    { id: "planes", label: "Planes", icon: "clipboard2-check" },
     { id: "sucursales", label: "Sucursales", icon: "geo-alt-fill" }
   ]},
   { group: "Recursos", items: [{ id: "inventario", label: "Inventario", icon: "box-seam-fill", count: 3 }] },
@@ -183,6 +187,12 @@ export const SALAS = [
 ];
 
 // Comunas (muestra básica para selects)
+export const REGIONES = [
+  { id: 1, uuid: 'r-1', codigo: 'RM', nombre: 'Metropolitana de Santiago' },
+  { id: 2, uuid: 'r-2', codigo: 'V', nombre: 'Valparaiso' },
+  { id: 3, uuid: 'r-3', codigo: 'VI', nombre: 'Libertador Bernardo O Higgins' }
+];
+
 export const COMUNAS = [
   { id: 1, uuid: 'c-1', codigo: '001', nombre: 'Ñuñoa', region_id: 1 },
   { id: 2, uuid: 'c-2', codigo: '002', nombre: 'Maipú', region_id: 1 },

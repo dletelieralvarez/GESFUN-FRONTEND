@@ -1,0 +1,115 @@
+<div class="content-wrap">
+  <app-page-head title="Productos y servicios" sub="{{ titleCount }} items registrados">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()"><i class="bi bi-plus-lg"></i>Nuevo item</button>
+  </app-page-head>
+
+  <div class="row gy-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Código</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Categoría</th>
+                <th class="text-end">Precio</th>
+                <th>Activo</th>
+                <th>Afecto</th>
+                <th class="pe-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of items; trackBy: trackById">
+                <td class="ps-4 tnum fw-semibold">{{ item.codigo }}</td>
+                <td>
+                  <div class="fw-bold">{{ item.nombre }}</div>
+                  <div class="text-secondary" style="font-size: .75rem">{{ item.descripcion }}</div>
+                </td>
+                <td><app-badge cls="b-neutral">{{ item.tipo_item === 'producto' ? 'Producto' : 'Servicio' }}</app-badge></td>
+                <td class="text-body-secondary">{{ item.categoria }}</td>
+                <td class="text-end tnum fw-bold">{{ clp(item.precio) }}</td>
+                <td><app-badge [cls]="item.activo ? 'b-ok' : 'b-neutral'">{{ item.activo ? 'Sí' : 'No' }}</app-badge></td>
+                <td><app-badge [cls]="item.afecto ? 'b-info' : 'b-neutral'">{{ item.afecto ? 'Sí' : 'No' }}</app-badge></td>
+                <td class="pe-4">
+                  <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(item)">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(item)">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4" *ngIf="formVisible">
+      <div class="card p-4">
+        <h5 class="mb-3">{{ isEditing ? 'Editar item' : 'Nuevo item' }}</h5>
+
+        <div class="mb-3">
+          <label class="form-label">Tipo</label>
+          <select class="form-select" [(ngModel)]="form.tipo_item">
+            <option value="producto">Producto</option>
+            <option value="servicio">Servicio</option>
+          </select>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-5">
+            <label class="form-label">Código</label>
+            <input class="form-control" type="text" [(ngModel)]="form.codigo" placeholder="ATA-001" />
+          </div>
+          <div class="col-7">
+            <label class="form-label">Categoría</label>
+            <input class="form-control" type="text" [(ngModel)]="form.categoria" placeholder="Ataúdes" />
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Nombre</label>
+          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Ataúd, cirios, cafetería..." />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="form.descripcion" placeholder="Detalle del producto o servicio"></textarea>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label">Precio</label>
+            <input class="form-control" type="number" [(ngModel)]="form.precio" min="0" />
+          </div>
+          <div class="col-6">
+            <label class="form-label">Unidad medida ID</label>
+            <input class="form-control" type="number" [(ngModel)]="form.unidad_medida_id" min="1" />
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Empresa ID</label>
+          <input class="form-control" type="number" [(ngModel)]="form.empresa_id" min="1" />
+        </div>
+
+        <div class="d-flex gap-3 mb-4">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="activoItem" [(ngModel)]="form.activo" />
+            <label class="form-check-label" for="activoItem">Activo</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="afectoItem" [(ngModel)]="form.afecto" />
+            <label class="form-check-label" for="afectoItem">Afecto</label>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary w-100" type="button" (click)="save()">Guardar</button>
+          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

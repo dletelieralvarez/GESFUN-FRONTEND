@@ -4,10 +4,14 @@ import { AgendaComponent } from './pages/agenda/agenda.component';
 import { CatalogoComponent } from './pages/catalogo/catalogo.component';
 import { CasosComponent } from './pages/casos/casos.component';
 import { ClientesComponent } from './pages/clientes/clientes.component';
+import { EmpleadosComponent } from './pages/empleados/empleados.component';
+import { ProveedoresComponent } from './pages/proveedores/proveedores.component';
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
+import { PlanesComponent } from './pages/planes/planes.component';
+import { ProductosServiciosComponent } from './pages/productos-servicios/productos-servicios.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { LoginComponent } from './pages/login/login.component';
@@ -24,6 +28,10 @@ const routes: Routes = [
   { path: 'auth/callback', component: AuthCallbackComponent, data: { title: 'Autenticacion' } },
   { path: 'clientes', component: ClientesComponent, data: { title: 'Clientes', crumb: 'Comercial / Clientes' } },
   { path: 'usuarios', component: UsuariosComponent, data: { title: 'Administración de usuarios', crumb: 'Administración / Usuarios' } },
+  { path: 'empleados', component: EmpleadosComponent, data: { title: 'Administración de empleados', crumb: 'Administración / Empleados' } },
+  { path: 'proveedores', component: ProveedoresComponent, data: { title: 'Administración de proveedores', crumb: 'Administración / Proveedores' } },
+  { path: 'productos-servicios', component: ProductosServiciosComponent, data: { title: 'Productos y servicios', crumb: 'Administración / Productos y servicios' } },
+  { path: 'planes', component: PlanesComponent, data: { title: 'Planes', crumb: 'Administración / Planes' } },
   { path: 'sucursales', component: SucursalesComponent, data: { title: 'Administración de sucursales', crumb: 'Administración / Sucursales' } },
   { path: 'inventario', component: InventarioComponent, data: { title: 'Inventario', crumb: 'Recursos / Inventario' } },
   { path: 'facturacion', component: FacturacionComponent, data: { title: 'Facturación', crumb: 'Finanzas / Facturación' } },

@@ -13,9 +13,13 @@ import { AgendaComponent } from './pages/agenda/agenda.component';
 import { CatalogoComponent } from './pages/catalogo/catalogo.component';
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
 import { ClientesComponent } from './pages/clientes/clientes.component';
+import { EmpleadosComponent } from './pages/empleados/empleados.component';
+import { ProveedoresComponent } from './pages/proveedores/proveedores.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
+import { PlanesComponent } from './pages/planes/planes.component';
+import { ProductosServiciosComponent } from './pages/productos-servicios/productos-servicios.component';
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
@@ -42,7 +46,11 @@ const msalInterceptorConfig: MsalInterceptorConfiguration = {
     CatalogoComponent,
     CotizacionComponent,
     ClientesComponent,
+    EmpleadosComponent,
+    ProveedoresComponent,
     InventarioComponent,
+    PlanesComponent,
+    ProductosServiciosComponent,
     FacturacionComponent,
     UsuariosComponent,
     SucursalesComponent,

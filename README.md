@@ -104,9 +104,13 @@ src/
       clientes/
       cotizacion/
       dashboard/
+      empleados/
       facturacion/
       inventario/
       login/
+      planes/
+      productos-servicios/
+      proveedores/
       sucursales/
       usuarios/
     services/
@@ -186,6 +190,10 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/cotizacion` | `CotizacionComponent` | Cotizaciones |
 | `/clientes` | `ClientesComponent` | Clientes/terceros |
 | `/usuarios` | `UsuariosComponent` | Administracion de usuarios |
+| `/empleados` | `EmpleadosComponent` | Administracion de empleados |
+| `/proveedores` | `ProveedoresComponent` | Administracion de proveedores |
+| `/productos-servicios` | `ProductosServiciosComponent` | Administracion de productos y servicios |
+| `/planes` | `PlanesComponent` | Administracion de planes armables |
 | `/sucursales` | `SucursalesComponent` | Administracion de sucursales |
 | `/inventario` | `InventarioComponent` | Inventario |
 | `/facturacion` | `FacturacionComponent` | Facturacion |
@@ -222,6 +230,9 @@ Se creo una capa local de datos en `src/app/data/`.
 - Planes de suscripcion.
 - Productos y servicios.
 - Terceros/clientes.
+- Empleados.
+- Proveedores.
+- Regiones.
 - Servicios funerarios.
 - Facturas.
 - Inventario.
@@ -255,12 +266,11 @@ Funcionalidad:
 
 - Boton de login usando `AuthService`.
 - Boton de logout.
-- Prueba de autenticacion contra el endpoint `/api/me`.
 - Manejo de estado `loading`.
 - Manejo de errores.
-- Visualizacion del perfil recibido desde el backend.
+- Redireccion automatica a `/dashboard` cuando MSAL detecta una cuenta activa.
 
-El login usa MSAL y Microsoft Entra ID para autenticar al usuario.
+El login usa MSAL y Microsoft Entra ID para autenticar al usuario con flujo redirect.
 
 ### 6.2 Dashboard
 
@@ -363,9 +373,11 @@ src/app/pages/clientes/
 Funcionalidad:
 
 - Lista clientes/terceros.
+- Lista solo terceros con rol `CLIENTE`.
 - Permite crear un nuevo cliente.
 - Permite editar un cliente existente.
 - Permite eliminar un cliente con confirmacion.
+- Mantiene el rol fijo como `Cliente`; no se puede cambiar desde el formulario.
 - Maneja formulario local.
 - Valida campos minimos:
   - Nombre.
@@ -374,12 +386,88 @@ Funcionalidad:
   - Email.
   - Telefono.
 - Formatea RUT con digito verificador.
+- Permite seleccionar region.
 - Muestra nombre de comuna desde el arreglo `COMUNAS`.
 - Diferencia entre persona natural y empresa.
 
 Importante: estos cambios son locales en memoria; no se persisten todavia en backend.
 
-### 6.8 Usuarios
+### 6.8 Empleados
+
+Ubicacion:
+
+```text
+src/app/pages/empleados/
+```
+
+Funcionalidad:
+
+- Lista terceros con rol `EMPLEADO`.
+- Permite crear, editar y eliminar empleados.
+- Mantiene el rol fijo como `Empleado`; no se puede seleccionar otro rol.
+- Permite seleccionar region y comuna.
+- Maneja datos generales como nombre, RUT, email, telefono, empresa y tipo de persona.
+
+Importante: estos cambios son locales en memoria.
+
+### 6.9 Proveedores
+
+Ubicacion:
+
+```text
+src/app/pages/proveedores/
+```
+
+Funcionalidad:
+
+- Lista terceros con rol `PROVEEDOR`.
+- Permite crear, editar y eliminar proveedores.
+- Mantiene el rol fijo como `Proveedor`; no se puede seleccionar otro rol.
+- Permite seleccionar region y comuna.
+- Maneja datos generales como razon social/nombre, RUT, email, telefono, empresa y tipo de persona.
+
+Importante: estos cambios son locales en memoria.
+
+### 6.10 Productos Y Servicios
+
+Ubicacion:
+
+```text
+src/app/pages/productos-servicios/
+```
+
+Funcionalidad:
+
+- Administra el maestro `PRODUCTO_SERVICIO`.
+- Permite crear, editar y eliminar productos o servicios.
+- Soporta ejemplos como ataudes, cirios, libro de condolencias, flores y servicios de cafeteria.
+- Maneja tipo de item (`producto` o `servicio`), codigo, nombre, descripcion, precio, categoria, unidad de medida, empresa, estado activo y afecto.
+- Sirve como catalogo base para armar planes.
+
+Importante: estos cambios son locales en memoria.
+
+### 6.11 Planes
+
+Ubicacion:
+
+```text
+src/app/pages/planes/
+```
+
+Funcionalidad:
+
+- Administra planes asociados a una sucursal.
+- Permite crear, editar y eliminar planes.
+- Permite armar el plan seleccionando productos o servicios desde `PRODUCTOS_SERVICIOS`.
+- Permite definir cantidad por item.
+- Calcula unitario y total por item.
+- Calcula automaticamente el total del plan a partir del kit.
+- Mantiene una estructura equivalente a `PLAN` y `PLAN_KIT` del modelo de datos.
+- Permite activar/desactivar el plan.
+
+Importante: estos cambios son locales en memoria.
+
+### 6.12 Usuarios
 
 Ubicacion:
 
@@ -398,7 +486,7 @@ Funcionalidad:
 
 Importante: estos cambios son locales en memoria.
 
-### 6.9 Sucursales
+### 6.13 Sucursales
 
 Ubicacion:
 
@@ -417,7 +505,7 @@ Funcionalidad:
 
 Importante: estos cambios son locales en memoria.
 
-### 6.10 Inventario
+### 6.14 Inventario
 
 Ubicacion:
 
@@ -438,7 +526,7 @@ Funcionalidad:
 - Calcula cantidad de productos bajo stock minimo.
 - Usa `trackBySku` para optimizar renderizado de filas.
 
-### 6.11 Facturacion
+### 6.15 Facturacion
 
 Ubicacion:
 
@@ -496,12 +584,13 @@ El flujo actual usa:
 
 - `@azure/msal-angular`.
 - `@azure/msal-browser`.
-- Login por popup.
+- Login por redirect.
 - Cache en `localStorage`.
 - Scope del BFF/API.
 - Logout por popup.
 - Obtencion silenciosa de token cuando existe una cuenta activa.
-- Fallback a popup si el token silencioso no se puede obtener.
+- Fallback interactivo para token cuando MSAL lo requiere.
+- `MsalRedirectComponent` para procesar respuestas de Microsoft Entra ID.
 
 ## 9. Servicio de autenticacion
 
@@ -538,21 +627,21 @@ getProfile() {
 Ubicacion:
 
 ```text
-src/app/interceptors/auth.interceptor.ts
+src/app/app.module.ts
 ```
 
 Responsabilidades:
 
-- Interceptar peticiones HTTP.
-- Detectar si la URL pertenece al BFF configurado.
-- Solicitar access token al `AuthService`.
-- Agregar header:
+- Configurar `MsalInterceptor` oficial de `@azure/msal-angular`.
+- Proteger el recurso `http://localhost:8081`.
+- Asociar el recurso al scope del BFF.
+- Adjuntar automaticamente:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Solo se agrega el token cuando la peticion apunta a:
+Solo se agrega token cuando la peticion apunta a:
 
 ```text
 http://localhost:8081
@@ -584,14 +673,15 @@ Existe el archivo:
 src/app/pages/auth-callback/auth-callback.component.ts
 ```
 
-Actualmente este componente no esta declarado en `AppModule` ni registrado en `AppRoutingModule`. Ademas, su codigo intenta usar un metodo `handleCallbackToken()` que no existe en el `AuthService` actual.
+Actualmente este componente esta declarado y registrado como ruta `/auth/callback`.
 
-Como el flujo activo ya usa MSAL con popup y token silencioso, este callback queda como pieza pendiente o heredada. Si se decide usar autenticacion por redirect, se debe:
+El flujo principal usa `redirectUri` en:
 
-- Declarar `AuthCallbackComponent` en `AppModule`.
-- Registrar la ruta `/auth/callback`.
-- Implementar o ajustar el metodo esperado en `AuthService`.
-- Alinear `redirectUri` en Azure y en `auth-config.ts`.
+```text
+http://localhost:4200
+```
+
+El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectResponse()` y redirige a `/dashboard` si existe cuenta activa.
 
 ## 13. Scripts disponibles
 
@@ -610,17 +700,17 @@ Como el flujo activo ya usa MSAL con popup y token silencioso, este callback que
 3. Levantar el frontend con `npm run start`.
 4. Abrir `http://localhost:4200`.
 5. Iniciar sesion desde `/login`.
-6. Usar "probar autenticacion" para validar `/api/me`.
-7. Navegar a los modulos desde el sidebar.
-8. Revisar dashboard, casos, agenda, catalogo, cotizacion, clientes, usuarios, sucursales, inventario y facturacion.
+6. Completar login Microsoft Entra ID.
+7. Volver automaticamente al dashboard.
+8. Navegar a los modulos desde el sidebar.
+9. Revisar dashboard, casos, agenda, catalogo, cotizacion, clientes, empleados, proveedores, productos y servicios, planes, usuarios, sucursales, inventario y facturacion.
 
 ## 15. Limitaciones actuales
 
 - La mayoria de datos del sistema son mock/locales.
-- Los CRUD de clientes, usuarios y sucursales funcionan en memoria y se pierden al recargar.
+- Los CRUD de clientes, empleados, proveedores, productos/servicios, planes, usuarios y sucursales funcionan en memoria y se pierden al recargar.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
-- El componente `AuthCallbackComponent` esta pendiente de integracion o limpieza.
 - Las pruebas unitarias son las generadas/base y no cubren todavia todos los flujos de negocio.
 
 ## 16. Siguientes pasos sugeridos
@@ -628,6 +718,10 @@ Como el flujo activo ya usa MSAL con popup y token silencioso, este callback que
 - Agregar `AuthGuard` para proteger rutas internas.
 - Crear servicios HTTP por dominio:
   - Clientes.
+  - Empleados.
+  - Proveedores.
+  - Productos y servicios.
+  - Planes y plan kit.
   - Usuarios.
   - Sucursales.
   - Servicios.
@@ -643,6 +737,6 @@ Como el flujo activo ya usa MSAL con popup y token silencioso, este callback que
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, interceptor de bearer token y una prueba contra BFF local.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, interceptor de bearer token, administracion de terceros por rol, administracion de productos/servicios y administracion de planes armables con kit de items.
 
 La siguiente etapa natural es conectar cada modulo con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

@@ -1,77 +1,69 @@
 import { Component } from '@angular/core';
-import { TERCEROS, COMUNAS, REGIONES } from '../../data/mock-data';
+import { COMUNAS, REGIONES, TERCEROS } from '../../data/mock-data';
 import { Tercero } from '../../data/models';
 
 @Component({
-  selector: 'app-clientes',
-  templateUrl: './clientes.component.html',
-  styleUrls: ['./clientes.component.css']
+  selector: 'app-empleados',
+  templateUrl: './empleados.component.html',
+  styleUrls: ['./empleados.component.css']
 })
-export class ClientesComponent {
-  clientes: Tercero[] = TERCEROS.filter(t => t.rol === 'CLIENTE');
+export class EmpleadosComponent {
+  empleados: Tercero[] = TERCEROS.filter(t => t.rol === 'EMPLEADO');
   regiones = REGIONES;
   comunas = COMUNAS;
   formVisible = false;
   isEditing = false;
-  selectedCliente: Tercero | null = null;
-
+  selectedEmpleado: Tercero | null = null;
   form: Partial<Tercero> = this.createEmptyForm();
 
-  trackById(index: number, item: Tercero) {
-    return item.id;
-  }
-
   get titleCount() {
-    return this.clientes.length;
+    return this.empleados.length;
   }
 
   get comunasFiltradas() {
     return this.comunas.filter(c => !this.form.region_id || c.region_id === Number(this.form.region_id));
   }
 
+  trackById(index: number, item: Tercero) {
+    return item.id;
+  }
+
   openNew() {
     this.isEditing = false;
-    this.selectedCliente = null;
+    this.selectedEmpleado = null;
     this.form = this.createEmptyForm();
     this.formVisible = true;
   }
 
-  edit(cliente: Tercero) {
+  edit(empleado: Tercero) {
     this.isEditing = true;
-    this.selectedCliente = cliente;
-    this.form = { ...cliente, rol: 'CLIENTE', region_id: cliente.region_id || this.getRegionIdByComuna(cliente.comuna_id) };
+    this.selectedEmpleado = empleado;
+    this.form = { ...empleado, rol: 'EMPLEADO', region_id: empleado.region_id || this.getRegionIdByComuna(empleado.comuna_id) };
     this.formVisible = true;
   }
 
-  delete(cliente: Tercero) {
-    if (!confirm(`Eliminar cliente ${cliente.nombre_completo}?`)) {
+  delete(empleado: Tercero) {
+    if (!confirm(`Eliminar empleado ${empleado.nombre_completo}?`)) {
       return;
     }
-    this.clientes = this.clientes.filter(c => c.id !== cliente.id);
-    if (this.selectedCliente?.id === cliente.id) {
+    this.empleados = this.empleados.filter(e => e.id !== empleado.id);
+    if (this.selectedEmpleado?.id === empleado.id) {
       this.cancel();
     }
   }
 
   save() {
     if (!this.form.nombre_completo || !this.form.ruc || !this.form.dv || !this.form.email || !this.form.telefono) {
-      alert('Completa nombre, RUT, email y teléfono.');
+      alert('Completa nombre, RUT, email y telefono.');
       return;
     }
 
     const result = this.getFullTerceroFromForm();
-    if (this.isEditing && this.selectedCliente) {
-      this.clientes = this.clientes.map(c => c.id === this.selectedCliente!.id ? { ...c, ...result } : c);
+    if (this.isEditing && this.selectedEmpleado) {
+      this.empleados = this.empleados.map(e => e.id === this.selectedEmpleado!.id ? { ...e, ...result } : e);
     } else {
-      const nextId = Math.max(0, ...this.clientes.map(c => c.id)) + 1;
-      this.clientes = [
-        ...this.clientes,
-        {
-          ...result,
-          id: nextId,
-          uuid: `uuid-t-${Date.now()}`
-        }
-      ];
+      const nextId = Math.max(0, ...this.empleados.map(e => e.id)) + 1;
+      this.empleados = [...this.empleados, { ...result, id: nextId, uuid: `uuid-emp-${Date.now()}` }];
     }
 
     this.cancel();
@@ -80,24 +72,22 @@ export class ClientesComponent {
   cancel() {
     this.formVisible = false;
     this.isEditing = false;
-    this.selectedCliente = null;
+    this.selectedEmpleado = null;
     this.form = this.createEmptyForm();
   }
 
-  formatRut(cliente: Tercero) {
-    return cliente.dv ? `${cliente.ruc}-${cliente.dv}` : cliente.ruc;
+  formatRut(empleado: Tercero) {
+    return empleado.dv ? `${empleado.ruc}-${empleado.dv}` : empleado.ruc;
   }
 
   getComunaName(id?: number) {
-    if (!id) return '';
-    const c = this.comunas.find(x => x.id === id);
-    return c ? c.nombre : `(${id})`;
+    const comuna = this.comunas.find(c => c.id === Number(id));
+    return comuna ? comuna.nombre : '';
   }
 
   getRegionName(id?: number) {
-    if (!id) return '';
-    const region = this.regiones.find(x => x.id === id);
-    return region ? region.nombre : `(${id})`;
+    const region = this.regiones.find(r => r.id === Number(id));
+    return region ? region.nombre : '';
   }
 
   onRegionChange() {
@@ -110,8 +100,7 @@ export class ClientesComponent {
   private createEmptyForm(): Partial<Tercero> {
     return {
       tipo_persona: 'persona_natural',
-      razon_social: undefined,
-      rol: 'CLIENTE',
+      rol: 'EMPLEADO',
       nombres: '',
       apellido_paterno: '',
       apellido_materno: '',
@@ -127,17 +116,16 @@ export class ClientesComponent {
   }
 
   private getFullTerceroFromForm(): Tercero {
-    const base = {
+    return {
       ...this.form,
+      rol: 'EMPLEADO',
       tipo_persona: this.form.tipo_persona || 'persona_natural',
       razon_social: this.form.tipo_persona === 'empresa' ? this.form.nombre_completo || undefined : this.form.razon_social,
-      rol: 'CLIENTE',
       region_id: this.form.region_id || this.getRegionIdByComuna(this.form.comuna_id),
       nombres: this.form.tipo_persona === 'persona_natural' ? this.extractNombres(this.form.nombre_completo || '') : '',
       apellido_paterno: this.form.tipo_persona === 'persona_natural' ? this.extractApellidoPaterno(this.form.nombre_completo || '') : '',
       apellido_materno: this.form.tipo_persona === 'persona_natural' ? this.extractApellidoMaterno(this.form.nombre_completo || '') : ''
     } as Tercero;
-    return base;
   }
 
   private extractNombres(fullName: string) {
