@@ -150,3 +150,9 @@
 .login-card .alert {
   border-radius: 1rem;
 }
+
+.response-box {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+}

@@ -1,13 +1,14 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
+import { AccountInfo } from '@azure/msal-browser';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   userName = '';
   password = '';
   profile: any = null;
@@ -17,40 +18,61 @@ export class LoginComponent {
 
   constructor(public auth: AuthService, private router: Router) {}
 
+  async ngOnInit() {
+    try {
+      const account = await this.auth.handleRedirectResponse();
+      if (account) {
+        this.router.navigate(['/dashboard']);
+      }
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo inicializar Microsoft Entra ID.');
+    }
+  }
+
+  get account(): AccountInfo | null {
+    return this.auth.getActiveAccount();
+  }
+
   async login() {
+    this.loading = true;
     this.error = null;
     this.info = null;
-    this.loading = true;
+    this.profile = null;
+
     try {
-      await this.auth.login();
-      this.router.navigate(['/dashboard']);
+      await this.auth.login(this.userName.trim());
     } catch (err: any) {
-      this.error = err?.message || 'No se pudo iniciar sesión con Microsoft';
+      this.error = this.getErrorMessage(err, 'No se pudo iniciar sesion con Microsoft.');
     } finally {
       this.loading = false;
     }
   }
 
   async loginWithCredentials() {
-    this.info = 'Se usará Microsoft Entra para iniciar sesión con MFA.';
+    this.info = 'El acceso local redirige al flujo corporativo de Microsoft Entra ID.';
     await this.login();
+  }
+
+  async logout() {
+    this.loading = true;
+    this.error = null;
+    this.info = null;
+    this.profile = null;
+
+    try {
+      await this.auth.logout();
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo cerrar sesion.');
+    } finally {
+      this.loading = false;
+    }
   }
 
   recoverPassword() {
     window.open('https://passwordreset.microsoftonline.com/', '_blank');
   }
 
-  testAuth() {
-    this.loading = true;
-    this.error = null;
-    this.profile = null;
-    this.auth.getProfile().subscribe({
-      next: (res) => { this.profile = res; this.loading = false; },
-      error: (err) => { this.error = err?.error?.message || (err.statusText || 'Error'); this.loading = false; }
-    });
-  }
-
-  logout() {
-    this.auth.logout();
+  private getErrorMessage(error: any, fallback: string) {
+    return error?.errorMessage || error?.message || fallback;
   }
 }

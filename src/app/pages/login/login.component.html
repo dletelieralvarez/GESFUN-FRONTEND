@@ -4,7 +4,7 @@
       <div class="login-logo mb-3">GF</div>
       <div class="login-badge mb-3">Acceso corporativo</div>
       <h2 class="fw-bold mb-2">Bienvenido a GesFun</h2>
-      <p class="text-muted small mb-0">Accede con tu usuario o inicia sesión con Microsoft.</p>
+      <p class="text-muted small mb-0">Accede con Microsoft Entra ID usando el tenant corporativo.</p>
     </div>
 
     <form (ngSubmit)="loginWithCredentials()" autocomplete="off">
@@ -13,12 +13,12 @@
         <label for="username">Usuario</label>
       </div>
       <div class="mb-3 form-floating">
-        <input type="password" class="form-control" [(ngModel)]="password" name="password" id="password" placeholder="Contraseña" />
-        <label for="password">Contraseña</label>
+        <input type="password" class="form-control" [(ngModel)]="password" name="password" id="password" placeholder="Contrasena" />
+        <label for="password">Contrasena</label>
       </div>
       <div class="d-flex justify-content-between align-items-center mb-4">
         <button class="btn btn-primary btn-lg px-5" type="submit" [disabled]="loading">Ingresar</button>
-        <button class="btn btn-link text-decoration-none text-secondary small" type="button" (click)="recoverPassword()">Recuperar contraseña</button>
+        <button class="btn btn-link text-decoration-none text-secondary small" type="button" (click)="recoverPassword()">Recuperar contrasena</button>
       </div>
     </form>
 
@@ -27,7 +27,13 @@
     <div class="d-grid mb-3">
       <button class="btn btn-ms btn-lg" type="button" (click)="login()" [disabled]="loading">
         <span class="ms-icon"></span>
-        Iniciar sesión con Microsoft
+        Iniciar sesion con Microsoft
+      </button>
+    </div>
+
+    <div class="d-grid gap-2 mb-3" *ngIf="account">
+      <button class="btn btn-outline-secondary" type="button" (click)="logout()" [disabled]="loading">
+        Cerrar sesion
       </button>
     </div>
 

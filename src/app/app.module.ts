@@ -13,20 +13,22 @@ import { AgendaComponent } from './pages/agenda/agenda.component';
 import { CatalogoComponent } from './pages/catalogo/catalogo.component';
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
 import { ClientesComponent } from './pages/clientes/clientes.component';
-import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { LoginComponent } from './pages/login/login.component';
+import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { UiModule } from './ui/ui.module';
-import { MsalModule } from '@azure/msal-angular';
+import { MsalInterceptor, MsalInterceptorConfiguration, MsalModule, MsalRedirectComponent } from '@azure/msal-angular';
 import { PublicClientApplication, InteractionType } from '@azure/msal-browser';
-import { msalConfig, loginRequest } from './auth-config';
+import { bffApiScope, bffApiUrl, loginRequest, msalConfig } from './auth-config';
 
-const msalInterceptorConfig: any = {
-  interactionType: InteractionType.Popup,
-  protectedResourceMap: new Map<any, string[]>()
+const msalInterceptorConfig: MsalInterceptorConfiguration = {
+  interactionType: InteractionType.Redirect,
+  protectedResourceMap: new Map<string, string[]>([
+    [bffApiUrl, [bffApiScope]]
+  ])
 };
 
 @NgModule({
@@ -44,7 +46,8 @@ const msalInterceptorConfig: any = {
     FacturacionComponent,
     UsuariosComponent,
     SucursalesComponent,
-    LoginComponent
+    LoginComponent,
+    AuthCallbackComponent
   ],
   imports: [
     BrowserModule,
@@ -53,13 +56,13 @@ const msalInterceptorConfig: any = {
     AppRoutingModule,
     UiModule,
     MsalModule.forRoot(new PublicClientApplication(msalConfig), {
-      interactionType: InteractionType.Popup,
+      interactionType: InteractionType.Redirect,
       authRequest: loginRequest
     }, msalInterceptorConfig)
   ],
   providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: MsalInterceptor, multi: true }
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent, MsalRedirectComponent]
 })
 export class AppModule { }

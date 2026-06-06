@@ -11,6 +11,7 @@ import { InventarioComponent } from './pages/inventario/inventario.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { LoginComponent } from './pages/login/login.component';
+import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -20,6 +21,7 @@ const routes: Routes = [
   { path: 'catalogo', component: CatalogoComponent, data: { title: 'Catálogo y planes', crumb: 'Comercial / Catálogo' } },
   { path: 'cotizacion', component: CotizacionComponent, data: { title: 'Cotizaciones', crumb: 'Comercial / Cotizaciones' } },
   { path: 'login', component: LoginComponent, data: { title: 'Login' } },
+  { path: 'auth/callback', component: AuthCallbackComponent, data: { title: 'Autenticacion' } },
   { path: 'clientes', component: ClientesComponent, data: { title: 'Clientes', crumb: 'Comercial / Clientes' } },
   { path: 'usuarios', component: UsuariosComponent, data: { title: 'Administración de usuarios', crumb: 'Administración / Usuarios' } },
   { path: 'sucursales', component: SucursalesComponent, data: { title: 'Administración de sucursales', crumb: 'Administración / Sucursales' } },
