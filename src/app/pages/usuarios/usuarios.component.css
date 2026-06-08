@@ -1,3 +1,55 @@
 .page-head {
   margin-bottom: 1rem;
 }
+
+.diagnostic-card {
+  border-color: #dbe7df;
+  box-shadow: 0 8px 24px rgba(26, 46, 35, .05);
+}
+
+.diagnostic-title {
+  color: #24352d;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  margin-bottom: .75rem;
+  text-transform: uppercase;
+}
+
+.diagnostic-grid {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.diagnostic-grid div {
+  min-width: 0;
+}
+
+.diagnostic-grid span {
+  color: #6c7a72;
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  margin-bottom: .2rem;
+  text-transform: uppercase;
+}
+
+.diagnostic-grid strong {
+  color: #1c2a23;
+  display: block;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 992px) {
+  .diagnostic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+}

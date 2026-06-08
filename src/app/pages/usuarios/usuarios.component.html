@@ -1,90 +1,144 @@
-<div class="page-head d-flex justify-content-between align-items-start">
-  <div>
-    <h1>Administración de usuarios</h1>
-    <p class="text-muted">Crea, edita y administra usuarios del sistema.</p>
-  </div>
-  <button class="btn btn-primary" (click)="openCreate()"><i class="bi bi-person-plus"></i> Crear usuario</button>
-</div>
+<div class="content-wrap">
+  <app-page-head title="Administracion de usuarios" sub="Usuarios obtenidos desde el BFF">
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" (click)="loadUsers()" [disabled]="loading">
+        <i class="bi bi-arrow-clockwise"></i>Recargar
+      </button>
+      <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" (click)="openCreate()">
+        <i class="bi bi-person-plus"></i>Crear usuario
+      </button>
+    </div>
+  </app-page-head>
 
-<div class="card mb-4" *ngIf="formOpen">
-  <div class="card-header">
-    {{ editingIndex === null ? 'Crear usuario' : 'Editar usuario' }}
-  </div>
-  <div class="card-body">
-    <div class="row gy-3">
-      <div class="col-md-4">
-        <label class="form-label">Nombre</label>
-        <input type="text" class="form-control" [(ngModel)]="userForm.nombre" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Apellido paterno</label>
-        <input type="text" class="form-control" [(ngModel)]="userForm.paterno" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Apellido materno</label>
-        <input type="text" class="form-control" [(ngModel)]="userForm.materno" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-control" [(ngModel)]="userForm.email" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Rol</label>
-        <input type="text" class="form-control" [(ngModel)]="userForm.roles" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Tipo de usuario</label>
-        <input type="text" class="form-control" [(ngModel)]="userForm.tipo_usuario" />
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Contraseña</label>
-        <input type="password" class="form-control" [(ngModel)]="userForm.password" />
-      </div>
-      <div class="col-md-4 d-flex align-items-center mt-3">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="activo" [(ngModel)]="userForm.activo" />
-          <label class="form-check-label" for="activo">Activo</label>
+  <div class="alert alert-info py-2" *ngIf="loading">Cargando usuarios...</div>
+  <div class="alert alert-danger py-2" *ngIf="error">{{ error }}</div>
+
+  <div class="card mb-3 diagnostic-card" *ngIf="tokenInfo">
+    <div class="card-body">
+      <div class="diagnostic-title">Diagnostico del token enviado al BFF</div>
+      <div class="diagnostic-grid">
+        <div>
+          <span>Cuenta</span>
+          <strong>{{ tokenInfo.account || tokenInfo.preferred_username || tokenInfo.upn || '-' }}</strong>
+        </div>
+        <div>
+          <span>Audience</span>
+          <strong>{{ tokenInfo.aud || '-' }}</strong>
+        </div>
+        <div>
+          <span>Scopes</span>
+          <strong>{{ tokenInfo.scp || '-' }}</strong>
+        </div>
+        <div>
+          <span>/api/me</span>
+          <strong>{{ tokenInfo.meStatus || 'NO_PROBADO' }}</strong>
+        </div>
+        <div>
+          <span>Issuer</span>
+          <strong>{{ tokenInfo.iss || '-' }}</strong>
+        </div>
+        <div>
+          <span>Tenant</span>
+          <strong>{{ tokenInfo.tid || '-' }}</strong>
+        </div>
+        <div>
+          <span>Version</span>
+          <strong>{{ tokenInfo.ver || '-' }}</strong>
+        </div>
+        <div>
+          <span>Client app</span>
+          <strong>{{ tokenInfo.azp || tokenInfo.appid || '-' }}</strong>
         </div>
       </div>
     </div>
-    <div class="mt-4 d-flex gap-2">
-      <button class="btn btn-success" (click)="saveUser()">Guardar</button>
-      <button class="btn btn-outline-secondary" (click)="cancel()">Cancelar</button>
+  </div>
+
+  <div class="card mb-4" *ngIf="formOpen">
+    <div class="card-header">
+      {{ editingIndex === null ? 'Crear usuario' : 'Editar usuario' }}
+    </div>
+    <div class="card-body">
+      <div class="row gy-3">
+        <div class="col-md-4">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-control" [(ngModel)]="userForm.nombre" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Apellido paterno</label>
+          <input type="text" class="form-control" [(ngModel)]="userForm.paterno" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Apellido materno</label>
+          <input type="text" class="form-control" [(ngModel)]="userForm.materno" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" [(ngModel)]="userForm.email" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Rol</label>
+          <input type="text" class="form-control" [(ngModel)]="userForm.roles" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Tipo de usuario</label>
+          <input type="text" class="form-control" [(ngModel)]="userForm.tipoUsuario" />
+        </div>
+        <div class="col-md-4 d-flex align-items-center mt-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="activo" [(ngModel)]="userForm.activo" />
+            <label class="form-check-label" for="activo">Activo</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-success" type="button" (click)="saveUser()">Guardar</button>
+        <button class="btn btn-outline-secondary" type="button" (click)="cancel()">Cancelar</button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="card">
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>ID</th>
-          <th>Nombre completo</th>
-          <th>Email</th>
-          <th>Rol</th>
-          <th>Tipo usuario</th>
-          <th>Activo</th>
-          <th class="text-end">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let user of users; let i = index">
-          <td>{{ user.id }}</td>
-          <td>{{ user.nombre }} {{ user.paterno }} {{ user.materno }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.roles }}</td>
-          <td>{{ user.tipo_usuario }}</td>
-          <td>{{ user.activo ? 'Sí' : 'No' }}</td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary me-2" (click)="openEdit(i)"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-danger" (click)="deleteUser(i)"><i class="bi bi-trash"></i></button>
-          </td>
-        </tr>
-        <tr *ngIf="users.length === 0">
-          <td colspan="7" class="text-center py-4">No hay usuarios registrados.</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">ID</th>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Tipo usuario</th>
+            <th>Activo</th>
+            <th>UUID</th>
+            <th class="text-end pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users; let i = index">
+            <td class="ps-4 tnum">{{ user.id }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <app-avatar [name]="user.nombre + ' ' + user.paterno" [size]="34"></app-avatar>
+                <div>
+                  <div class="fw-bold">{{ user.nombre }} {{ user.paterno }} {{ user.materno }}</div>
+                  <div class="text-secondary" style="font-size: .75rem">{{ user.tipoUsuario }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ user.email }}</td>
+            <td><app-badge cls="b-info">{{ user.roles }}</app-badge></td>
+            <td class="text-body-secondary">{{ user.tipoUsuario }}</td>
+            <td><app-badge [cls]="user.activo ? 'b-ok' : 'b-neutral'">{{ user.activo ? 'Si' : 'No' }}</app-badge></td>
+            <td class="text-secondary" style="font-size: .75rem">{{ user.uuid }}</td>
+            <td class="text-end pe-4">
+              <button class="btn btn-sm btn-outline-primary me-2" type="button" (click)="openEdit(i)"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteUser(i)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          <tr *ngIf="!loading && users.length === 0">
+            <td colspan="8" class="text-center py-4">No hay usuarios registrados.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
