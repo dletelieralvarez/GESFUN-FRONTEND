@@ -665,6 +665,60 @@ GET /api/me
 
 La llamada debe aceptar un bearer token emitido por Microsoft Entra ID para el scope configurado en `bffApiScope`.
 
+Para el flujo SPA con `gesfun-client`, el BFF debe aceptar tokens v2 de Microsoft Entra ID:
+
+```text
+issuer:   https://login.microsoftonline.com/0848441e-8d61-4f58-84b7-9f55266c7ee4/v2.0
+audience: daead1c3-a4cc-4647-9423-e1fc626d8003
+client:   7c4068b3-4cdf-42f3-84ac-f8e2d2042118
+scope:    access_as_user
+```
+
+El frontend siempre debe llamar al BFF en `http://localhost:8081`; el BFF reenvia al backend real.
+
+## 11.1 Modulos conectados al BFF
+
+Los siguientes modulos ya cuentan con eventos reales contra el BFF:
+
+- `UsuariosComponent`
+  - `GET /api/usuarios`
+  - `POST /api/usuarios`
+  - `PUT /api/usuarios/{id}`
+  - `DELETE /api/usuarios/{id}`
+- `ClientesComponent`
+  - `GET /api/terceros`
+  - `POST /api/terceros`
+  - `PUT /api/terceros/{uuid}`
+  - `PATCH /api/terceros/{uuid}/desactivar`
+- `EmpleadosComponent`
+  - `GET /api/terceros`
+  - `POST /api/terceros`
+  - `PUT /api/terceros/{uuid}`
+  - `PATCH /api/terceros/{uuid}/desactivar`
+- `ProveedoresComponent`
+  - `GET /api/terceros`
+  - `POST /api/terceros`
+  - `PUT /api/terceros/{uuid}`
+  - `PATCH /api/terceros/{uuid}/desactivar`
+- `ProductosServiciosComponent`
+  - `GET /api/productos-servicios`
+  - `POST /api/productos-servicios`
+  - `PUT /api/productos-servicios/{uuid}`
+  - `PATCH /api/productos-servicios/{uuid}/desactivar`
+
+Los modulos de terceros cargan ademas:
+
+- `GET /api/comunas`
+- `GET /api/empresas`
+
+Esto permite enviar al backend los campos esperados por contrato:
+
+- `rut`
+- `comunaUuid`
+- `empresaUuid`
+
+Las ediciones de terceros y productos/servicios se realizan por `uuid`, no por `id` numerico.
+
 ## 12. Estado del callback de autenticacion
 
 Existe el archivo:
@@ -707,8 +761,9 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 ## 15. Limitaciones actuales
 
-- La mayoria de datos del sistema son mock/locales.
-- Los CRUD de clientes, empleados, proveedores, productos/servicios, planes, usuarios y sucursales funcionan en memoria y se pierden al recargar.
+- Algunos modulos siguen usando datos mock/locales.
+- Los CRUD de usuarios, clientes, empleados, proveedores y productos/servicios ya pasan por BFF.
+- Los CRUD de planes y sucursales aun funcionan en memoria y se pierden al recargar.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
 - Las pruebas unitarias son las generadas/base y no cubren todavia todos los flujos de negocio.
@@ -717,18 +772,14 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 - Agregar `AuthGuard` para proteger rutas internas.
 - Crear servicios HTTP por dominio:
-  - Clientes.
-  - Empleados.
-  - Proveedores.
-  - Productos y servicios.
   - Planes y plan kit.
-  - Usuarios.
   - Sucursales.
   - Servicios.
   - Inventario.
   - Facturacion.
-- Reemplazar datos mock por llamadas al BFF/API.
-- Persistir altas, ediciones y eliminaciones.
+- Extraer servicios HTTP compartidos para usuarios, terceros y productos/servicios.
+- Reemplazar los modulos restantes que usan mock por llamadas al BFF/API.
+- Persistir altas, ediciones y eliminaciones en planes, sucursales y demas modulos pendientes.
 - Agregar validaciones de formularios mas completas.
 - Agregar manejo centralizado de errores.
 - Agregar loading states por pantalla.
@@ -737,6 +788,6 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, interceptor de bearer token, administracion de terceros por rol, administracion de productos/servicios y administracion de planes armables con kit de items.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, interceptor de bearer token, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF y administracion de planes armables con kit de items.
 
 La siguiente etapa natural es conectar cada modulo con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

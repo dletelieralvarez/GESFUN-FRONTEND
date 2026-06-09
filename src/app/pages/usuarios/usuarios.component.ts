@@ -57,8 +57,11 @@ interface TokenDiagnostic {
 export class UsuariosComponent implements OnInit {
   users: User[] = [];
   loading = false;
+  saving = false;
   error: string | null = null;
+  success: string | null = null;
   tokenInfo: TokenDiagnostic | null = null;
+  userPendingDelete: User | null = null;
 
   formOpen = false;
   editingIndex: number | null = null;
@@ -73,6 +76,7 @@ export class UsuariosComponent implements OnInit {
   async loadUsers() {
     this.loading = true;
     this.error = null;
+    this.success = null;
 
     try {
       const token = await this.auth.getAccessToken();
@@ -114,30 +118,59 @@ export class UsuariosComponent implements OnInit {
   }
 
   openCreate() {
+    this.userPendingDelete = null;
     this.editingIndex = null;
     this.userForm = this.createEmptyUser();
     this.formOpen = true;
   }
 
   openEdit(index: number) {
+    this.userPendingDelete = null;
     this.editingIndex = index;
     this.userForm = { ...this.users[index] };
     this.formOpen = true;
   }
 
-  saveUser() {
-    if (this.editingIndex === null) {
-      this.users = [...this.users, { ...this.userForm }];
-    } else {
-      this.users = this.users.map((user, idx) => idx === this.editingIndex ? { ...this.userForm } : user);
+  async saveUser() {
+    this.saving = true;
+    this.error = null;
+    this.success = null;
+
+    try {
+      if (this.editingIndex === null) {
+        await this.createUser(this.userForm);
+        await this.loadUsers();
+        this.success = 'Usuario creado correctamente.';
+      } else {
+        await this.updateUser(this.userForm);
+        await this.loadUsers();
+        this.success = 'Usuario actualizado correctamente.';
+      }
+
+      this.cancel();
+    } catch (err: any) {
+      this.error = err?.error?.message || err?.message || 'No se pudo guardar el usuario.';
+    } finally {
+      this.saving = false;
     }
-    this.cancel();
   }
 
   deleteUser(index: number) {
-    if (confirm('Eliminar este usuario?')) {
-      this.users = this.users.filter((_, idx) => idx !== index);
+    this.formOpen = false;
+    this.editingIndex = null;
+    this.userPendingDelete = this.users[index];
+    this.error = null;
+    this.success = null;
+  }
+
+  confirmDeleteUser() {
+    if (this.userPendingDelete) {
+      this.removeUser(this.userPendingDelete);
     }
+  }
+
+  cancelDelete() {
+    this.userPendingDelete = null;
   }
 
   cancel() {
@@ -159,19 +192,91 @@ export class UsuariosComponent implements OnInit {
     };
   }
 
+  private async createUser(user: User) {
+    const token = await this.auth.getAccessToken();
+    const payload = this.toApiPayload(user, false);
+
+    await lastValueFrom(this.http.post(`${bffApiUrl}/api/usuarios`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }));
+  }
+
+  private async updateUser(user: User) {
+    const token = await this.auth.getAccessToken();
+    const payload = this.toApiPayload(user, true);
+
+    await lastValueFrom(this.http.put(`${bffApiUrl}/api/usuarios/${user.id}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }));
+  }
+
+  private async removeUser(user: User) {
+    this.loading = true;
+    this.error = null;
+    this.success = null;
+
+    try {
+      const token = await this.auth.getAccessToken();
+      await lastValueFrom(this.http.delete(`${bffApiUrl}/api/usuarios/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }));
+
+      await this.loadUsers();
+      this.success = 'Usuario eliminado correctamente.';
+      this.userPendingDelete = null;
+    } catch (err: any) {
+      this.error = err?.error?.message || err?.message || 'No se pudo eliminar el usuario.';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  private toApiPayload(user: User, includeId: boolean) {
+    const payload: any = {
+      uuid: user.uuid,
+      email: user.email,
+      nombre: user.nombre,
+      paterno: user.paterno,
+      materno: user.materno,
+      activo: user.activo ? 1 : 0,
+      roles: user.roles,
+      tipoUsuario: user.tipoUsuario
+    };
+
+    if (includeId) {
+      payload.id = user.id;
+    }
+
+    return payload;
+  }
+
   private getLoadErrorMessage(err: any) {
     if (err?.status === 401) {
       const user = this.tokenInfo?.preferred_username || this.tokenInfo?.upn || 'usuario autenticado';
       const audience = this.tokenInfo?.aud || 'audiencia no disponible';
       const scopes = this.tokenInfo?.scp || 'scopes no disponibles';
       const meStatus = this.tokenInfo?.meStatus === 'RECHAZADO'
-        ? ' Tambien fue rechazado por /api/me, por lo que el problema esta en el token, audience, scope o validacion general del BFF.'
-        : ' /api/me acepto el token, por lo que el problema probablemente es permiso o regla especifica de /api/usuarios.';
+        ? ' Tambien fue rechazado por /bff/me, por lo que el problema esta en el token, audience, scope o validacion general del BFF.'
+        : ' /bff/me acepto el token, por lo que el problema probablemente esta en el backend o en la ruta proxied /api/usuarios.';
 
       return `El BFF rechazo el token para ${user}. Audiencia: ${audience}. Scopes: ${scopes}.${meStatus}`;
     }
 
-    return err?.error?.message || err?.message || 'No se pudieron cargar los usuarios.';
+    if (err?.status === 0) {
+      return 'No se pudo conectar con el BFF. Verifica que el servicio este levantado en http://localhost:8081.';
+    }
+
+    if (err?.status) {
+      return `No se pudieron cargar los usuarios. Codigo HTTP ${err.status}.`;
+    }
+
+    return 'No se pudieron cargar los usuarios.';
   }
 
   private async validateBffToken(token: string) {
@@ -180,7 +285,7 @@ export class UsuariosComponent implements OnInit {
     }
 
     try {
-      await lastValueFrom(this.http.get(`${bffApiUrl}/api/me`, {
+      await lastValueFrom(this.http.get(`${bffApiUrl}/bff/me`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

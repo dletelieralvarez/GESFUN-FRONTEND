@@ -10,45 +10,30 @@
     </div>
   </app-page-head>
 
-  <div class="alert alert-info py-2" *ngIf="loading">Cargando usuarios...</div>
-  <div class="alert alert-danger py-2" *ngIf="error">{{ error }}</div>
+  <div class="status-stack" *ngIf="loading || error || success || userPendingDelete">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Cargando usuarios...</span>
+    </div>
 
-  <div class="card mb-3 diagnostic-card" *ngIf="tokenInfo">
-    <div class="card-body">
-      <div class="diagnostic-title">Diagnostico del token enviado al BFF</div>
-      <div class="diagnostic-grid">
-        <div>
-          <span>Cuenta</span>
-          <strong>{{ tokenInfo.account || tokenInfo.preferred_username || tokenInfo.upn || '-' }}</strong>
-        </div>
-        <div>
-          <span>Audience</span>
-          <strong>{{ tokenInfo.aud || '-' }}</strong>
-        </div>
-        <div>
-          <span>Scopes</span>
-          <strong>{{ tokenInfo.scp || '-' }}</strong>
-        </div>
-        <div>
-          <span>/api/me</span>
-          <strong>{{ tokenInfo.meStatus || 'NO_PROBADO' }}</strong>
-        </div>
-        <div>
-          <span>Issuer</span>
-          <strong>{{ tokenInfo.iss || '-' }}</strong>
-        </div>
-        <div>
-          <span>Tenant</span>
-          <strong>{{ tokenInfo.tid || '-' }}</strong>
-        </div>
-        <div>
-          <span>Version</span>
-          <strong>{{ tokenInfo.ver || '-' }}</strong>
-        </div>
-        <div>
-          <span>Client app</span>
-          <strong>{{ tokenInfo.azp || tokenInfo.appid || '-' }}</strong>
-        </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+
+    <div class="delete-confirm" *ngIf="userPendingDelete">
+      <div>
+        <strong>Eliminar usuario</strong>
+        <span>{{ userPendingDelete.nombre }} {{ userPendingDelete.paterno }} - {{ userPendingDelete.email }}</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" type="button" (click)="confirmDeleteUser()" [disabled]="loading">Eliminar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelDelete()" [disabled]="loading">Cancelar</button>
       </div>
     </div>
   </div>
@@ -59,6 +44,14 @@
     </div>
     <div class="card-body">
       <div class="row gy-3">
+        <div class="col-md-2" *ngIf="editingIndex !== null">
+          <label class="form-label">ID</label>
+          <input type="text" class="form-control" [value]="userForm.id" readonly />
+        </div>
+        <div class="col-md-10" *ngIf="editingIndex !== null">
+          <label class="form-label">UUID</label>
+          <input type="text" class="form-control" [value]="userForm.uuid" readonly />
+        </div>
         <div class="col-md-4">
           <label class="form-label">Nombre</label>
           <input type="text" class="form-control" [(ngModel)]="userForm.nombre" />
@@ -91,8 +84,10 @@
         </div>
       </div>
       <div class="mt-4 d-flex gap-2">
-        <button class="btn btn-success" type="button" (click)="saveUser()">Guardar</button>
-        <button class="btn btn-outline-secondary" type="button" (click)="cancel()">Cancelar</button>
+        <button class="btn btn-success" type="button" (click)="saveUser()" [disabled]="saving">
+          {{ saving ? 'Guardando...' : 'Guardar' }}
+        </button>
+        <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
       </div>
     </div>
   </div>
@@ -130,8 +125,8 @@
             <td><app-badge [cls]="user.activo ? 'b-ok' : 'b-neutral'">{{ user.activo ? 'Si' : 'No' }}</app-badge></td>
             <td class="text-secondary" style="font-size: .75rem">{{ user.uuid }}</td>
             <td class="text-end pe-4">
-              <button class="btn btn-sm btn-outline-primary me-2" type="button" (click)="openEdit(i)"><i class="bi bi-pencil"></i></button>
-              <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteUser(i)"><i class="bi bi-trash"></i></button>
+              <button class="btn btn-sm btn-outline-primary me-2" type="button" (click)="openEdit(i)" [disabled]="loading || saving"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteUser(i)" [disabled]="loading || saving"><i class="bi bi-trash"></i></button>
             </td>
           </tr>
           <tr *ngIf="!loading && users.length === 0">
