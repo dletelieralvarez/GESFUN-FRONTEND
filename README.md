@@ -683,12 +683,12 @@ GET /api/me
 
 La llamada debe aceptar un bearer token emitido por Microsoft Entra ID para el scope configurado en `bffApiScope`.
 
-Para el flujo SPA con `gesfun-client`, el BFF debe aceptar tokens v2 de Microsoft Entra ID:
+Para el flujo SPA, el BFF debe aceptar tokens v2 de Microsoft Entra ID. Los valores reales de tenant, audience y cliente deben mantenerse en configuracion local o variables de entorno, no documentarse en el README:
 
 ```text
-issuer:   https://login.microsoftonline.com/0848441e-8d61-4f58-84b7-9f55266c7ee4/v2.0
-audience: daead1c3-a4cc-4647-9423-e1fc626d8003
-client:   7c4068b3-4cdf-42f3-84ac-f8e2d2042118
+issuer:   https://login.microsoftonline.com/<tenant-id>/v2.0
+audience: <bff-client-id-o-app-id-uri>
+client:   <frontend-client-id>
 scope:    access_as_user
 ```
 
@@ -808,6 +808,6 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, interceptor de bearer token, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF y administracion de planes armables con kit de items.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, envio de bearer token al BFF desde `AuthService`, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF y administracion de planes armables con kit de items.
 
 La siguiente etapa natural es conectar cada modulo con endpoints reales y proteger las rutas internas con autenticacion obligatoria.
