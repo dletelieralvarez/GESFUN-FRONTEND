@@ -23,13 +23,14 @@ export class EmpleadosComponent implements OnInit {
   formVisible = false;
   isEditing = false;
   selectedEmpleado: Tercero | null = null;
+  empleadoPendingDelete: Tercero | null = null;
   form: Partial<Tercero> = this.createEmptyForm();
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
-  ngOnInit() {
-    this.loadCatalogos();
-    this.loadEmpleados();
+  async ngOnInit() {
+    await this.loadCatalogos();
+    await this.loadEmpleados();
   }
 
   get titleCount() {
@@ -41,11 +42,12 @@ export class EmpleadosComponent implements OnInit {
   }
 
   trackById(index: number, item: Tercero) {
-    return item.id;
+    return item.uuid || item.id;
   }
 
   openNew() {
     this.clearMessages();
+    this.empleadoPendingDelete = null;
     this.isEditing = false;
     this.selectedEmpleado = null;
     this.form = this.createEmptyForm();
@@ -54,32 +56,55 @@ export class EmpleadosComponent implements OnInit {
 
   edit(empleado: Tercero) {
     this.clearMessages();
+    this.empleadoPendingDelete = null;
+    if (!this.isEmpleadoActivo(empleado)) {
+      this.error = 'No se puede editar un empleado desactivado.';
+      return;
+    }
     this.isEditing = true;
     this.selectedEmpleado = empleado;
     this.form = { ...empleado, rol: 'EMPLEADO', region_id: empleado.region_id || this.getRegionIdByComuna(empleado.comuna_id) };
     this.formVisible = true;
   }
 
-  async delete(empleado: Tercero) {
-    if (!confirm(`Eliminar empleado ${empleado.nombre_completo}?`)) {
+  delete(empleado: Tercero) {
+    if (!this.isEmpleadoActivo(empleado)) {
+      this.error = 'El empleado ya esta desactivado.';
+      return;
+    }
+    this.formVisible = false;
+    this.isEditing = false;
+    this.selectedEmpleado = null;
+    this.empleadoPendingDelete = empleado;
+    this.clearMessages();
+  }
+
+  async confirmDeleteEmpleado() {
+    if (!this.empleadoPendingDelete) {
       return;
     }
 
+    const empleado = this.empleadoPendingDelete;
     this.loading = true;
     this.clearMessages();
 
     try {
-      await this.patchTerceroDesactivar(empleado);
-      this.empleados = this.empleados.filter(e => e.id !== empleado.id);
-      this.success = 'Empleado eliminado correctamente.';
-      if (this.selectedEmpleado?.id === empleado.id) {
+      await this.patchEmpleadoDesactivar(empleado);
+      await this.loadEmpleados();
+      this.success = 'Empleado desactivado correctamente.';
+      if (this.selectedEmpleado?.uuid === empleado.uuid) {
         this.cancel();
       }
+      this.empleadoPendingDelete = null;
     } catch (err: any) {
-      this.error = this.getErrorMessage(err, 'No se pudo eliminar el empleado.');
+      this.error = this.getErrorMessage(err, 'No se pudo desactivar el empleado.');
     } finally {
       this.loading = false;
     }
+  }
+
+  cancelDelete() {
+    this.empleadoPendingDelete = null;
   }
 
   async save() {
@@ -96,11 +121,11 @@ export class EmpleadosComponent implements OnInit {
     try {
       if (this.isEditing && this.selectedEmpleado) {
         const updated: Tercero = { ...this.selectedEmpleado, ...result, rol: 'EMPLEADO' };
-        await this.putTercero(updated);
+        await this.putEmpleado(updated);
         await this.loadEmpleados();
         this.success = 'Empleado actualizado correctamente.';
       } else {
-        await this.postTercero(result);
+        await this.postEmpleado(result);
         await this.loadEmpleados();
         this.success = 'Empleado creado correctamente.';
       }
@@ -117,11 +142,16 @@ export class EmpleadosComponent implements OnInit {
     this.formVisible = false;
     this.isEditing = false;
     this.selectedEmpleado = null;
+    this.empleadoPendingDelete = null;
     this.form = this.createEmptyForm();
   }
 
   formatRut(empleado: Tercero) {
     return empleado.dv ? `${empleado.ruc}-${empleado.dv}` : empleado.ruc;
+  }
+
+  isEmpleadoActivo(empleado: Tercero) {
+    return empleado.activo !== false;
   }
 
   getComunaName(id?: number) {
@@ -153,9 +183,10 @@ export class EmpleadosComponent implements OnInit {
       dv: '',
       email: '',
       telefono: '',
+      activo: true,
       region_id: 1,
       comuna_id: 1,
-      empresa_id: 1
+      empresa_id: this.empresas[0]?.id || 1
     };
   }
 
@@ -163,18 +194,19 @@ export class EmpleadosComponent implements OnInit {
     return {
       ...this.form,
       rol: 'EMPLEADO',
-      tipo_persona: this.form.tipo_persona || 'persona_natural',
-      razon_social: this.form.tipo_persona === 'empresa' ? this.form.nombre_completo || undefined : this.form.razon_social,
+      tipo_persona: 'persona_natural',
+      activo: true,
+      razon_social: this.form.razon_social,
       region_id: this.form.region_id || this.getRegionIdByComuna(this.form.comuna_id),
-      nombres: this.form.tipo_persona === 'persona_natural' ? this.extractNombres(this.form.nombre_completo || '') : '',
-      apellido_paterno: this.form.tipo_persona === 'persona_natural' ? this.extractApellidoPaterno(this.form.nombre_completo || '') : '',
-      apellido_materno: this.form.tipo_persona === 'persona_natural' ? this.extractApellidoMaterno(this.form.nombre_completo || '') : ''
+      nombres: this.extractNombres(this.form.nombre_completo || ''),
+      apellido_paterno: this.extractApellidoPaterno(this.form.nombre_completo || ''),
+      apellido_materno: this.extractApellidoMaterno(this.form.nombre_completo || '')
     } as Tercero;
   }
 
-  private async postTercero(tercero: Tercero) {
+  private async postEmpleado(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.post(`${bffApiUrl}/api/terceros`, this.toApiPayload(tercero), {
+    await lastValueFrom(this.http.post(`${bffApiUrl}/api/empleados`, this.toApiPayload(tercero), {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
@@ -185,10 +217,10 @@ export class EmpleadosComponent implements OnInit {
 
     try {
       const token = await this.auth.getAccessToken();
-      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/terceros`, {
+      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/empleados`, {
         headers: { Authorization: `Bearer ${token}` }
       }));
-      this.empleados = this.extractPayload<Tercero>(response).filter(item => item.rol === 'EMPLEADO');
+      this.empleados = this.extractPayload<any>(response).map((item, index) => this.fromApiEmpleado(item, index));
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudieron cargar los empleados.');
     } finally {
@@ -204,17 +236,16 @@ export class EmpleadosComponent implements OnInit {
         lastValueFrom(this.http.get(`${bffApiUrl}/api/empresas`, { headers: { Authorization: `Bearer ${token}` } }))
       ]);
 
-      const comunas = this.extractPayload<Comuna>(comunasResponse);
-      const empresas = this.extractPayload<Empresa>(empresasResponse);
+      const comunas = this.extractPayload<any>(comunasResponse);
+      const empresas = this.extractPayload<any>(empresasResponse);
       if (comunas.length) {
-        this.comunas = comunas.map(comuna => ({
-          ...comuna,
-          region_id: (comuna as any).region_id ?? (comuna as any).regionId ?? this.getRegionIdByComunaNombre(comuna.nombre)
-        }));
+        this.comunas = comunas.map((comuna, index) => this.fromApiComuna(comuna, index));
+        this.form.comuna_id = this.comunas[0]?.id || 1;
+        this.form.region_id = this.comunas[0]?.region_id || 1;
       }
       if (empresas.length) {
-        this.empresas = empresas;
-        this.form.empresa_id = empresas[0].id;
+        this.empresas = empresas.map((empresa, index) => this.fromApiEmpresa(empresa, index));
+        this.form.empresa_id = this.empresas[0].id;
       }
     } catch (error) {
       console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
@@ -226,16 +257,16 @@ export class EmpleadosComponent implements OnInit {
     return Array.isArray(payload) ? payload : [];
   }
 
-  private async putTercero(tercero: Tercero) {
+  private async putEmpleado(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.put(`${bffApiUrl}/api/terceros/${tercero.uuid}`, this.toApiPayload(tercero), {
+    await lastValueFrom(this.http.put(`${bffApiUrl}/api/empleados/${tercero.uuid}`, this.toApiPayload(tercero), {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
 
-  private async patchTerceroDesactivar(tercero: Tercero) {
+  private async patchEmpleadoDesactivar(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.patch(`${bffApiUrl}/api/terceros/${tercero.uuid}/desactivar`, {}, {
+    await lastValueFrom(this.http.patch(`${bffApiUrl}/api/empleados/${tercero.uuid}/desactivar`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
@@ -245,19 +276,20 @@ export class EmpleadosComponent implements OnInit {
     const empresaUuid = this.getEmpresaUuid(tercero.empresa_id);
 
     return {
-      ...tercero,
-      rol: 'EMPLEADO',
-      rut: tercero.ruc,
-      tipoPersona: tercero.tipo_persona,
+      tipoPersona: 'N',
+      rut: Number(String(tercero.ruc || '').replace(/\D/g, '')),
+      dv: tercero.dv,
       nombreCompleto: tercero.nombre_completo,
       apellidoPaterno: tercero.apellido_paterno,
       apellidoMaterno: tercero.apellido_materno,
+      nombres: tercero.nombres,
       razonSocial: tercero.razon_social,
+      nombreFantasia: tercero.nombre_fantasia,
+      email: tercero.email,
+      telefono: tercero.telefono,
+      activo: 1,
       comunaUuid: comuna?.uuid,
-      empresaUuid,
-      region_id: Number(tercero.region_id || this.getRegionIdByComuna(tercero.comuna_id)),
-      comuna_id: Number(tercero.comuna_id || 1),
-      empresa_id: Number(tercero.empresa_id || 1)
+      empresaUuid
     };
   }
 
@@ -268,6 +300,62 @@ export class EmpleadosComponent implements OnInit {
 
   private extractEmpresaFromCache(empresaId?: number): Empresa | undefined {
     return this.empresas.find(item => item.id === Number(empresaId)) ?? this.empresas[0];
+  }
+
+  private fromApiEmpleado(item: any, index: number): Tercero {
+    const comunaUuid = item.comunaUuid ?? item.comuna_uuid ?? item.comuna?.uuid;
+    const empresaUuid = item.empresaUuid ?? item.empresa_uuid ?? item.empresa?.uuid;
+    const comuna = this.comunas.find(c => c.uuid === comunaUuid);
+    const empresa = this.empresas.find(e => e.uuid === empresaUuid);
+    const nombreCompleto = item.nombreCompleto ?? item.nombre_completo ?? item.razonSocial ?? item.razon_social ?? '';
+    const tipoPersona = item.tipoPersona ?? item.tipo_persona;
+
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      apellido_paterno: item.apellidoPaterno ?? item.apellido_paterno ?? '',
+      apellido_materno: item.apellidoMaterno ?? item.apellido_materno ?? '',
+      rol: 'EMPLEADO',
+      dv: item.dv ?? '',
+      email: item.email ?? '',
+      fecha_nacimiento: item.fechaNacimiento ?? item.fecha_nacimiento,
+      nombre_completo: nombreCompleto,
+      nombre_fantasia: item.nombreFantasia ?? item.nombre_fantasia,
+      nombres: item.nombres ?? this.extractNombres(nombreCompleto),
+      razon_social: item.razonSocial ?? item.razon_social,
+      ruc: String(item.rut ?? item.ruc ?? ''),
+      telefono: item.telefono ?? '',
+      tipo_persona: tipoPersona === 'J' || tipoPersona === 'empresa' ? 'empresa' : 'persona_natural',
+      activo: item.activo === undefined || item.activo === true || item.activo === 1,
+      region_id: comuna?.region_id || this.getRegionIdByComunaNombre(item.comuna?.nombre ?? ''),
+      comuna_id: comuna?.id || Number(item.comuna_id ?? 1),
+      empresa_id: empresa?.id || Number(item.empresa_id ?? this.empresas[0]?.id ?? 1)
+    };
+  }
+
+  private fromApiComuna(item: any, index: number): Comuna {
+    const nombre = item.nombre ?? item.name ?? '';
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      codigo: String(item.codigo ?? item.code ?? index + 1),
+      nombre,
+      region_id: Number(item.region_id ?? item.regionId ?? this.getRegionIdByComunaNombre(nombre))
+    };
+  }
+
+  private fromApiEmpresa(item: any, index: number): Empresa {
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      rut: String(item.rut ?? ''),
+      dv: item.dv ?? '',
+      razon_social: item.razonSocial ?? item.razon_social ?? item.nombre ?? `Empresa ${index + 1}`,
+      activo: item.activo === undefined ? true : Boolean(item.activo),
+      usuario_id: Number(item.usuario_id ?? item.usuarioId ?? 0),
+      comuna_id: Number(item.comuna_id ?? item.comunaId ?? 1),
+      direccion: item.direccion ?? ''
+    };
   }
 
   private clearMessages() {

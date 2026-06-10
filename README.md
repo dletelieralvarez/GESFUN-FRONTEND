@@ -402,13 +402,22 @@ src/app/pages/empleados/
 
 Funcionalidad:
 
-- Lista terceros con rol `EMPLEADO`.
-- Permite crear, editar y eliminar empleados.
+- Lista empleados desde el BFF.
+- Permite crear y editar empleados.
+- Permite desactivar empleados mediante desactivacion logica.
 - Mantiene el rol fijo como `Empleado`; no se puede seleccionar otro rol.
+- Mantiene el tipo de persona fijo como `Persona natural`.
 - Permite seleccionar region y comuna.
-- Maneja datos generales como nombre, RUT, email, telefono, empresa y tipo de persona.
-
-Importante: estos cambios son locales en memoria.
+- Maneja datos generales como nombre, RUT, email, telefono y empresa.
+- Muestra estado `Activo` o `Desactivado`.
+- Bloquea la edicion de empleados desactivados.
+- Usa confirmacion visual inline para desactivar, sin `alert` ni `confirm` nativo del navegador.
+- Se conecta al BFF por endpoints especificos de empleados:
+  - `GET /api/empleados`
+  - `POST /api/empleados`
+  - `PUT /api/empleados/{uuid}`
+  - `PATCH /api/empleados/{uuid}/desactivar`
+- El BFF reenvia al backend real y aplica el rol `EMPLEADO`.
 
 ### 6.9 Proveedores
 
@@ -420,13 +429,22 @@ src/app/pages/proveedores/
 
 Funcionalidad:
 
-- Lista terceros con rol `PROVEEDOR`.
-- Permite crear, editar y eliminar proveedores.
+- Lista proveedores desde el BFF.
+- Permite crear y editar proveedores.
+- Permite desactivar proveedores mediante desactivacion logica.
 - Mantiene el rol fijo como `Proveedor`; no se puede seleccionar otro rol.
 - Permite seleccionar region y comuna.
 - Maneja datos generales como razon social/nombre, RUT, email, telefono, empresa y tipo de persona.
-
-Importante: estos cambios son locales en memoria.
+- Permite elegir si el proveedor es empresa o persona natural.
+- Muestra estado `Activo` o `Desactivado`.
+- Bloquea la edicion de proveedores desactivados.
+- Usa confirmacion visual inline para desactivar, sin `alert` ni `confirm` nativo del navegador.
+- Se conecta al BFF por endpoints especificos de proveedores:
+  - `GET /api/proveedores`
+  - `POST /api/proveedores`
+  - `PUT /api/proveedores/{uuid}`
+  - `PATCH /api/proveedores/{uuid}/desactivar`
+- El BFF reenvia al backend real y aplica el rol `PROVEEDOR`.
 
 ### 6.10 Productos Y Servicios
 
@@ -622,32 +640,32 @@ getProfile() {
 }
 ```
 
-## 10. Interceptor HTTP
+## 10. Envio de token al BFF
 
 Ubicacion:
 
 ```text
-src/app/app.module.ts
+src/app/services/auth.service.ts
 ```
 
 Responsabilidades:
 
-- Configurar `MsalInterceptor` oficial de `@azure/msal-angular`.
-- Proteger el recurso `http://localhost:8081`.
-- Asociar el recurso al scope del BFF.
-- Adjuntar automaticamente:
+- Obtener access token para el scope del BFF.
+- Intentar primero `acquireTokenSilent`.
+- Usar `acquireTokenPopup` como fallback cuando MSAL requiere interaccion o cuando ocurre `monitor_window_timeout`.
+- Entregar el token a los componentes para llamar al BFF con:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Solo se agrega token cuando la peticion apunta a:
+El proyecto no usa `MsalInterceptor` para el BFF en este momento. Las llamadas protegidas envian el header `Authorization` de forma explicita desde cada modulo que consume:
 
 ```text
 http://localhost:8081
 ```
 
-Las peticiones a otros destinos pasan sin modificacion.
+Este ajuste evita una doble adquisicion de token: una desde el componente y otra desde el interceptor. Esa doble adquisicion podia provocar errores de MSAL como `monitor_window_timeout`.
 
 ## 11. Configuracion esperada del backend BFF
 
@@ -691,15 +709,15 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `PUT /api/terceros/{uuid}`
   - `PATCH /api/terceros/{uuid}/desactivar`
 - `EmpleadosComponent`
-  - `GET /api/terceros`
-  - `POST /api/terceros`
-  - `PUT /api/terceros/{uuid}`
-  - `PATCH /api/terceros/{uuid}/desactivar`
+  - `GET /api/empleados`
+  - `POST /api/empleados`
+  - `PUT /api/empleados/{uuid}`
+  - `PATCH /api/empleados/{uuid}/desactivar`
 - `ProveedoresComponent`
-  - `GET /api/terceros`
-  - `POST /api/terceros`
-  - `PUT /api/terceros/{uuid}`
-  - `PATCH /api/terceros/{uuid}/desactivar`
+  - `GET /api/proveedores`
+  - `POST /api/proveedores`
+  - `PUT /api/proveedores/{uuid}`
+  - `PATCH /api/proveedores/{uuid}/desactivar`
 - `ProductosServiciosComponent`
   - `GET /api/productos-servicios`
   - `POST /api/productos-servicios`
@@ -718,6 +736,8 @@ Esto permite enviar al backend los campos esperados por contrato:
 - `empresaUuid`
 
 Las ediciones de terceros y productos/servicios se realizan por `uuid`, no por `id` numerico.
+
+En empleados y proveedores, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un empleado o proveedor queda desactivado, el frontend mantiene el registro visible, muestra el estado `Desactivado` y bloquea la edicion.
 
 ## 12. Estado del callback de autenticacion
 

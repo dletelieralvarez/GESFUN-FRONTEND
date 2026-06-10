@@ -16,6 +16,7 @@ export interface Tercero {
   ruc?: string;
   telefono: string;
   tipo_persona: 'persona_natural' | 'empresa';
+  activo?: boolean;
   region_id?: number;
   comuna_id: number;
   empresa_id: number;

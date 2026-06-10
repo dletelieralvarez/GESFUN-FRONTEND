@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -24,16 +24,9 @@ import { FacturacionComponent } from './pages/facturacion/facturacion.component'
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { UiModule } from './ui/ui.module';
-import { MsalInterceptor, MsalInterceptorConfiguration, MsalModule, MsalRedirectComponent } from '@azure/msal-angular';
+import { MsalModule, MsalRedirectComponent } from '@azure/msal-angular';
 import { PublicClientApplication, InteractionType } from '@azure/msal-browser';
-import { bffApiScope, bffApiUrl, loginRequest, msalConfig } from './auth-config';
-
-const msalInterceptorConfig: MsalInterceptorConfiguration = {
-  interactionType: InteractionType.Redirect,
-  protectedResourceMap: new Map<string, string[]>([
-    [bffApiUrl, [bffApiScope]]
-  ])
-};
+import { loginRequest, msalConfig } from './auth-config';
 
 @NgModule({
   declarations: [
@@ -66,11 +59,12 @@ const msalInterceptorConfig: MsalInterceptorConfiguration = {
     MsalModule.forRoot(new PublicClientApplication(msalConfig), {
       interactionType: InteractionType.Redirect,
       authRequest: loginRequest
-    }, msalInterceptorConfig)
+    }, {
+      interactionType: InteractionType.Redirect,
+      protectedResourceMap: new Map()
+    })
   ],
-  providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: MsalInterceptor, multi: true }
-  ],
+  providers: [],
   bootstrap: [AppComponent, MsalRedirectComponent]
 })
 export class AppModule { }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { MsalService } from '@azure/msal-angular';
-import { AccountInfo, AuthenticationResult, InteractionRequiredAuthError } from '@azure/msal-browser';
+import { AccountInfo, InteractionRequiredAuthError } from '@azure/msal-browser';
 import { lastValueFrom } from 'rxjs';
 import { bffApiScope, bffApiUrl, loginRequest, redirectUri } from '../auth-config';
 
@@ -73,12 +73,14 @@ export class AuthService {
       throw new Error('No hay usuario autenticado');
     }
 
+    const request = { scopes: [bffApiScope], account, redirectUri };
+
     try {
-      const result = await lastValueFrom(this.msalService.acquireTokenSilent({ scopes: [bffApiScope], account, redirectUri }));
+      const result = await lastValueFrom(this.msalService.acquireTokenSilent(request));
       return result.accessToken;
     } catch (error) {
-      if (error instanceof InteractionRequiredAuthError) {
-        const result = await lastValueFrom(this.msalService.acquireTokenPopup({ scopes: [bffApiScope], account, redirectUri }));
+      if (this.requiresInteractiveToken(error)) {
+        const result = await lastValueFrom(this.msalService.acquireTokenPopup(request));
         return result.accessToken;
       }
       throw error;
@@ -100,5 +102,18 @@ export class AuthService {
       this.msalService.instance.setActiveAccount(account);
     }
     return account;
+  }
+
+  private requiresInteractiveToken(error: unknown) {
+    const authError = error as { errorCode?: string; message?: string };
+    const errorCode = authError?.errorCode || '';
+    const message = authError?.message || '';
+
+    return error instanceof InteractionRequiredAuthError
+      || errorCode === 'monitor_window_timeout'
+      || errorCode === 'token_renewal_error'
+      || errorCode === 'consent_required'
+      || errorCode === 'interaction_required'
+      || message.includes('monitor_window_timeout');
   }
 }
