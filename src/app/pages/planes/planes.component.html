@@ -1,13 +1,41 @@
 <div class="content-wrap">
   <app-page-head title="Planes" sub="{{ titleCount }} planes registrados">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()" [disabled]="loading || saving"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
   </app-page-head>
 
+  <div class="status-stack" *ngIf="loading || error || success || planPendingDeactivate">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Procesando planes...</span>
+    </div>
+
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+
+    <div class="delete-confirm" *ngIf="planPendingDeactivate">
+      <div>
+        <strong>Desactivar plan</strong>
+        <span>{{ planPendingDeactivate.nombre }} - {{ getSucursalName(planPendingDeactivate.sucursal_id) }}</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" type="button" (click)="confirmDeactivatePlan()" [disabled]="loading">Desactivar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelDeactivate()" [disabled]="loading">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="row gy-3">
-    <div class="col-lg-7">
+    <div [ngClass]="formVisible ? 'col-xl-7' : 'col-12'">
       <div class="card">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 admin-crud-table">
             <thead>
               <tr>
                 <th class="ps-4">Plan</th>
@@ -30,8 +58,8 @@
                 <td><app-badge [cls]="plan.activo ? 'b-ok' : 'b-neutral'">{{ plan.activo ? 'Si' : 'No' }}</app-badge></td>
                 <td class="pe-4">
                   <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(plan)">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(plan)">Eliminar</button>
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">Desactivar</button>
                   </div>
                 </td>
               </tr>
@@ -41,7 +69,7 @@
       </div>
     </div>
 
-    <div class="col-lg-5" *ngIf="formVisible">
+    <div class="col-xl-5" *ngIf="formVisible">
       <div class="card p-4">
         <h5 class="mb-3">{{ isEditing ? 'Editar plan' : 'Nuevo plan' }}</h5>
 
@@ -85,7 +113,7 @@
             </div>
           </div>
 
-          <button class="btn btn-outline-primary w-100 mb-3" type="button" (click)="addKitItem()">
+          <button class="btn btn-outline-primary w-100 mb-3" type="button" (click)="addKitItem()" [disabled]="saving">
             <i class="bi bi-plus-lg"></i> Agregar al plan
           </button>
 
@@ -110,7 +138,7 @@
                   </td>
                   <td class="text-end tnum fw-semibold">{{ clp(item.total) }}</td>
                   <td class="text-end">
-                    <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar">
+                    <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar" [disabled]="saving">
                       <i class="bi bi-x-lg"></i>
                     </button>
                   </td>
@@ -133,8 +161,8 @@
         </div>
 
         <div class="d-flex gap-2">
-          <button class="btn btn-primary w-100" type="button" (click)="save()">Guardar</button>
-          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()">Cancelar</button>
+          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
+          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
         </div>
       </div>
     </div>

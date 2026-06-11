@@ -497,16 +497,40 @@ src/app/pages/planes/
 
 Funcionalidad:
 
-- Administra planes asociados a una sucursal.
-- Permite crear, editar y eliminar planes.
-- Permite armar el plan seleccionando productos o servicios desde `PRODUCTOS_SERVICIOS`.
+- Administra planes asociados a una sucursal desde el BFF.
+- Permite crear y editar planes.
+- Permite desactivar planes mediante desactivacion logica.
+- Permite armar el plan seleccionando productos o servicios desde el catalogo del BFF.
 - Permite definir cantidad por item.
 - Calcula unitario y total por item.
 - Calcula automaticamente el total del plan a partir del kit.
 - Mantiene una estructura equivalente a `PLAN` y `PLAN_KIT` del modelo de datos.
-- Permite activar/desactivar el plan.
-
-Importante: estos cambios son locales en memoria.
+- Carga catalogos auxiliares desde:
+  - `GET /api/sucursales`
+  - `GET /api/productos-servicios`
+- Se conecta al BFF por endpoints especificos de planes:
+  - `GET /api/planes`
+  - `POST /api/planes`
+  - `PUT /api/planes/{uuid}`
+  - `PATCH /api/planes/{uuid}/desactivar`
+- Sincroniza el kit del plan con:
+  - `GET /api/plan-kit/plan/{planUuid}`
+  - `POST /api/plan-kit`
+  - `PUT /api/plan-kit/{uuid}`
+  - `DELETE /api/plan-kit/{uuid}`
+- Envia al BFF el contrato esperado para `PLAN`:
+  - `nombre`
+  - `descripcion`
+  - `activo`
+  - `sucursalUuid`
+- Envia al BFF el contrato esperado para `PLAN_KIT`:
+  - `cantidad`
+  - `unitario`
+  - `observacion`
+  - `activo`
+  - `productoServicioUuid`
+  - `planUuid`
+- Muestra los planes desactivados y bloquea su edicion.
 
 ### 6.12 Usuarios
 
@@ -746,6 +770,15 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `POST /api/productos-servicios`
   - `PUT /api/productos-servicios/{uuid}`
   - `PATCH /api/productos-servicios/{uuid}/desactivar`
+- `PlanesComponent`
+  - `GET /api/planes`
+  - `POST /api/planes`
+  - `PUT /api/planes/{uuid}`
+  - `PATCH /api/planes/{uuid}/desactivar`
+  - `GET /api/plan-kit/plan/{planUuid}`
+  - `POST /api/plan-kit`
+  - `PUT /api/plan-kit/{uuid}`
+  - `DELETE /api/plan-kit/{uuid}`
 
 Los modulos de terceros cargan ademas:
 
@@ -805,9 +838,9 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 ## 15. Limitaciones actuales
 
 - Algunos modulos siguen usando datos mock/locales.
-- Los CRUD de usuarios, clientes, empleados, proveedores y productos/servicios ya pasan por BFF.
+- Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios y planes ya pasan por BFF.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
-- Los CRUD de planes y sucursales aun funcionan en memoria y se pierden al recargar.
+- El CRUD de sucursales aun funciona en memoria y se pierde al recargar.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
 - Las pruebas unitarias son las generadas/base y no cubren todavia todos los flujos de negocio.

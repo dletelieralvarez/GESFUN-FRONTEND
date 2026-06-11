@@ -1,1 +1,91 @@
+.status-stack {
+  display: grid;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
 
+.status-message {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-left-width: 4px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 46, 35, .05);
+  color: #24352d;
+  display: flex;
+  gap: .65rem;
+  padding: .8rem .95rem;
+}
+
+.status-message i {
+  font-size: 1rem;
+}
+
+.status-loading {
+  border-left-color: #6b7f75;
+}
+
+.status-success {
+  border-left-color: #3e7a59;
+}
+
+.status-success i {
+  color: #3e7a59;
+}
+
+.status-error {
+  background: #fff9f8;
+  border-color: #f0d8d4;
+  border-left-color: #ba4a42;
+  color: #7a241f;
+}
+
+.status-error i {
+  color: #ba4a42;
+}
+
+.delete-confirm {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-left: 4px solid #ba4a42;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 46, 35, .05);
+  color: #24352d;
+  display: flex;
+  gap: .65rem;
+  justify-content: space-between;
+  padding: .8rem .95rem;
+}
+
+.delete-confirm strong,
+.delete-confirm span {
+  display: block;
+}
+
+.delete-confirm span {
+  color: #6c7a72;
+  font-size: .85rem;
+  margin-top: .15rem;
+}
+
+.admin-crud-table {
+  min-width: 920px;
+}
+
+.admin-crud-table th:first-child,
+.admin-crud-table td:first-child {
+  min-width: 280px;
+}
+
+.admin-crud-table th:last-child,
+.admin-crud-table td:last-child {
+  min-width: 150px;
+}
+
+@media (max-width: 576px) {
+  .delete-confirm {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
