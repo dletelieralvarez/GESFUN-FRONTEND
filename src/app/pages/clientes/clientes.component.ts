@@ -23,18 +23,19 @@ export class ClientesComponent implements OnInit {
   formVisible = false;
   isEditing = false;
   selectedCliente: Tercero | null = null;
+  clientePendingDeactivate: Tercero | null = null;
 
   form: Partial<Tercero> = this.createEmptyForm();
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
-  ngOnInit() {
-    this.loadCatalogos();
-    this.loadClientes();
+  async ngOnInit() {
+    await this.loadCatalogos();
+    await this.loadClientes();
   }
 
   trackById(index: number, item: Tercero) {
-    return item.id;
+    return item.uuid || item.id;
   }
 
   get titleCount() {
@@ -47,6 +48,7 @@ export class ClientesComponent implements OnInit {
 
   openNew() {
     this.clearMessages();
+    this.clientePendingDeactivate = null;
     this.isEditing = false;
     this.selectedCliente = null;
     this.form = this.createEmptyForm();
@@ -55,32 +57,56 @@ export class ClientesComponent implements OnInit {
 
   edit(cliente: Tercero) {
     this.clearMessages();
+    this.clientePendingDeactivate = null;
+    if (!this.isClienteActivo(cliente)) {
+      this.error = 'No se puede editar un cliente desactivado.';
+      return;
+    }
     this.isEditing = true;
     this.selectedCliente = cliente;
     this.form = { ...cliente, rol: 'CLIENTE', region_id: cliente.region_id || this.getRegionIdByComuna(cliente.comuna_id) };
     this.formVisible = true;
   }
 
-  async delete(cliente: Tercero) {
-    if (!confirm(`Eliminar cliente ${cliente.nombre_completo}?`)) {
+  delete(cliente: Tercero) {
+    if (!this.isClienteActivo(cliente)) {
+      this.error = 'El cliente ya esta desactivado.';
       return;
     }
 
+    this.formVisible = false;
+    this.isEditing = false;
+    this.selectedCliente = null;
+    this.clientePendingDeactivate = cliente;
+    this.clearMessages();
+  }
+
+  async confirmDeactivateCliente() {
+    if (!this.clientePendingDeactivate) {
+      return;
+    }
+
+    const cliente = this.clientePendingDeactivate;
     this.loading = true;
     this.clearMessages();
 
     try {
-      await this.patchTerceroDesactivar(cliente);
-      this.clientes = this.clientes.filter(c => c.id !== cliente.id);
-      this.success = 'Cliente eliminado correctamente.';
-      if (this.selectedCliente?.id === cliente.id) {
+      await this.patchClienteDesactivar(cliente);
+      await this.loadClientes();
+      this.success = 'Cliente desactivado correctamente.';
+      if (this.selectedCliente?.uuid === cliente.uuid) {
         this.cancel();
       }
+      this.clientePendingDeactivate = null;
     } catch (err: any) {
-      this.error = this.getErrorMessage(err, 'No se pudo eliminar el cliente.');
+      this.error = this.getErrorMessage(err, 'No se pudo desactivar el cliente.');
     } finally {
       this.loading = false;
     }
+  }
+
+  cancelDeactivate() {
+    this.clientePendingDeactivate = null;
   }
 
   async save() {
@@ -97,11 +123,11 @@ export class ClientesComponent implements OnInit {
     try {
       if (this.isEditing && this.selectedCliente) {
         const updated: Tercero = { ...this.selectedCliente, ...result, rol: 'CLIENTE' };
-        await this.putTercero(updated);
+        await this.putCliente(updated);
         await this.loadClientes();
         this.success = 'Cliente actualizado correctamente.';
       } else {
-        await this.postTercero(result);
+        await this.postCliente(result);
         await this.loadClientes();
         this.success = 'Cliente creado correctamente.';
       }
@@ -118,11 +144,16 @@ export class ClientesComponent implements OnInit {
     this.formVisible = false;
     this.isEditing = false;
     this.selectedCliente = null;
+    this.clientePendingDeactivate = null;
     this.form = this.createEmptyForm();
   }
 
   formatRut(cliente: Tercero) {
     return cliente.dv ? `${cliente.ruc}-${cliente.dv}` : cliente.ruc;
+  }
+
+  isClienteActivo(cliente: Tercero) {
+    return cliente.activo !== false;
   }
 
   getComunaName(id?: number) {
@@ -157,9 +188,10 @@ export class ClientesComponent implements OnInit {
       dv: '',
       email: '',
       telefono: '',
+      activo: true,
       region_id: 1,
       comuna_id: 1,
-      empresa_id: 1
+      empresa_id: this.empresas[0]?.id || 1
     };
   }
 
@@ -167,6 +199,7 @@ export class ClientesComponent implements OnInit {
     return {
       ...this.form,
       tipo_persona: this.form.tipo_persona || 'persona_natural',
+      activo: true,
       razon_social: this.form.tipo_persona === 'empresa' ? this.form.nombre_completo || undefined : this.form.razon_social,
       rol: 'CLIENTE',
       region_id: this.form.region_id || this.getRegionIdByComuna(this.form.comuna_id),
@@ -176,9 +209,9 @@ export class ClientesComponent implements OnInit {
     } as Tercero;
   }
 
-  private async postTercero(tercero: Tercero) {
+  private async postCliente(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.post(`${bffApiUrl}/api/terceros`, this.toApiPayload(tercero), {
+    await lastValueFrom(this.http.post(`${bffApiUrl}/api/clientes`, this.toApiPayload(tercero), {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
@@ -189,10 +222,10 @@ export class ClientesComponent implements OnInit {
 
     try {
       const token = await this.auth.getAccessToken();
-      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/terceros`, {
+      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/clientes`, {
         headers: { Authorization: `Bearer ${token}` }
       }));
-      this.clientes = this.extractPayload<Tercero>(response).filter(item => item.rol === 'CLIENTE');
+      this.clientes = this.extractPayload<any>(response).map((item, index) => this.fromApiCliente(item, index));
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudieron cargar los clientes.');
     } finally {
@@ -208,17 +241,16 @@ export class ClientesComponent implements OnInit {
         lastValueFrom(this.http.get(`${bffApiUrl}/api/empresas`, { headers: { Authorization: `Bearer ${token}` } }))
       ]);
 
-      const comunas = this.extractPayload<Comuna>(comunasResponse);
-      const empresas = this.extractPayload<Empresa>(empresasResponse);
+      const comunas = this.extractPayload<any>(comunasResponse);
+      const empresas = this.extractPayload<any>(empresasResponse);
       if (comunas.length) {
-        this.comunas = comunas.map(comuna => ({
-          ...comuna,
-          region_id: (comuna as any).region_id ?? (comuna as any).regionId ?? this.getRegionIdByComunaNombre(comuna.nombre)
-        }));
+        this.comunas = comunas.map((comuna, index) => this.fromApiComuna(comuna, index));
+        this.form.comuna_id = this.comunas[0]?.id || 1;
+        this.form.region_id = this.comunas[0]?.region_id || 1;
       }
       if (empresas.length) {
-        this.empresas = empresas;
-        this.form.empresa_id = empresas[0].id;
+        this.empresas = empresas.map((empresa, index) => this.fromApiEmpresa(empresa, index));
+        this.form.empresa_id = this.empresas[0].id;
       }
     } catch (error) {
       console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
@@ -230,16 +262,16 @@ export class ClientesComponent implements OnInit {
     return Array.isArray(payload) ? payload : [];
   }
 
-  private async putTercero(tercero: Tercero) {
+  private async putCliente(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.put(`${bffApiUrl}/api/terceros/${tercero.uuid}`, this.toApiPayload(tercero), {
+    await lastValueFrom(this.http.put(`${bffApiUrl}/api/clientes/${tercero.uuid}`, this.toApiPayload(tercero), {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
 
-  private async patchTerceroDesactivar(tercero: Tercero) {
+  private async patchClienteDesactivar(tercero: Tercero) {
     const token = await this.auth.getAccessToken();
-    await lastValueFrom(this.http.patch(`${bffApiUrl}/api/terceros/${tercero.uuid}/desactivar`, {}, {
+    await lastValueFrom(this.http.patch(`${bffApiUrl}/api/clientes/${tercero.uuid}/desactivar`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     }));
   }
@@ -249,19 +281,76 @@ export class ClientesComponent implements OnInit {
     const empresa = this.empresas.find(item => item.id === Number(tercero.empresa_id)) ?? this.empresas[0];
 
     return {
-      ...tercero,
-      rol: 'CLIENTE',
-      rut: tercero.ruc,
-      tipoPersona: tercero.tipo_persona,
+      tipoPersona: tercero.tipo_persona === 'empresa' ? 'J' : 'N',
+      rut: Number(String(tercero.ruc || '').replace(/\D/g, '')),
+      dv: tercero.dv,
       nombreCompleto: tercero.nombre_completo,
       apellidoPaterno: tercero.apellido_paterno,
       apellidoMaterno: tercero.apellido_materno,
+      nombres: tercero.nombres,
       razonSocial: tercero.razon_social,
+      nombreFantasia: tercero.nombre_fantasia,
+      email: tercero.email,
+      telefono: tercero.telefono,
+      activo: 1,
       comunaUuid: comuna?.uuid,
-      empresaUuid: empresa?.uuid,
-      region_id: Number(tercero.region_id || this.getRegionIdByComuna(tercero.comuna_id)),
-      comuna_id: Number(tercero.comuna_id || 1),
-      empresa_id: Number(tercero.empresa_id || 1)
+      empresaUuid: empresa?.uuid
+    };
+  }
+
+  private fromApiCliente(item: any, index: number): Tercero {
+    const comunaUuid = item.comunaUuid ?? item.comuna_uuid ?? item.comuna?.uuid;
+    const empresaUuid = item.empresaUuid ?? item.empresa_uuid ?? item.empresa?.uuid;
+    const comuna = this.comunas.find(c => c.uuid === comunaUuid);
+    const empresa = this.empresas.find(e => e.uuid === empresaUuid);
+    const nombreCompleto = item.nombreCompleto ?? item.nombre_completo ?? item.razonSocial ?? item.razon_social ?? '';
+    const tipoPersona = item.tipoPersona ?? item.tipo_persona;
+
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      apellido_paterno: item.apellidoPaterno ?? item.apellido_paterno ?? '',
+      apellido_materno: item.apellidoMaterno ?? item.apellido_materno ?? '',
+      rol: 'CLIENTE',
+      dv: item.dv ?? '',
+      email: item.email ?? '',
+      fecha_nacimiento: item.fechaNacimiento ?? item.fecha_nacimiento,
+      nombre_completo: nombreCompleto,
+      nombre_fantasia: item.nombreFantasia ?? item.nombre_fantasia,
+      nombres: item.nombres ?? this.extractNombres(nombreCompleto),
+      razon_social: item.razonSocial ?? item.razon_social,
+      ruc: String(item.rut ?? item.ruc ?? ''),
+      telefono: item.telefono ?? '',
+      tipo_persona: tipoPersona === 'J' || tipoPersona === 'empresa' ? 'empresa' : 'persona_natural',
+      activo: item.activo === undefined || item.activo === true || item.activo === 1,
+      region_id: comuna?.region_id || this.getRegionIdByComunaNombre(item.comuna?.nombre ?? ''),
+      comuna_id: comuna?.id || Number(item.comuna_id ?? 1),
+      empresa_id: empresa?.id || Number(item.empresa_id ?? this.empresas[0]?.id ?? 1)
+    };
+  }
+
+  private fromApiComuna(item: any, index: number): Comuna {
+    const nombre = item.nombre ?? item.name ?? '';
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      codigo: String(item.codigo ?? item.code ?? index + 1),
+      nombre,
+      region_id: Number(item.region_id ?? item.regionId ?? this.getRegionIdByComunaNombre(nombre))
+    };
+  }
+
+  private fromApiEmpresa(item: any, index: number): Empresa {
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      rut: String(item.rut ?? ''),
+      dv: item.dv ?? '',
+      razon_social: item.razonSocial ?? item.razon_social ?? item.nombre ?? `Empresa ${index + 1}`,
+      activo: item.activo === undefined ? true : Boolean(item.activo),
+      usuario_id: Number(item.usuario_id ?? item.usuarioId ?? 0),
+      comuna_id: Number(item.comuna_id ?? item.comunaId ?? 1),
+      direccion: item.direccion ?? ''
     };
   }
 

@@ -372,13 +372,11 @@ src/app/pages/clientes/
 
 Funcionalidad:
 
-- Lista clientes/terceros.
-- Lista solo terceros con rol `CLIENTE`.
+- Lista clientes desde el BFF.
 - Permite crear un nuevo cliente.
 - Permite editar un cliente existente.
-- Permite eliminar un cliente con confirmacion.
+- Permite desactivar clientes mediante desactivacion logica.
 - Mantiene el rol fijo como `Cliente`; no se puede cambiar desde el formulario.
-- Maneja formulario local.
 - Valida campos minimos:
   - Nombre.
   - RUT.
@@ -387,10 +385,17 @@ Funcionalidad:
   - Telefono.
 - Formatea RUT con digito verificador.
 - Permite seleccionar region.
-- Muestra nombre de comuna desde el arreglo `COMUNAS`.
+- Muestra nombre de comuna desde el catalogo cargado desde el BFF.
 - Diferencia entre persona natural y empresa.
-
-Importante: estos cambios son locales en memoria; no se persisten todavia en backend.
+- Muestra estado `Activo` o `Desactivado`.
+- Bloquea la edicion de clientes desactivados.
+- Usa confirmacion visual inline para desactivar, sin `alert` ni `confirm` nativo del navegador.
+- Se conecta al BFF por endpoints especificos de clientes:
+  - `GET /api/clientes`
+  - `POST /api/clientes`
+  - `PUT /api/clientes/{uuid}`
+  - `PATCH /api/clientes/{uuid}/desactivar`
+- El BFF reenvia al backend real y aplica el rol `CLIENTE`.
 
 ### 6.8 Empleados
 
@@ -704,10 +709,10 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `PUT /api/usuarios/{id}`
   - `DELETE /api/usuarios/{id}`
 - `ClientesComponent`
-  - `GET /api/terceros`
-  - `POST /api/terceros`
-  - `PUT /api/terceros/{uuid}`
-  - `PATCH /api/terceros/{uuid}/desactivar`
+  - `GET /api/clientes`
+  - `POST /api/clientes`
+  - `PUT /api/clientes/{uuid}`
+  - `PATCH /api/clientes/{uuid}/desactivar`
 - `EmpleadosComponent`
   - `GET /api/empleados`
   - `POST /api/empleados`
@@ -737,7 +742,7 @@ Esto permite enviar al backend los campos esperados por contrato:
 
 Las ediciones de terceros y productos/servicios se realizan por `uuid`, no por `id` numerico.
 
-En empleados y proveedores, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un empleado o proveedor queda desactivado, el frontend mantiene el registro visible, muestra el estado `Desactivado` y bloquea la edicion.
+En clientes, empleados y proveedores, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un registro queda desactivado, el frontend lo mantiene visible, muestra el estado `Desactivado` y bloquea la edicion.
 
 ## 12. Estado del callback de autenticacion
 
