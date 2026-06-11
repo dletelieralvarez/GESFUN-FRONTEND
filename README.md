@@ -561,14 +561,29 @@ src/app/pages/sucursales/
 
 Funcionalidad:
 
-- Lista sucursales iniciales.
-- Permite crear sucursal.
-- Permite editar sucursal.
-- Permite eliminar sucursal con confirmacion.
-- Maneja codigo, nombre, direccion, telefono, empresa, comuna y estado activo.
-- Genera UUID con `crypto.randomUUID()` cuando esta disponible.
-
-Importante: estos cambios son locales en memoria.
+- Lista sucursales desde el BFF.
+- Permite crear y editar sucursales.
+- Permite desactivar sucursales mediante desactivacion logica.
+- Maneja codigo, nombre, direccion, telefono, empresa, region, comuna y estado activo.
+- Carga catalogos auxiliares desde:
+  - `GET /api/comunas`
+  - `GET /api/empresas`
+- Se conecta al BFF por endpoints especificos de sucursales:
+  - `GET /api/sucursales`
+  - `POST /api/sucursales`
+  - `PUT /api/sucursales/{uuid}`
+  - `PATCH /api/sucursales/{uuid}/desactivar`
+- Envia al BFF el contrato esperado:
+  - `codigo`
+  - `nombre`
+  - `direccion`
+  - `telefono`
+  - `activo`
+  - `empresaUuid`
+  - `comunaUuid`
+- Mantiene visibles las sucursales desactivadas y bloquea su edicion.
+- Usa confirmacion visual inline para desactivar, sin `alert` ni `confirm` nativo del navegador.
+- Conserva los UUID reales de comuna y empresa recibidos desde el BFF para evitar enviar identificadores mock al backend durante la edicion.
 
 ### 6.14 Inventario
 
@@ -779,8 +794,13 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `POST /api/plan-kit`
   - `PUT /api/plan-kit/{uuid}`
   - `DELETE /api/plan-kit/{uuid}`
+- `SucursalesComponent`
+  - `GET /api/sucursales`
+  - `POST /api/sucursales`
+  - `PUT /api/sucursales/{uuid}`
+  - `PATCH /api/sucursales/{uuid}/desactivar`
 
-Los modulos de terceros cargan ademas:
+Los modulos de terceros y sucursales cargan ademas:
 
 - `GET /api/comunas`
 - `GET /api/empresas`
@@ -793,7 +813,7 @@ Esto permite enviar al backend los campos esperados por contrato:
 
 Las ediciones de terceros y productos/servicios se realizan por `uuid`, no por `id` numerico.
 
-En clientes, empleados y proveedores, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un registro queda desactivado, el frontend lo mantiene visible, muestra el estado `Desactivado` y bloquea la edicion.
+En clientes, empleados, proveedores, productos/servicios, planes y sucursales, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un registro queda desactivado, el frontend lo mantiene visible, muestra el estado `Desactivado` y bloquea la edicion.
 
 ## 12. Estado del callback de autenticacion
 
@@ -838,9 +858,8 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 ## 15. Limitaciones actuales
 
 - Algunos modulos siguen usando datos mock/locales.
-- Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios y planes ya pasan por BFF.
+- Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes y sucursales ya pasan por BFF.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
-- El CRUD de sucursales aun funciona en memoria y se pierde al recargar.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
 - Las pruebas unitarias son las generadas/base y no cubren todavia todos los flujos de negocio.
@@ -867,4 +886,4 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, envio de bearer token al BFF desde `AuthService`, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF y administracion de planes armables con kit de items.
 
-La siguiente etapa natural es conectar cada modulo con endpoints reales y proteger las rutas internas con autenticacion obligatoria.
+La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

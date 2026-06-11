@@ -1,3 +1,133 @@
-.page-head {
+.status-stack {
+  display: grid;
+  gap: .75rem;
   margin-bottom: 1rem;
+}
+
+.status-message {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-left-width: 4px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 46, 35, .05);
+  color: #24352d;
+  display: flex;
+  gap: .65rem;
+  padding: .8rem .95rem;
+}
+
+.status-message i {
+  font-size: 1rem;
+}
+
+.status-loading {
+  border-left-color: #6b7f75;
+}
+
+.status-success {
+  border-left-color: #3e7a59;
+}
+
+.status-success i {
+  color: #3e7a59;
+}
+
+.status-error {
+  background: #fff9f8;
+  border-color: #f0d8d4;
+  border-left-color: #ba4a42;
+  color: #7a241f;
+}
+
+.status-error i {
+  color: #ba4a42;
+}
+
+.delete-confirm {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-left: 4px solid #ba4a42;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 46, 35, .05);
+  color: #24352d;
+  display: flex;
+  gap: .65rem;
+  justify-content: space-between;
+  padding: .8rem .95rem;
+}
+
+.delete-confirm strong,
+.delete-confirm span {
+  display: block;
+}
+
+.delete-confirm span {
+  color: #6c7a72;
+  font-size: .85rem;
+  margin-top: .15rem;
+}
+
+.admin-crud-layout {
+  align-items: flex-start;
+}
+
+.admin-side-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+.side-panel-icon {
+  align-items: center;
+  background: #eaf3ee;
+  border-radius: 8px;
+  color: #34714f;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.form-label {
+  color: #24352d;
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.form-control,
+.form-select {
+  min-height: 42px;
+}
+
+.admin-crud-table {
+  min-width: 1080px;
+}
+
+.admin-crud-table th:first-child,
+.admin-crud-table td:first-child {
+  min-width: 270px;
+}
+
+.admin-crud-table th:nth-child(6),
+.admin-crud-table td:nth-child(6) {
+  min-width: 180px;
+}
+
+.admin-crud-table th:last-child,
+.admin-crud-table td:last-child {
+  min-width: 150px;
+}
+
+@media (max-width: 576px) {
+  .delete-confirm {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .admin-side-panel {
+    position: static;
+  }
 }
