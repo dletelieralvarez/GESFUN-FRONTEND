@@ -461,13 +461,31 @@ src/app/pages/productos-servicios/
 
 Funcionalidad:
 
-- Administra el maestro `PRODUCTO_SERVICIO`.
-- Permite crear, editar y eliminar productos o servicios.
+- Administra el maestro `PRODUCTO_SERVICIO` desde el BFF.
+- Permite crear y editar productos o servicios.
+- Permite desactivar productos o servicios mediante desactivacion logica.
 - Soporta ejemplos como ataudes, cirios, libro de condolencias, flores y servicios de cafeteria.
-- Maneja tipo de item (`producto` o `servicio`), codigo, nombre, descripcion, precio, categoria, unidad de medida, empresa, estado activo y afecto.
+- Maneja tipo de item (`producto` o `servicio`), codigo, nombre, descripcion, precio, categoria visual, unidad de medida, empresa, estado activo y afecto.
 - Sirve como catalogo base para armar planes.
-
-Importante: estos cambios son locales en memoria.
+- Carga catalogos auxiliares desde:
+  - `GET /api/unidades-medida`
+  - `GET /api/empresas`
+- Se conecta al BFF por endpoints especificos de productos y servicios:
+  - `GET /api/productos-servicios`
+  - `POST /api/productos-servicios`
+  - `PUT /api/productos-servicios/{uuid}`
+  - `PATCH /api/productos-servicios/{uuid}/desactivar`
+- Envia al BFF el contrato esperado:
+  - `tipoItem`
+  - `codigo`
+  - `nombre`
+  - `descripcion`
+  - `precio`
+  - `activo`
+  - `afecto`
+  - `unidadMedidaUuid`
+  - `empresaUuid`
+- Muestra los registros desactivados y bloquea su edicion.
 
 ### 6.11 Planes
 
@@ -788,6 +806,7 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores y productos/servicios ya pasan por BFF.
+- El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - Los CRUD de planes y sucursales aun funcionan en memoria y se pierden al recargar.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.

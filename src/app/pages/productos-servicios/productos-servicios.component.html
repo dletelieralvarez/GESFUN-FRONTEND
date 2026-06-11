@@ -3,21 +3,46 @@
     <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()" [disabled]="loading || saving"><i class="bi bi-plus-lg"></i>Nuevo item</button>
   </app-page-head>
 
-  <div class="status-message status-loading" *ngIf="loading">Procesando productos y servicios...</div>
-  <div class="status-message status-error" *ngIf="error">{{ error }}</div>
-  <div class="status-message status-success" *ngIf="success">{{ success }}</div>
+  <div class="status-stack" *ngIf="loading || error || success || itemPendingDeactivate">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Procesando productos y servicios...</span>
+    </div>
+
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+
+    <div class="delete-confirm" *ngIf="itemPendingDeactivate">
+      <div>
+        <strong>Desactivar item</strong>
+        <span>{{ itemPendingDeactivate.codigo }} - {{ itemPendingDeactivate.nombre }}</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" type="button" (click)="confirmDeactivateItem()" [disabled]="loading">Desactivar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelDeactivate()" [disabled]="loading">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
   <div class="row gy-3">
-    <div class="col-lg-8">
+    <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
       <div class="card">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 admin-crud-table">
             <thead>
               <tr>
                 <th class="ps-4">Código</th>
                 <th>Nombre</th>
                 <th>Tipo</th>
                 <th>Categoría</th>
+                <th>Unidad</th>
                 <th class="text-end">Precio</th>
                 <th>Activo</th>
                 <th>Afecto</th>
@@ -33,13 +58,14 @@
                 </td>
                 <td><app-badge cls="b-neutral">{{ item.tipo_item === 'producto' ? 'Producto' : 'Servicio' }}</app-badge></td>
                 <td class="text-body-secondary">{{ item.categoria }}</td>
+                <td class="text-body-secondary">{{ getUnidadMedidaNombre(item.unidad_medida_id) }}</td>
                 <td class="text-end tnum fw-bold">{{ clp(item.precio) }}</td>
                 <td><app-badge [cls]="item.activo ? 'b-ok' : 'b-neutral'">{{ item.activo ? 'Sí' : 'No' }}</app-badge></td>
                 <td><app-badge [cls]="item.afecto ? 'b-info' : 'b-neutral'">{{ item.afecto ? 'Sí' : 'No' }}</app-badge></td>
                 <td class="pe-4">
                   <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(item)" [disabled]="loading || saving">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(item)" [disabled]="loading || saving">Eliminar</button>
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(item)" [disabled]="loading || saving || !isItemActivo(item)">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(item)" [disabled]="loading || saving || !isItemActivo(item)">Desactivar</button>
                   </div>
                 </td>
               </tr>
@@ -49,7 +75,7 @@
       </div>
     </div>
 
-    <div class="col-lg-4" *ngIf="formVisible">
+    <div class="col-xl-4" *ngIf="formVisible">
       <div class="card p-4">
         <h5 class="mb-3">{{ isEditing ? 'Editar item' : 'Nuevo item' }}</h5>
 
@@ -88,14 +114,18 @@
             <input class="form-control" type="number" [(ngModel)]="form.precio" min="0" />
           </div>
           <div class="col-6">
-            <label class="form-label">Unidad medida ID</label>
-            <input class="form-control" type="number" [(ngModel)]="form.unidad_medida_id" min="1" />
+            <label class="form-label">Unidad medida</label>
+            <select class="form-select" [(ngModel)]="form.unidad_medida_id">
+              <option *ngFor="let unidad of unidadesMedida" [value]="unidad.id">{{ unidad.nombre }}</option>
+            </select>
           </div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Empresa ID</label>
-          <input class="form-control" type="number" [(ngModel)]="form.empresa_id" min="1" />
+          <label class="form-label">Empresa</label>
+          <select class="form-select" [(ngModel)]="form.empresa_id">
+            <option *ngFor="let empresa of empresas" [value]="empresa.id">{{ empresa.razon_social }}</option>
+          </select>
         </div>
 
         <div class="d-flex gap-3 mb-4">
