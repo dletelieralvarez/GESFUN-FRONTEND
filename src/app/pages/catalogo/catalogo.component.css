@@ -1,0 +1,7 @@
+.status-message { align-items: center; background: #fff; border: 1px solid #dfe8e2; border-left-width: 4px; border-radius: 8px; box-shadow: 0 8px 24px rgba(26, 46, 35, .05); color: #24352d; display: flex; gap: .65rem; padding: .8rem .95rem; }
+.status-loading { border-left-color: #6b7f75; }
+.status-error { background: #fff9f8; border-color: #f0d8d4; border-left-color: #ba4a42; color: #7a241f; }
+.popular-badge { background: var(--brand); color: #fff; left: 20px; top: -11px; }
+.plan-price { font-size: 1.85rem; }
+.plan-description { font-size: .84rem; overflow-wrap: break-word; }
+.plan-item { font-size: .84rem; }

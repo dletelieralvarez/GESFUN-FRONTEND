@@ -1,58 +1,75 @@
 <div class="content-wrap">
-  <app-page-head title="Servicios funerarios" sub="{{ cases.length }} servicios registrados · 4 activos esta semana">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Nuevo servicio</button>
+  <app-page-head title="Servicios funerarios" sub="{{ cases.length }} servicios registrados · {{ activeCount }} activos">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" (click)="openNew()" [disabled]="loading || saving">
+      <i class="bi bi-plus-lg"></i>Nuevo servicio
+    </button>
   </app-page-head>
 
-  <div class="d-flex justify-content-between align-items-center gap-2 mb-4 flex-wrap">
-    <app-pills [tabs]="tabs" [active]="tab" (selected)="setTab($event)"></app-pills>
-    <div class="d-flex gap-2">
-      <app-filter-chip label="Sala" value="Todas"></app-filter-chip>
-      <app-filter-chip label="Encargado" value="Todos"></app-filter-chip>
-      <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"><i class="bi bi-funnel"></i>Filtros</button>
+  <div class="status-stack" *ngIf="loading || error || success || casePendingDeactivate">
+    <div class="status-message status-loading" *ngIf="loading"><i class="bi bi-arrow-repeat"></i><span>Procesando servicios funerarios...</span></div>
+    <div class="status-message status-error" *ngIf="error"><i class="bi bi-exclamation-circle"></i><span>{{ error }}</span></div>
+    <div class="status-message status-success" *ngIf="success"><i class="bi bi-check-circle"></i><span>{{ success }}</span></div>
+    <div class="delete-confirm" *ngIf="casePendingDeactivate">
+      <div><strong>Desactivar servicio</strong><span>{{ casePendingDeactivate.folio }} - {{ casePendingDeactivate.fallecido_nombre }}</span></div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" type="button" (click)="confirmDeactivate()" [disabled]="loading">Desactivar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelDeactivate()" [disabled]="loading">Cancelar</button>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th class="ps-4">Folio</th>
-            <th>Fallecido</th>
-            <th>Familiar responsable</th>
-            <th>Plan</th>
-            <th>Sala</th>
-            <th>Velorio</th>
-            <th>Estado</th>
-            <th class="text-end pe-4">Saldo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let c of rows">
-            <td class="ps-4 tnum fw-bold text-primary">{{ c.folio }}</td>
-            <td>
-              <div class="fw-semibold">{{ c.fallecido }}</div>
-              <div class="text-secondary" style="font-size: .75rem">{{ c.rut }}</div>
-            </td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <app-avatar [name]="c.familiar" [size]="30"></app-avatar>
-                <div>
-                  <div class="fw-semibold" style="font-size: .82rem">{{ c.familiar }}</div>
-                  <div class="text-secondary" style="font-size: .72rem">{{ c.parentesco }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="text-body-secondary">{{ c.plan }}</td>
-            <td class="text-body-secondary">{{ c.sala }}</td>
-            <td class="tnum text-body-secondary">{{ c.velorio }}</td>
-            <td><app-estado-badge [estado]="c.estado"></app-estado-badge></td>
-            <td class="text-end pe-4 tnum fw-bold" [ngClass]="{ 'text-danger': c.total - c.pagado > 0, 'text-primary': c.total - c.pagado === 0 }">
-              {{ c.total - c.pagado > 0 ? clp(c.total - c.pagado) : 'Pagado' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-4 flex-wrap">
+    <app-pills [tabs]="tabs" [active]="tab" (selected)="setTab($event)"></app-pills>
+  </div>
+
+  <div class="row gy-3">
+    <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 admin-crud-table">
+            <thead><tr><th class="ps-4">Folio</th><th>Fallecido</th><th>Familiar responsable</th><th>Plan</th><th>Sala</th><th>Estado</th><th class="text-end">Saldo</th><th class="pe-4">Acciones</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of rows; trackBy: trackById">
+                <td class="ps-4 tnum fw-bold text-primary">{{ c.folio }}</td>
+                <td><div class="fw-semibold">{{ c.fallecido_nombre }}</div><div class="text-secondary small">{{ c.fallecido_rut }}</div></td>
+                <td><div class="fw-semibold">{{ c.tercero_nombre }}</div><div class="text-secondary small">{{ c.tercero_rut }}</div></td>
+                <td class="text-body-secondary">{{ c.plan_nombre }}</td>
+                <td class="text-body-secondary">{{ c.sucursal_nombre }}</td>
+                <td><app-estado-badge [estado]="c.activo ? getEstadoLabel(c.estado) : 'Desactivado'"></app-estado-badge></td>
+                <td class="text-end tnum fw-bold" [ngClass]="{ 'text-danger': getSaldo(c) > 0, 'text-primary': getSaldo(c) === 0 }">{{ getSaldo(c) > 0 ? clp(getSaldo(c)) : 'Pagado' }}</td>
+                <td class="pe-4"><div class="d-flex gap-2 justify-content-end">
+                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(c)" [disabled]="loading || saving || !c.activo">Editar</button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(c)" [disabled]="loading || saving || !c.activo">Desactivar</button>
+                </div></td>
+              </tr>
+              <tr *ngIf="!loading && rows.length === 0"><td colspan="8" class="text-center py-4">No hay servicios para este estado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4" *ngIf="formVisible">
+      <div class="card p-4">
+        <h5 class="mb-3">{{ isEditing ? 'Editar servicio funerario' : 'Nuevo servicio funerario' }}</h5>
+
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Folio</label><input class="form-control" [(ngModel)]="form.folio" placeholder="ES-2026-0001" /></div><div class="col-6"><label class="form-label">Estado</label><select class="form-select" [(ngModel)]="form.estado"><option value="pendiente">Pendiente</option><option value="programado">Programado</option><option value="en_curso">En curso</option><option value="completado">Completado</option></select></div></div>
+
+        <div class="mb-3"><label class="form-label">Familiar responsable</label><select class="form-select" [(ngModel)]="form.tercero_id"><option *ngFor="let cliente of clientes" [ngValue]="cliente.id">{{ cliente.nombre_completo }}</option></select></div>
+        <div class="mb-3"><label class="form-label">Nombre del fallecido</label><input class="form-control" [(ngModel)]="form.fallecido_nombre" /></div>
+        <div class="mb-3"><label class="form-label">RUT del fallecido</label><input class="form-control" [(ngModel)]="form.fallecido_rut" placeholder="12345678-9" /></div>
+
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Plan</label><select class="form-select" [(ngModel)]="form.suscripcion_plan_id"><option *ngFor="let plan of planes" [ngValue]="plan.id">{{ plan.nombre }}</option></select></div><div class="col-6"><label class="form-label">Sucursal / sala</label><select class="form-select" [(ngModel)]="form.sucursal_id"><option *ngFor="let sucursal of sucursales" [ngValue]="sucursal.id">{{ sucursal.nombre }}</option></select></div></div>
+
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Motivo fallecimiento</label><select class="form-select" [(ngModel)]="form.motivo_fallecimiento_id"><option [ngValue]="0">Sin especificar</option><option *ngFor="let motivo of motivos" [ngValue]="motivo.id">{{ motivo.nombre }}</option></select></div><div class="col-6"><label class="form-label">Encargado</label><select class="form-select" [(ngModel)]="form.responsable_usuario_id"><option [ngValue]="0">Sin asignar</option><option *ngFor="let responsable of responsables" [ngValue]="responsable.id">{{ responsable.nombre }}</option></select></div></div>
+
+        <div class="mb-3"><label class="form-label">Fecha de ingreso</label><input class="form-control" type="date" [(ngModel)]="form.fecha_ingreso" /></div>
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Velatorio</label><input class="form-control" type="datetime-local" [(ngModel)]="form.fecha_velatorio" /></div><div class="col-6"><label class="form-label">Ceremonia</label><input class="form-control" type="datetime-local" [(ngModel)]="form.fecha_ceremonia" /></div></div>
+        <div class="mb-3"><label class="form-label">Destino</label><input class="form-control" [(ngModel)]="form.destino" placeholder="Cementerio o crematorio" /></div>
+        <div class="row g-2 mb-4"><div class="col-6"><label class="form-label">Monto total</label><input class="form-control" type="number" min="0" [(ngModel)]="form.monto_total" /></div><div class="col-6"><label class="form-label">Monto pagado</label><input class="form-control" type="number" min="0" [(ngModel)]="form.monto_pagado" /></div></div>
+
+        <div class="d-flex gap-2"><button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button><button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button></div>
+      </div>
     </div>
   </div>
 </div>

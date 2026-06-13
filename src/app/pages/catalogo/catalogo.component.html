@@ -1,55 +1,71 @@
 <div class="content-wrap">
-  <app-page-head title="Catálogo y planes" sub="Planes de servicio y prestaciones adicionales">
-    <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
+  <app-page-head title="Catalogo y planes" sub="Planes de servicio y prestaciones adicionales">
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" (click)="loadCatalogo()" [disabled]="loading">
+        <i class="bi bi-arrow-clockwise"></i>Recargar
+      </button>
+      <a class="btn btn-outline-primary d-inline-flex align-items-center gap-2" routerLink="/productos-servicios">
+        <i class="bi bi-boxes"></i>Administrar prestaciones
+      </a>
+      <a class="btn btn-primary d-inline-flex align-items-center gap-2" routerLink="/planes">
+        <i class="bi bi-plus-lg"></i>Administrar planes
+      </a>
+    </div>
   </app-page-head>
 
-  <div class="row g-4 mb-4">
-    <div class="col-12 col-lg-4" *ngFor="let plan of plans">
+  <div class="status-message status-loading mb-3" *ngIf="loading">
+    <i class="bi bi-arrow-repeat"></i><span>Cargando catalogo y planes...</span>
+  </div>
+  <div class="status-message status-error mb-3" *ngIf="error">
+    <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+  </div>
+
+  <div class="row g-4 mb-4" *ngIf="!loading">
+    <div class="col-12 col-lg-4" *ngFor="let plan of plans; trackBy: trackById">
       <div class="card h-100 position-relative" [ngClass]="{ 'border-2': plan.popular }" [ngStyle]="plan.popular ? { borderColor: 'var(--brand)' } : {}">
-        <span *ngIf="plan.popular" class="badge text-bg-light position-absolute" style="top: -11px; left: 20px; background: var(--brand); color: #fff">MÁS SOLICITADO</span>
+        <span *ngIf="plan.popular" class="badge position-absolute popular-badge">MAS SOLICITADO</span>
         <div class="card-body pb-2">
-          <app-badge [cls]="plan.tag">{{ plan.name }}</app-badge>
-          <div class="tnum fw-800 ls-tight mt-2" style="font-size: 1.85rem">{{ clp(plan.price) }}</div>
-          <p class="text-secondary mt-2 mb-0" style="font-size: .84rem; overflow-wrap: break-word">{{ plan.desc }}</p>
+          <app-badge [cls]="plan.popular ? 'b-ok' : 'b-neutral'">{{ plan.nombre }}</app-badge>
+          <div class="tnum fw-800 ls-tight mt-2 plan-price">{{ clp(plan.valor) }}</div>
+          <p class="text-secondary mt-2 mb-0 plan-description">{{ plan.descripcion }}</p>
         </div>
         <hr class="my-2 text-body-tertiary" />
         <div class="card-body pt-2 flex-grow-1">
-          <div class="d-flex flex-column gap-2">
-            <div *ngFor="let item of plan.items" class="d-flex gap-2" style="font-size: .84rem">
-              <i class="bi bi-check-lg" style="color: var(--brand); margin-top: 1px"></i>
-              <span class="text-body-secondary">{{ item }}</span>
+          <div class="d-flex flex-column gap-2" *ngIf="plan.items.length">
+            <div *ngFor="let item of plan.items" class="d-flex gap-2 plan-item">
+              <i class="bi bi-check-lg text-primary"></i><span class="text-body-secondary">{{ item }}</span>
             </div>
           </div>
+          <div class="text-secondary small" *ngIf="!plan.items.length">Este plan no tiene prestaciones configuradas.</div>
         </div>
-        <div class="card-body pt-0">
-          <button class="btn w-100 d-inline-flex align-items-center justify-content-center gap-2" [ngClass]="plan.popular ? 'btn-primary' : 'btn-outline-secondary'"><i class="bi bi-file-earmark-text"></i>Cotizar este plan</button>
+        <div class="card-body pt-0 d-flex gap-2">
+          <a class="btn btn-outline-secondary w-100" routerLink="/planes"><i class="bi bi-pencil"></i> Editar</a>
+          <a class="btn btn-primary w-100" routerLink="/cotizacion"><i class="bi bi-file-earmark-text"></i> Cotizar</a>
         </div>
       </div>
     </div>
+    <div class="col-12" *ngIf="plans.length === 0 && !error">
+      <div class="card p-4 text-center text-secondary">No hay planes activos registrados.</div>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <div class="fw-bold">Servicios y prestaciones adicionales</div>
-      <div class="text-secondary fw-normal" style="font-size: .78rem">Se agregan a cualquier plan según necesidad de la familia</div>
+  <div class="card" *ngIf="!loading">
+    <div class="card-header d-flex justify-content-between align-items-center gap-3">
+      <div><div class="fw-bold">Servicios y prestaciones adicionales</div><div class="text-secondary fw-normal small">Se agregan a cualquier plan segun necesidad de la familia</div></div>
+      <a class="btn btn-sm btn-outline-primary" routerLink="/productos-servicios"><i class="bi bi-plus-lg"></i> Administrar</a>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th class="ps-4">Servicio</th>
-            <th>Categoría</th>
-            <th class="text-end">Valor</th>
-            <th class="pe-4" style="width: 110px"></th>
-          </tr>
-        </thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th class="ps-4">Codigo</th><th>Servicio</th><th>Categoria</th><th class="text-end">Valor</th><th class="text-end pe-4">Acciones</th></tr></thead>
         <tbody>
-          <tr *ngFor="let servicio of servicios">
-            <td class="ps-4 fw-semibold">{{ servicio.name }}</td>
-            <td><app-badge cls="b-neutral">{{ servicio.cat }}</app-badge></td>
-            <td class="text-end tnum fw-bold">{{ clp(servicio.price) }}</td>
-            <td class="text-end pe-4"><button class="btn btn-soft btn-sm d-inline-flex align-items-center gap-1"><i class="bi bi-plus-lg"></i>Agregar</button></td>
+          <tr *ngFor="let servicio of servicios; trackBy: trackById">
+            <td class="ps-4 tnum fw-semibold">{{ servicio.codigo }}</td>
+            <td><div class="fw-semibold">{{ servicio.nombre }}</div><div class="text-secondary small">{{ servicio.descripcion }}</div></td>
+            <td><app-badge cls="b-neutral">{{ servicio.categoria }}</app-badge></td>
+            <td class="text-end tnum fw-bold">{{ clp(servicio.precio) }}</td>
+            <td class="text-end pe-4"><a class="btn btn-sm btn-outline-primary" routerLink="/productos-servicios">Editar</a></td>
           </tr>
+          <tr *ngIf="servicios.length === 0 && !error"><td colspan="5" class="text-center py-4">No hay prestaciones activas registradas.</td></tr>
         </tbody>
       </table>
     </div>
