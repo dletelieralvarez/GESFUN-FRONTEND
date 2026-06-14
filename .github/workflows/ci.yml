@@ -83,12 +83,15 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      # Crea archivo de clave privada para conectarse a EC2
+      # Reconstruye la clave privada desde Base64 y prepara SSH
       - name: Configurar SSH
         run: |
           mkdir -p ~/.ssh
-          printf "%s" "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
+
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/ec2_key.pem
+
           chmod 600 ~/.ssh/ec2_key.pem
+
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts || true
 
       # Entra a EC2, descarga imagen y levanta contenedor en puerto 80
