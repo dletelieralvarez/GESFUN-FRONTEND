@@ -1,0 +1,118 @@
+# Nombre del pipeline
+name: CI/CD GesFun Frontend
+
+# Evita advertencia futura de Node 20 en GitHub Actions
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# Define cuándo se ejecuta el pipeline
+on:
+  # Permite ejecutarlo manualmente desde GitHub Actions
+  workflow_dispatch:
+
+  # Se ejecuta al hacer push a main o develop
+  push:
+    branches: [ main, develop ]
+
+  # Se ejecuta al hacer Pull Request hacia main o develop
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Job 1: instala dependencias y compila Angular
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Descarga el código del repositorio
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      # Instala Node.js 20
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # Instala dependencias
+      - name: Instalar dependencias
+        run: npm install
+
+      # Compila Angular.
+      # angular.json ya tiene production como defaultConfiguration.
+      - name: Compilar Angular
+        run: npm run build
+
+  # Job 2: construye imagen Docker y la sube a DockerHub
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Solo publica imagen cuando el push es a main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Descarga el código del repositorio
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      # Login en DockerHub usando Secrets
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Construye y publica la imagen del frontend
+      - name: Construir y publicar imagen Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:${{ github.sha }}
+
+  # Job 3: se conecta por SSH a EC2 y despliega el frontend
+  deploy:
+    needs: docker
+    runs-on: ubuntu-latest
+
+    # Solo despliega cuando el push es a main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Crea archivo de clave privada para conectarse a EC2
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s" "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts || true
+
+      # Entra a EC2, descarga imagen y levanta contenedor en puerto 80
+      - name: Desplegar Frontend en EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+
+            # Login en DockerHub desde la EC2
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+            # Descarga la última imagen del frontend
+            docker pull "${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:latest"
+
+            # Detiene y elimina el contenedor anterior si existe
+            docker stop gesfun-frontend || true
+            docker rm gesfun-frontend || true
+
+            # Levanta Angular/Nginx en puerto 80
+            docker run -d --name gesfun-frontend \
+              --restart always \
+              -p 80:80 \
+              "${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:latest"
+
+            # Muestra contenedores activos
+            docker ps
+
+          EOF
