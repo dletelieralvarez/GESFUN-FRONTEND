@@ -5,6 +5,7 @@ import { CLP, SERVICIOS, SUSCRIPCION_PLANS, TERCEROS } from '../../data/mock-dat
 import { Servicio, Sucursal, SuscripcionPlan, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { environment } from 'src/environments/environment.prod';
 
 interface CatalogItem {
   id: number;
@@ -454,7 +455,7 @@ export class CasosComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) return 'No se pudo conectar con el BFF. Verifica que el servicio este levantado en http://localhost:8081.';
+    if (err?.status === 0) return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     return err?.error?.message || err?.error?.payload?.message || err?.message || fallback;
   }
 }

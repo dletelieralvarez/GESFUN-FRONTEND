@@ -357,7 +357,7 @@ export class ProveedoresComponent implements OnInit {
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
-      return 'No se pudo conectar con el BFF. Verifica que el servicio este levantado en http://localhost:8081.';
+      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
     return err?.error?.message || err?.message || fallback;
   }
