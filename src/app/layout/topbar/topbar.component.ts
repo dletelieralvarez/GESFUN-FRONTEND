@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-topbar',
@@ -12,7 +13,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   crumb = 'Inicio';
   private subscriptions = new Subscription();
 
-  constructor(private router: Router, private route: ActivatedRoute) {}
+  constructor(private router: Router, private route: ActivatedRoute, public layout: LayoutService) {}
 
   ngOnInit() {
     this.updateMetadata();

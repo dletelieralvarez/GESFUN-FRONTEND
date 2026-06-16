@@ -55,17 +55,17 @@
       <a class="btn btn-sm btn-outline-primary" routerLink="/productos-servicios"><i class="bi bi-plus-lg"></i> Administrar</a>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 responsive-card-table">
         <thead><tr><th class="ps-4">Codigo</th><th>Servicio</th><th>Categoria</th><th class="text-end">Valor</th><th class="text-end pe-4">Acciones</th></tr></thead>
         <tbody>
           <tr *ngFor="let servicio of servicios; trackBy: trackById">
-            <td class="ps-4 tnum fw-semibold">{{ servicio.codigo }}</td>
-            <td><div class="fw-semibold">{{ servicio.nombre }}</div><div class="text-secondary small">{{ servicio.descripcion }}</div></td>
-            <td><app-badge cls="b-neutral">{{ servicio.categoria }}</app-badge></td>
-            <td class="text-end tnum fw-bold">{{ clp(servicio.precio) }}</td>
-            <td class="text-end pe-4"><a class="btn btn-sm btn-outline-primary" routerLink="/productos-servicios">Editar</a></td>
+            <td class="ps-4 tnum fw-semibold" data-label="Código">{{ servicio.codigo }}</td>
+            <td data-label="Servicio"><div class="fw-semibold">{{ servicio.nombre }}</div><div class="text-secondary small">{{ servicio.descripcion }}</div></td>
+            <td data-label="Categoría"><app-badge cls="b-neutral">{{ servicio.categoria }}</app-badge></td>
+            <td class="text-end tnum fw-bold" data-label="Valor">{{ clp(servicio.precio) }}</td>
+            <td class="text-end pe-4" data-label="Acciones"><a class="btn btn-sm btn-outline-primary" routerLink="/productos-servicios">Editar</a></td>
           </tr>
-          <tr *ngIf="servicios.length === 0 && !error"><td colspan="5" class="text-center py-4">No hay prestaciones activas registradas.</td></tr>
+          <tr *ngIf="servicios.length === 0 && !error"><td colspan="5" class="text-center py-4 empty-row">No hay prestaciones activas registradas.</td></tr>
         </tbody>
       </table>
     </div>

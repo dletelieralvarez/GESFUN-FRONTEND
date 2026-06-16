@@ -3,6 +3,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { NAV_BS } from '../../data/mock-data';
 import { AuthService } from '../../services/auth.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -15,7 +16,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   loggingOut = false;
   private subscriptions = new Subscription();
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(private router: Router, private auth: AuthService, private layout: LayoutService) {}
 
   ngOnInit() {
     this.setCurrentView(this.router.url);
@@ -23,6 +24,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event) => {
         const navEvent = event as NavigationEnd;
         this.setCurrentView(navEvent.urlAfterRedirects);
+        this.layout.closeSidebar();
       })
     );
   }

@@ -6,11 +6,11 @@
     </div>
   </app-page-head>
 
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-3"><app-stat label="Servicios activos" icon="folder-fill" [value]="activos" delta="+2" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
-    <div class="col-6 col-xl-3"><app-stat label="Eventos hoy" icon="calendar3" [value]="hoy" delta="3 salas" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
-    <div class="col-6 col-xl-3"><app-stat label="Ingresos del mes" icon="cash-stack" [value]="clp(ingresos)" delta="+14%" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
-    <div class="col-6 col-xl-3"><app-stat label="Alertas de stock" icon="exclamation-triangle-fill" [value]="lowStock.length" delta="revisar" deltaDir="down" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+  <div class="row g-3 mb-4 dashboard-stats">
+    <div class="col-12 col-sm-6 col-xl-3"><app-stat label="Servicios activos" icon="folder-fill" [value]="activos" delta="+2" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
+    <div class="col-12 col-sm-6 col-xl-3"><app-stat label="Eventos hoy" icon="calendar3" [value]="hoy" delta="3 salas" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
+    <div class="col-12 col-sm-6 col-xl-3"><app-stat label="Ingresos del mes" icon="cash-stack" [value]="clp(ingresos)" delta="+14%" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
+    <div class="col-12 col-sm-6 col-xl-3"><app-stat label="Alertas de stock" icon="exclamation-triangle-fill" [value]="lowStock.length" delta="revisar" deltaDir="down" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
   </div>
 
   <div class="row g-4">
@@ -24,24 +24,24 @@
           <button class="btn btn-soft btn-sm">Ver todos <i class="bi bi-chevron-right"></i></button>
         </div>
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Folio / Fallecido</th>
-                <th>Sala</th>
+                <th class="d-none d-sm-table-cell">Sala</th>
                 <th>Estado</th>
-                <th class="text-end pe-4">Pago</th>
+                <th class="text-end pe-4 d-none d-sm-table-cell">Pago</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let c of activeCases">
-                <td class="ps-4">
+                <td class="ps-4" data-label="Folio / Fallecido">
                   <div class="fw-bold">{{ c.fallecido }}</div>
                   <div class="tnum text-secondary" style="font-size: .75rem">{{ c.folio }} · {{ c.plan }}</div>
                 </td>
-                <td class="text-body-secondary">{{ c.sala }}</td>
-                <td><app-estado-badge [estado]="c.estado"></app-estado-badge></td>
-                <td class="text-end pe-4">
+                <td class="text-body-secondary d-none d-sm-table-cell" data-label="Sala">{{ c.sala }}</td>
+                <td data-label="Estado"><app-estado-badge [estado]="c.estado"></app-estado-badge></td>
+                <td class="text-end pe-4 d-none d-sm-table-cell" data-label="Pago">
                   <div class="tnum fw-bold">{{ clp(math.round((c.pagado / c.total) * 100)) }}</div>
                   <div style="width: 70px; margin-left: auto; margin-top: 4px"><app-progress [value]="(c.pagado / c.total) * 100"></app-progress></div>
                 </td>

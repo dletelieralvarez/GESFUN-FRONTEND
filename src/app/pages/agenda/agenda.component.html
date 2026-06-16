@@ -10,8 +10,8 @@
     </div>
   </app-page-head>
 
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3" *ngFor="let sala of salas; index as i">
+  <div class="row g-3 mb-4 room-summary">
+    <div class="col-12 col-sm-6 col-lg-3" *ngFor="let sala of salas; index as i">
       <div class="card room-card h-100">
         <div class="d-flex justify-content-between align-items-center">
           <div class="fw-bold" style="font-size: .85rem">{{ sala }}</div>
@@ -22,13 +22,34 @@
     </div>
   </div>
 
-  <div class="card overflow-hidden">
-    <div style="display: grid; grid-template-columns: 60px repeat(4, 1fr)">
-      <div style="border-bottom: 1px solid #e3e7e3; background: #f7f8f7"></div>
-      <div *ngFor="let sala of salas" class="fw-bold" style="border-bottom: 1px solid #e3e7e3; border-left: 1px solid #f0f2f0; background: #f7f8f7; padding: 12px 14px; font-size: .82rem">{{ sala }}</div>
+  <div class="card mobile-agenda-list mb-4">
+    <div class="card-header">
+      <div class="fw-bold">Eventos de hoy</div>
+      <div class="text-secondary fw-normal" style="font-size: .78rem">Vista rápida para móvil</div>
+    </div>
+    <div class="list-group list-group-flush">
+      <div class="list-group-item d-flex gap-3 border-0" *ngFor="let ev of eventsToday">
+        <div class="agenda-time tnum">{{ formatHour(ev.start) }}</div>
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between gap-2">
+            <div class="fw-bold">{{ ev.titulo }}</div>
+            <app-badge cls="b-neutral">{{ salas[ev.sala] }}</app-badge>
+          </div>
+          <div class="text-secondary" style="font-size: .78rem">{{ ev.tipo }} · {{ ev.sub }}</div>
+          <div class="tnum text-secondary" style="font-size: .75rem">{{ formatHour(ev.start) }}–{{ formatHour(ev.end) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card overflow-hidden agenda-card">
+    <div class="agenda-scroll">
+      <div class="agenda-grid">
+      <div class="agenda-head agenda-corner"></div>
+      <div *ngFor="let sala of salas" class="agenda-head fw-bold">{{ sala }}</div>
       <ng-container *ngFor="let hour of hours">
-        <div class="tnum text-secondary fw-semibold" style="border-right: 1px solid #f0f2f0; border-bottom: 1px solid #f0f2f0; font-size: .68rem; padding: 4px 8px; text-align: right; height: 46px">{{ hour.toString().padStart(2, '0') }}:00</div>
-        <div class="agenda-cell" *ngFor="let sala of salas; index as si" style="height: 46px;">
+        <div class="agenda-hour tnum text-secondary fw-semibold">{{ hour.toString().padStart(2, '0') }}:00</div>
+        <div class="agenda-cell" *ngFor="let sala of salas; index as si">
           <ng-container *ngIf="eventAt(hour, si) as ev">
             <div class="ag-event" [ngStyle]="getEventStyle(ev)">
               <div class="fw-bold text-uppercase" style="font-size: .64rem; letter-spacing: .03em">{{ ev.tipo }}</div>
@@ -39,6 +60,7 @@
           </ng-container>
         </div>
       </ng-container>
+      </div>
     </div>
   </div>
 </div>

@@ -26,18 +26,18 @@
     <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
       <div class="card">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead><tr><th class="ps-4">Folio</th><th>Fallecido</th><th>Familiar responsable</th><th>Plan</th><th>Sala</th><th>Estado</th><th class="text-end">Saldo</th><th class="pe-4">Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let c of rows; trackBy: trackById">
-                <td class="ps-4 tnum fw-bold text-primary">{{ c.folio }}</td>
-                <td><div class="fw-semibold">{{ c.fallecido_nombre }}</div><div class="text-secondary small">{{ c.fallecido_rut }}</div></td>
-                <td><div class="fw-semibold">{{ c.tercero_nombre }}</div><div class="text-secondary small">{{ c.tercero_rut }}</div></td>
-                <td class="text-body-secondary">{{ c.plan_nombre }}</td>
-                <td class="text-body-secondary">{{ c.sucursal_nombre }}</td>
-                <td><app-estado-badge [estado]="c.activo ? getEstadoLabel(c.estado) : 'Desactivado'"></app-estado-badge></td>
-                <td class="text-end tnum fw-bold" [ngClass]="{ 'text-danger': getSaldo(c) > 0, 'text-primary': getSaldo(c) === 0 }">{{ getSaldo(c) > 0 ? clp(getSaldo(c)) : 'Pagado' }}</td>
-                <td class="pe-4"><div class="d-flex gap-2 justify-content-end">
+                <td class="ps-4 tnum fw-bold text-primary" data-label="Folio">{{ c.folio }}</td>
+                <td data-label="Fallecido"><div class="fw-semibold">{{ c.fallecido_nombre }}</div><div class="text-secondary small">{{ c.fallecido_rut }}</div></td>
+                <td data-label="Responsable"><div class="fw-semibold">{{ c.tercero_nombre }}</div><div class="text-secondary small">{{ c.tercero_rut }}</div></td>
+                <td class="text-body-secondary" data-label="Plan">{{ c.plan_nombre }}</td>
+                <td class="text-body-secondary" data-label="Sala">{{ c.sucursal_nombre }}</td>
+                <td data-label="Estado"><app-estado-badge [estado]="c.activo ? getEstadoLabel(c.estado) : 'Desactivado'"></app-estado-badge></td>
+                <td class="text-end tnum fw-bold" data-label="Saldo" [ngClass]="{ 'text-danger': getSaldo(c) > 0, 'text-primary': getSaldo(c) === 0 }">{{ getSaldo(c) > 0 ? clp(getSaldo(c)) : 'Pagado' }}</td>
+                <td class="pe-4" data-label="Acciones"><div class="d-flex gap-2 justify-content-end">
                   <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(c)" [disabled]="loading || saving || !c.activo">Editar</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(c)" [disabled]="loading || saving || !c.activo">Desactivar</button>
                 </div></td>

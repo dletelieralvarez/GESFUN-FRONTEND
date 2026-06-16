@@ -33,9 +33,60 @@
 
   <div class="row gy-3">
     <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
-      <div class="card">
+      <div class="mobile-crud-list d-sm-none">
+        <div class="mobile-crud-card" *ngFor="let empleado of empleados; trackBy: trackById">
+          <div class="mobile-crud-card-head">
+            <app-avatar [name]="empleado.nombre_completo" [size]="38"></app-avatar>
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate">{{ empleado.nombre_completo }}</div>
+              <div class="text-secondary text-truncate" style="font-size: .76rem">{{ empleado.email }}</div>
+            </div>
+            <app-badge [cls]="isEmpleadoActivo(empleado) ? 'b-ok' : 'b-neutral'">
+              {{ isEmpleadoActivo(empleado) ? 'Activo' : 'Desactivado' }}
+            </app-badge>
+          </div>
+
+          <div class="mobile-crud-card-grid">
+            <div>
+              <span>RUT</span>
+              <strong>{{ formatRut(empleado) }}</strong>
+            </div>
+            <div>
+              <span>Rol</span>
+              <strong>{{ empleado.rol }}</strong>
+            </div>
+            <div>
+              <span>Contacto</span>
+              <strong>{{ empleado.telefono }}</strong>
+            </div>
+            <div>
+              <span>Tipo</span>
+              <strong>{{ empleado.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</strong>
+            </div>
+            <div>
+              <span>Región</span>
+              <strong>{{ getRegionName(empleado.region_id || 1) }}</strong>
+            </div>
+            <div>
+              <span>Comuna</span>
+              <strong>{{ getComunaName(empleado.comuna_id) }}</strong>
+            </div>
+          </div>
+
+          <div class="mobile-crud-card-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">
+              <i class="bi bi-slash-circle"></i> Desactivar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card d-none d-sm-block">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Empleado</th>
@@ -51,7 +102,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let empleado of empleados; trackBy: trackById">
-                <td class="ps-4">
+                <td class="ps-4" data-label="Empleado">
                   <div class="d-flex align-items-center gap-2">
                     <app-avatar [name]="empleado.nombre_completo" [size]="34"></app-avatar>
                     <div>
@@ -60,21 +111,25 @@
                     </div>
                   </div>
                 </td>
-                <td class="tnum text-body-secondary">{{ formatRut(empleado) }}</td>
-                <td class="text-body-secondary">{{ empleado.rol }}</td>
-                <td class="text-body-secondary">{{ empleado.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
-                <td class="tnum text-body-secondary">{{ empleado.telefono }}</td>
-                <td class="text-body-secondary">{{ getRegionName(empleado.region_id || 1) }}</td>
-                <td class="text-body-secondary">{{ getComunaName(empleado.comuna_id) }}</td>
-                <td>
+                <td class="tnum text-body-secondary" data-label="RUT">{{ formatRut(empleado) }}</td>
+                <td class="text-body-secondary" data-label="Rol">{{ empleado.rol }}</td>
+                <td class="text-body-secondary" data-label="Tipo">{{ empleado.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
+                <td class="tnum text-body-secondary" data-label="Contacto">{{ empleado.telefono }}</td>
+                <td class="text-body-secondary" data-label="Región">{{ getRegionName(empleado.region_id || 1) }}</td>
+                <td class="text-body-secondary" data-label="Comuna">{{ getComunaName(empleado.comuna_id) }}</td>
+                <td data-label="Estado">
                   <app-badge [cls]="isEmpleadoActivo(empleado) ? 'b-ok' : 'b-neutral'">
                     {{ isEmpleadoActivo(empleado) ? 'Activo' : 'Desactivado' }}
                   </app-badge>
                 </td>
-                <td class="pe-4">
+                <td class="pe-4" data-label="Acciones">
                   <div class="d-flex gap-2 justify-content-end">
-                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">Editar</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">Desactivar</button>
+                    <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1" type="button" (click)="edit(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">
+                      <i class="bi bi-pencil"></i>Editar
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-1" type="button" (click)="delete(empleado)" [disabled]="loading || saving || !isEmpleadoActivo(empleado)">
+                      <i class="bi bi-slash-circle"></i>Desactivar
+                    </button>
                   </div>
                 </td>
               </tr>

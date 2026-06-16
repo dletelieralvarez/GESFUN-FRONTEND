@@ -32,17 +32,17 @@
         <div class="card">
           <div class="card-header"><span class="fw-bold">Servicios adicionales</span></div>
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 responsive-card-table">
               <tbody>
                 <tr *ngFor="let service of servicios; index as i" (click)="toggleExtra(i)" style="cursor: pointer;">
-                  <td class="ps-4" style="width: 50px;">
+                  <td class="ps-4 quote-check-cell" data-label="Seleccionar">
                     <div [ngStyle]="{ width: '20px', height: '20px', borderRadius: '6px', border: '2px solid ' + (extras.has(i) ? 'var(--brand)' : '#c3cac3'), background: extras.has(i) ? 'var(--brand)' : 'transparent', display: 'grid', placeItems: 'center' }">
                       <i *ngIf="extras.has(i)" class="bi bi-check-lg" style="color: #fff; font-size: .8rem;"></i>
                     </div>
                   </td>
-                  <td class="fw-semibold">{{ service.name }}</td>
-                  <td><app-badge cls="b-neutral">{{ service.cat }}</app-badge></td>
-                  <td class="text-end pe-4 tnum fw-bold">{{ clp(service.price) }}</td>
+                  <td class="fw-semibold" data-label="Servicio">{{ service.name }}</td>
+                  <td data-label="Categoría"><app-badge cls="b-neutral">{{ service.cat }}</app-badge></td>
+                  <td class="text-end pe-4 tnum fw-bold" data-label="Precio">{{ clp(service.price) }}</td>
                 </tr>
               </tbody>
             </table>

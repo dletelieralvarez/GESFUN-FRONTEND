@@ -35,7 +35,7 @@
     <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
       <div class="card">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Cliente</th>
@@ -51,7 +51,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let cliente of clientes; trackBy: trackById">
-                <td class="ps-4">
+                <td class="ps-4" data-label="Cliente">
                   <div class="d-flex align-items-center gap-2">
                     <app-avatar [name]="cliente.nombre_completo" [size]="34"></app-avatar>
                     <div>
@@ -60,18 +60,18 @@
                     </div>
                   </div>
                 </td>
-                <td class="tnum text-body-secondary">{{ formatRut(cliente) }}</td>
-                <td class="text-body-secondary">{{ cliente.rol }}</td>
-                <td class="text-body-secondary">{{ cliente.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
-                <td class="tnum text-body-secondary">{{ cliente.telefono }}</td>
-                <td class="text-body-secondary">{{ getRegionName(cliente.region_id || 1) }}</td>
-                <td class="text-body-secondary">{{ getComunaName(cliente.comuna_id) }}</td>
-                <td>
+                <td class="tnum text-body-secondary" data-label="RUT">{{ formatRut(cliente) }}</td>
+                <td class="text-body-secondary" data-label="Rol">{{ cliente.rol }}</td>
+                <td class="text-body-secondary" data-label="Tipo">{{ cliente.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
+                <td class="tnum text-body-secondary" data-label="Contacto">{{ cliente.telefono }}</td>
+                <td class="text-body-secondary" data-label="Región">{{ getRegionName(cliente.region_id || 1) }}</td>
+                <td class="text-body-secondary" data-label="Comuna">{{ getComunaName(cliente.comuna_id) }}</td>
+                <td data-label="Estado">
                   <app-badge [cls]="isClienteActivo(cliente) ? 'b-ok' : 'b-neutral'">
                     {{ isClienteActivo(cliente) ? 'Activo' : 'Desactivado' }}
                   </app-badge>
                 </td>
-                <td class="pe-4">
+                <td class="pe-4" data-label="Acciones">
                   <div class="d-flex gap-2 justify-content-end">
                     <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(cliente)" [disabled]="loading || saving || !isClienteActivo(cliente)">Editar</button>
                     <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(cliente)" [disabled]="loading || saving || !isClienteActivo(cliente)">Desactivar</button>

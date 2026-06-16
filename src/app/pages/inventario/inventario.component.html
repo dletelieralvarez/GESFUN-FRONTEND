@@ -19,7 +19,7 @@
 
   <div class="card">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 responsive-card-table">
         <thead>
           <tr>
             <th class="ps-4">SKU</th>
@@ -32,17 +32,17 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of rows; trackBy: trackBySku">
-            <td class="ps-4 tnum fw-bold text-secondary">{{ item.sku }}</td>
-            <td class="fw-semibold">{{ item.item }}</td>
-            <td><app-badge cls="b-neutral">{{ item.cat }}</app-badge></td>
-            <td class="text-center"><span class="tnum fw-800" [ngClass]="{ 'text-danger': item.stock < item.min }" style="font-size: 1rem">{{ item.stock }}</span><span class="tnum text-secondary" style="font-size: .75rem"> / {{ item.min }}</span></td>
-            <td style="width: 180px">
+            <td class="ps-4 tnum fw-bold text-secondary" data-label="SKU">{{ item.sku }}</td>
+            <td class="fw-semibold" data-label="Producto">{{ item.item }}</td>
+            <td data-label="Categoría"><app-badge cls="b-neutral">{{ item.cat }}</app-badge></td>
+            <td class="text-center" data-label="Existencias"><span class="tnum fw-800" [ngClass]="{ 'text-danger': item.stock < item.min }" style="font-size: 1rem">{{ item.stock }}</span><span class="tnum text-secondary" style="font-size: .75rem"> / {{ item.min }}</span></td>
+            <td style="width: 180px" data-label="Nivel">
               <div class="d-flex align-items-center gap-2">
                 <div class="flex-grow-1"><app-progress [value]="math.min(100, (item.stock / (item.min * 2)) * 100)" [color]="item.stock < item.min ? '#b5402f' : (item.stock / (item.min * 2) * 100 < 60 ? '#c79a3a' : 'var(--brand)')"></app-progress></div>
                 <app-badge cls="b-danger" *ngIf="item.stock < item.min" [dot]="true">Bajo</app-badge>
               </div>
             </td>
-            <td class="text-end pe-4 tnum fw-bold">{{ clp(item.price) }}</td>
+            <td class="text-end pe-4 tnum fw-bold" data-label="Valor unit.">{{ clp(item.price) }}</td>
           </tr>
         </tbody>
       </table>

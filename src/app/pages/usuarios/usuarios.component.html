@@ -42,11 +42,11 @@
     <div [ngClass]="formOpen ? 'col-xl-8' : 'col-12'">
       <div class="card">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
         <thead>
           <tr>
-            <th class="ps-4">ID</th>
-            <th>Usuario</th>
+            <th class="ps-4">Usuario</th>
+            <th>ID</th>
             <th>Email</th>
             <th>Rol</th>
             <th>Tipo usuario</th>
@@ -56,8 +56,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let user of users; let i = index">
-            <td class="ps-4 tnum">{{ user.id }}</td>
-            <td>
+            <td class="ps-4" data-label="Usuario">
               <div class="d-flex align-items-center gap-2">
                 <app-avatar [name]="user.nombre + ' ' + user.paterno" [size]="34"></app-avatar>
                 <div>
@@ -66,17 +65,20 @@
                 </div>
               </div>
             </td>
-            <td>{{ user.email }}</td>
-            <td><app-badge cls="b-info">{{ user.roles }}</app-badge></td>
-            <td class="text-body-secondary">{{ user.tipoUsuario }}</td>
-            <td><app-badge [cls]="user.activo ? 'b-ok' : 'b-neutral'">{{ user.activo ? 'Si' : 'No' }}</app-badge></td>
-            <td class="text-end pe-4">
-              <button class="btn btn-sm btn-outline-primary me-2" type="button" (click)="openEdit(i)" [disabled]="loading || saving"><i class="bi bi-pencil"></i></button>
-              <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteUser(i)" [disabled]="loading || saving"><i class="bi bi-trash"></i></button>
+            <td class="tnum" data-label="ID">{{ user.id }}</td>
+            <td data-label="Email">{{ user.email }}</td>
+            <td data-label="Rol"><app-badge cls="b-info">{{ user.roles }}</app-badge></td>
+            <td class="text-body-secondary" data-label="Tipo usuario">{{ user.tipoUsuario }}</td>
+            <td data-label="Activo"><app-badge [cls]="user.activo ? 'b-ok' : 'b-neutral'">{{ user.activo ? 'Si' : 'No' }}</app-badge></td>
+            <td class="text-end pe-4" data-label="Acciones">
+              <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-primary" type="button" (click)="openEdit(i)" [disabled]="loading || saving"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteUser(i)" [disabled]="loading || saving"><i class="bi bi-trash"></i></button>
+              </div>
             </td>
           </tr>
           <tr *ngIf="!loading && users.length === 0">
-            <td colspan="7" class="text-center py-4">No hay usuarios registrados.</td>
+            <td colspan="7" class="text-center py-4 empty-row">No hay usuarios registrados.</td>
           </tr>
         </tbody>
           </table>

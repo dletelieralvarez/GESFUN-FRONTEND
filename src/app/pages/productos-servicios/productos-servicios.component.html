@@ -33,9 +33,60 @@
 
   <div class="row gy-3">
     <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
-      <div class="card">
+      <div class="mobile-crud-list d-sm-none">
+        <div class="mobile-crud-card" *ngFor="let item of items; trackBy: trackById">
+          <div class="mobile-crud-card-head">
+            <div class="icon-tile" style="width: 38px; height: 38px; background: var(--brand-tint); color: var(--brand); font-size: 1rem">
+              <i class="bi" [ngClass]="item.tipo_item === 'producto' ? 'bi-box-seam' : 'bi-briefcase'"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate">{{ item.nombre }}</div>
+              <div class="text-secondary text-truncate" style="font-size: .76rem">{{ item.codigo }} · {{ item.descripcion }}</div>
+            </div>
+            <app-badge [cls]="item.activo ? 'b-ok' : 'b-neutral'">{{ item.activo ? 'Activo' : 'Inactivo' }}</app-badge>
+          </div>
+
+          <div class="mobile-crud-card-grid">
+            <div>
+              <span>Tipo</span>
+              <strong>{{ item.tipo_item === 'producto' ? 'Producto' : 'Servicio' }}</strong>
+            </div>
+            <div>
+              <span>Categoría</span>
+              <strong>{{ item.categoria }}</strong>
+            </div>
+            <div>
+              <span>Unidad</span>
+              <strong>{{ getUnidadMedidaNombre(item.unidad_medida_id) }}</strong>
+            </div>
+            <div>
+              <span>Precio</span>
+              <strong>{{ clp(item.precio) }}</strong>
+            </div>
+            <div>
+              <span>Afecto</span>
+              <strong>{{ item.afecto ? 'Sí' : 'No' }}</strong>
+            </div>
+            <div>
+              <span>Código</span>
+              <strong>{{ item.codigo }}</strong>
+            </div>
+          </div>
+
+          <div class="mobile-crud-card-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(item)" [disabled]="loading || saving || !isItemActivo(item)">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(item)" [disabled]="loading || saving || !isItemActivo(item)">
+              <i class="bi bi-slash-circle"></i> Desactivar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card d-none d-sm-block">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Código</th>
@@ -51,18 +102,18 @@
             </thead>
             <tbody>
               <tr *ngFor="let item of items; trackBy: trackById">
-                <td class="ps-4 tnum fw-semibold">{{ item.codigo }}</td>
-                <td>
+                <td class="ps-4 tnum fw-semibold" data-label="Código">{{ item.codigo }}</td>
+                <td data-label="Nombre">
                   <div class="fw-bold">{{ item.nombre }}</div>
                   <div class="text-secondary" style="font-size: .75rem">{{ item.descripcion }}</div>
                 </td>
-                <td><app-badge cls="b-neutral">{{ item.tipo_item === 'producto' ? 'Producto' : 'Servicio' }}</app-badge></td>
-                <td class="text-body-secondary">{{ item.categoria }}</td>
-                <td class="text-body-secondary">{{ getUnidadMedidaNombre(item.unidad_medida_id) }}</td>
-                <td class="text-end tnum fw-bold">{{ clp(item.precio) }}</td>
-                <td><app-badge [cls]="item.activo ? 'b-ok' : 'b-neutral'">{{ item.activo ? 'Sí' : 'No' }}</app-badge></td>
-                <td><app-badge [cls]="item.afecto ? 'b-info' : 'b-neutral'">{{ item.afecto ? 'Sí' : 'No' }}</app-badge></td>
-                <td class="pe-4">
+                <td data-label="Tipo"><app-badge cls="b-neutral">{{ item.tipo_item === 'producto' ? 'Producto' : 'Servicio' }}</app-badge></td>
+                <td class="text-body-secondary" data-label="Categoría">{{ item.categoria }}</td>
+                <td class="text-body-secondary" data-label="Unidad">{{ getUnidadMedidaNombre(item.unidad_medida_id) }}</td>
+                <td class="text-end tnum fw-bold" data-label="Precio">{{ clp(item.precio) }}</td>
+                <td data-label="Activo"><app-badge [cls]="item.activo ? 'b-ok' : 'b-neutral'">{{ item.activo ? 'Sí' : 'No' }}</app-badge></td>
+                <td data-label="Afecto"><app-badge [cls]="item.afecto ? 'b-info' : 'b-neutral'">{{ item.afecto ? 'Sí' : 'No' }}</app-badge></td>
+                <td class="pe-4" data-label="Acciones">
                   <div class="d-flex gap-2 justify-content-end">
                     <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(item)" [disabled]="loading || saving || !isItemActivo(item)">Editar</button>
                     <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(item)" [disabled]="loading || saving || !isItemActivo(item)">Desactivar</button>

@@ -1,5 +1,11 @@
-<div class="app-grid" *ngIf="showShell">
+<div class="app-grid" [class.sidebar-open]="sidebarOpen$ | async" *ngIf="showShell">
   <app-sidebar></app-sidebar>
+  <button
+    type="button"
+    class="sidebar-backdrop"
+    aria-label="Cerrar menu"
+    (click)="layout.closeSidebar()"
+  ></button>
   <div class="d-flex flex-column overflow-hidden">
     <app-topbar></app-topbar>
     <div class="flex-grow-1 content-scroll">

@@ -33,9 +33,52 @@
 
   <div class="row gy-3">
     <div [ngClass]="formVisible ? 'col-xl-7' : 'col-12'">
-      <div class="card">
+      <div class="mobile-crud-list d-sm-none">
+        <div class="mobile-crud-card" *ngFor="let plan of planes; trackBy: trackById">
+          <div class="mobile-crud-card-head">
+            <div class="icon-tile" style="width: 38px; height: 38px; background: var(--brand-tint); color: var(--brand); font-size: 1rem">
+              <i class="bi bi-card-checklist"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate">{{ plan.nombre }}</div>
+              <div class="text-secondary text-truncate" style="font-size: .76rem">{{ plan.descripcion }}</div>
+            </div>
+            <app-badge [cls]="plan.activo ? 'b-ok' : 'b-neutral'">{{ plan.activo ? 'Activo' : 'Inactivo' }}</app-badge>
+          </div>
+
+          <div class="mobile-crud-card-grid">
+            <div>
+              <span>Sucursal</span>
+              <strong>{{ getSucursalName(plan.sucursal_id) }}</strong>
+            </div>
+            <div>
+              <span>Items</span>
+              <strong>{{ plan.kit.length }}</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>{{ clp(plan.valor) }}</strong>
+            </div>
+            <div>
+              <span>Estado</span>
+              <strong>{{ plan.activo ? 'Activo' : 'Inactivo' }}</strong>
+            </div>
+          </div>
+
+          <div class="mobile-crud-card-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">
+              <i class="bi bi-slash-circle"></i> Desactivar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card d-none d-sm-block">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Plan</th>
@@ -48,15 +91,15 @@
             </thead>
             <tbody>
               <tr *ngFor="let plan of planes; trackBy: trackById">
-                <td class="ps-4">
+                <td class="ps-4" data-label="Plan">
                   <div class="fw-bold">{{ plan.nombre }}</div>
                   <div class="text-secondary" style="font-size: .75rem">{{ plan.descripcion }}</div>
                 </td>
-                <td class="text-body-secondary">{{ getSucursalName(plan.sucursal_id) }}</td>
-                <td class="tnum text-body-secondary">{{ plan.kit.length }}</td>
-                <td class="text-end tnum fw-bold">{{ clp(plan.valor) }}</td>
-                <td><app-badge [cls]="plan.activo ? 'b-ok' : 'b-neutral'">{{ plan.activo ? 'Si' : 'No' }}</app-badge></td>
-                <td class="pe-4">
+                <td class="text-body-secondary" data-label="Sucursal">{{ getSucursalName(plan.sucursal_id) }}</td>
+                <td class="tnum text-body-secondary" data-label="Items">{{ plan.kit.length }}</td>
+                <td class="text-end tnum fw-bold" data-label="Total">{{ clp(plan.valor) }}</td>
+                <td data-label="Activo"><app-badge [cls]="plan.activo ? 'b-ok' : 'b-neutral'">{{ plan.activo ? 'Si' : 'No' }}</app-badge></td>
+                <td class="pe-4" data-label="Acciones">
                   <div class="d-flex gap-2 justify-content-end">
                     <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">Editar</button>
                     <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(plan)" [disabled]="loading || saving || !isPlanActivo(plan)">Desactivar</button>
@@ -118,7 +161,7 @@
           </button>
 
           <div class="table-responsive" *ngIf="form.kit?.length">
-            <table class="table table-sm align-middle">
+            <table class="table table-sm align-middle responsive-card-table">
               <thead>
                 <tr>
                   <th>Item</th>
@@ -129,15 +172,15 @@
               </thead>
               <tbody>
                 <tr *ngFor="let item of form.kit; trackBy: trackByProductoServicio">
-                  <td>
+                  <td data-label="Item">
                     <div class="fw-semibold">{{ item.nombre }}</div>
                     <div class="text-secondary" style="font-size: .72rem">{{ item.codigo }} · {{ item.tipo_item }}</div>
                   </td>
-                  <td>
+                  <td data-label="Cantidad">
                     <input class="form-control form-control-sm" type="number" min="1" [(ngModel)]="item.cantidad" (ngModelChange)="updateKitItem(item)" />
                   </td>
-                  <td class="text-end tnum fw-semibold">{{ clp(item.total) }}</td>
-                  <td class="text-end">
+                  <td class="text-end tnum fw-semibold" data-label="Total">{{ clp(item.total) }}</td>
+                  <td class="text-end" data-label="Quitar">
                     <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar" [disabled]="saving">
                       <i class="bi bi-x-lg"></i>
                     </button>

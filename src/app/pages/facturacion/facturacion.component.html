@@ -13,7 +13,7 @@
 
   <div class="card">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 responsive-card-table">
         <thead>
           <tr>
             <th class="ps-4">Folio</th>
@@ -28,14 +28,14 @@
         </thead>
         <tbody>
           <tr *ngFor="let invoice of rows">
-            <td class="ps-4 tnum fw-bold text-primary">{{ invoice.folio }}</td>
-            <td class="tnum text-secondary">{{ invoice.caso }}</td>
-            <td class="fw-semibold">{{ invoice.cliente }}</td>
-            <td class="tnum text-body-secondary">{{ invoice.emitida }}</td>
-            <td class="tnum" [ngClass]="{ 'text-danger fw-bold': invoice.estado === 'Vencida', 'text-body-secondary': invoice.estado !== 'Vencida' }">{{ invoice.vence }}</td>
-            <td><app-badge [cls]="invEstado[invoice.estado]" [dot]="true">{{ invoice.estado }}</app-badge></td>
-            <td class="text-end tnum fw-semibold">{{ clp(invoice.monto) }}</td>
-            <td class="text-end pe-4 tnum fw-bold" [ngClass]="{ 'text-danger': invoice.monto - invoice.abonado > 0, 'text-primary': invoice.monto - invoice.abonado === 0 }">{{ invoice.monto - invoice.abonado > 0 ? clp(invoice.monto - invoice.abonado) : '—' }}</td>
+            <td class="ps-4 tnum fw-bold text-primary" data-label="Folio">{{ invoice.folio }}</td>
+            <td class="tnum text-secondary" data-label="Caso">{{ invoice.caso }}</td>
+            <td class="fw-semibold" data-label="Cliente">{{ invoice.cliente }}</td>
+            <td class="tnum text-body-secondary" data-label="Emitida">{{ invoice.emitida }}</td>
+            <td class="tnum" data-label="Vence" [ngClass]="{ 'text-danger fw-bold': invoice.estado === 'Vencida', 'text-body-secondary': invoice.estado !== 'Vencida' }">{{ invoice.vence }}</td>
+            <td data-label="Estado"><app-badge [cls]="invEstado[invoice.estado]" [dot]="true">{{ invoice.estado }}</app-badge></td>
+            <td class="text-end tnum fw-semibold" data-label="Monto">{{ clp(invoice.monto) }}</td>
+            <td class="text-end pe-4 tnum fw-bold" data-label="Saldo" [ngClass]="{ 'text-danger': invoice.monto - invoice.abonado > 0, 'text-primary': invoice.monto - invoice.abonado === 0 }">{{ invoice.monto - invoice.abonado > 0 ? clp(invoice.monto - invoice.abonado) : '—' }}</td>
           </tr>
         </tbody>
       </table>

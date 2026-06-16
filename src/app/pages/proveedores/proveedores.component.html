@@ -33,9 +33,60 @@
 
   <div class="row gy-3">
     <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
-      <div class="card">
+      <div class="mobile-crud-list d-sm-none">
+        <div class="mobile-crud-card" *ngFor="let proveedor of proveedores; trackBy: trackById">
+          <div class="mobile-crud-card-head">
+            <app-avatar [name]="proveedor.nombre_completo" [size]="38"></app-avatar>
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate">{{ proveedor.nombre_completo }}</div>
+              <div class="text-secondary text-truncate" style="font-size: .76rem">{{ proveedor.email }}</div>
+            </div>
+            <app-badge [cls]="isProveedorActivo(proveedor) ? 'b-ok' : 'b-neutral'">
+              {{ isProveedorActivo(proveedor) ? 'Activo' : 'Desactivado' }}
+            </app-badge>
+          </div>
+
+          <div class="mobile-crud-card-grid">
+            <div>
+              <span>RUT</span>
+              <strong>{{ formatRut(proveedor) }}</strong>
+            </div>
+            <div>
+              <span>Rol</span>
+              <strong>{{ proveedor.rol }}</strong>
+            </div>
+            <div>
+              <span>Contacto</span>
+              <strong>{{ proveedor.telefono }}</strong>
+            </div>
+            <div>
+              <span>Tipo</span>
+              <strong>{{ proveedor.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</strong>
+            </div>
+            <div>
+              <span>Región</span>
+              <strong>{{ getRegionName(proveedor.region_id || 1) }}</strong>
+            </div>
+            <div>
+              <span>Comuna</span>
+              <strong>{{ getComunaName(proveedor.comuna_id) }}</strong>
+            </div>
+          </div>
+
+          <div class="mobile-crud-card-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(proveedor)" [disabled]="loading || saving || !isProveedorActivo(proveedor)">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(proveedor)" [disabled]="loading || saving || !isProveedorActivo(proveedor)">
+              <i class="bi bi-slash-circle"></i> Desactivar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card d-none d-sm-block">
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0 admin-crud-table">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
             <thead>
               <tr>
                 <th class="ps-4">Proveedor</th>
@@ -51,7 +102,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let proveedor of proveedores; trackBy: trackById">
-                <td class="ps-4">
+                <td class="ps-4" data-label="Proveedor">
                   <div class="d-flex align-items-center gap-2">
                     <app-avatar [name]="proveedor.nombre_completo" [size]="34"></app-avatar>
                     <div>
@@ -60,18 +111,18 @@
                     </div>
                   </div>
                 </td>
-                <td class="tnum text-body-secondary">{{ formatRut(proveedor) }}</td>
-                <td class="text-body-secondary">{{ proveedor.rol }}</td>
-                <td class="text-body-secondary">{{ proveedor.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
-                <td class="tnum text-body-secondary">{{ proveedor.telefono }}</td>
-                <td class="text-body-secondary">{{ getRegionName(proveedor.region_id || 1) }}</td>
-                <td class="text-body-secondary">{{ getComunaName(proveedor.comuna_id) }}</td>
-                <td>
+                <td class="tnum text-body-secondary" data-label="RUT">{{ formatRut(proveedor) }}</td>
+                <td class="text-body-secondary" data-label="Rol">{{ proveedor.rol }}</td>
+                <td class="text-body-secondary" data-label="Tipo">{{ proveedor.tipo_persona === 'empresa' ? 'Empresa' : 'Persona' }}</td>
+                <td class="tnum text-body-secondary" data-label="Contacto">{{ proveedor.telefono }}</td>
+                <td class="text-body-secondary" data-label="Región">{{ getRegionName(proveedor.region_id || 1) }}</td>
+                <td class="text-body-secondary" data-label="Comuna">{{ getComunaName(proveedor.comuna_id) }}</td>
+                <td data-label="Estado">
                   <app-badge [cls]="isProveedorActivo(proveedor) ? 'b-ok' : 'b-neutral'">
                     {{ isProveedorActivo(proveedor) ? 'Activo' : 'Desactivado' }}
                   </app-badge>
                 </td>
-                <td class="pe-4">
+                <td class="pe-4" data-label="Acciones">
                   <div class="d-flex gap-2 justify-content-end">
                     <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(proveedor)" [disabled]="loading || saving || !isProveedorActivo(proveedor)">Editar</button>
                     <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(proveedor)" [disabled]="loading || saving || !isProveedorActivo(proveedor)">Desactivar</button>
