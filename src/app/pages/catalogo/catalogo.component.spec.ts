@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { CatalogoComponent } from './catalogo.component';
+import { commonTestingImports, commonTestingProviders } from '../../testing/test-bed-utils';
 
 describe('CatalogoComponent', () => {
   let component: CatalogoComponent;
@@ -8,11 +9,12 @@ describe('CatalogoComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [CatalogoComponent]
+      imports: commonTestingImports,
+      declarations: [CatalogoComponent],
+      providers: commonTestingProviders
     });
     fixture = TestBed.createComponent(CatalogoComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AgendaComponent } from './agenda.component';
+import { commonTestingImports } from '../../testing/test-bed-utils';
 
 describe('AgendaComponent', () => {
   let component: AgendaComponent;
@@ -8,11 +9,11 @@ describe('AgendaComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
+      imports: commonTestingImports,
       declarations: [AgendaComponent]
     });
     fixture = TestBed.createComponent(AgendaComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -155,6 +155,7 @@ export const NAV_BS = [
     { id: "proveedores", label: "Proveedores", icon: "truck" },
     { id: "productos-servicios", label: "Productos y servicios", icon: "boxes" },
     { id: "planes", label: "Planes", icon: "clipboard2-check" },
+    { id: "recursos", label: "Recursos", icon: "tools" },
     { id: "sucursales", label: "Sucursales", icon: "geo-alt-fill" }
   ]},
   { group: "Recursos", items: [{ id: "inventario", label: "Inventario", icon: "box-seam-fill", count: 3 }] },
@@ -170,6 +171,7 @@ export const PAGE_META_BS = {
   clientes:    { title: "Clientes", crumb: "Comercial / Clientes" },
   inventario:  { title: "Inventario", crumb: "Recursos / Inventario" },
   facturacion: { title: "Facturación", crumb: "Finanzas / Facturación" },
+  recursos:    { title: "Recursos", crumb: "Administración / Recursos" },
 };
 
 export const ESTADO_BS: Record<string, string> = {

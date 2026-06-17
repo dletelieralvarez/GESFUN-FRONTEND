@@ -111,6 +111,7 @@ src/
       planes/
       productos-servicios/
       proveedores/
+      recursos/
       sucursales/
       usuarios/
     services/
@@ -194,6 +195,7 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/proveedores` | `ProveedoresComponent` | Administracion de proveedores |
 | `/productos-servicios` | `ProductosServiciosComponent` | Administracion de productos y servicios |
 | `/planes` | `PlanesComponent` | Administracion de planes armables |
+| `/recursos` | `RecursosComponent` | Administracion de tipos de recurso |
 | `/sucursales` | `SucursalesComponent` | Administracion de sucursales |
 | `/inventario` | `InventarioComponent` | Inventario |
 | `/facturacion` | `FacturacionComponent` | Facturacion |
@@ -799,6 +801,10 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `POST /api/sucursales`
   - `PUT /api/sucursales/{uuid}`
   - `PATCH /api/sucursales/{uuid}/desactivar`
+- `RecursosComponent`
+  - `GET /api/tipos-recurso`
+  - `POST /api/tipos-recurso`
+  - `PUT /api/tipos-recurso/{uuid}`
 
 Los modulos de terceros y sucursales cargan ademas:
 
@@ -813,7 +819,9 @@ Esto permite enviar al backend los campos esperados por contrato:
 
 Las ediciones de terceros y productos/servicios se realizan por `uuid`, no por `id` numerico.
 
-En clientes, empleados, proveedores, productos/servicios, planes y sucursales, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un registro queda desactivado, el frontend lo mantiene visible, muestra el estado `Desactivado` y bloquea la edicion.
+En clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos, el boton de baja se presenta como `Desactivar`, porque el backend no elimina fisicamente el registro: cambia su estado `activo`. Cuando un registro queda desactivado, el frontend lo mantiene visible, muestra el estado `Desactivado` y bloquea la edicion.
+
+En recursos, la desactivacion se realiza con `PUT /api/tipos-recurso/{uuid}` enviando `activo: 0`, de acuerdo con el contrato actual del BFF. El UUID se usa internamente para editar/desactivar, pero no se muestra en la tabla.
 
 ## 12. Estado del callback de autenticacion
 
@@ -841,7 +849,11 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 | `npm run build` | Compila la app para produccion |
 | `npm run watch` | Compila en modo watch con configuracion development |
 | `npm run test` | Ejecuta pruebas unitarias con Karma/Jasmine |
+| `npm run test:ci` | Ejecuta pruebas unitarias una sola vez en Chrome Headless |
+| `npm run test:coverage` | Ejecuta pruebas unitarias y genera reporte de cobertura |
 | `npm run ng` | Acceso directo al Angular CLI |
+
+El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 54 pruebas exitosas con cobertura aproximada de 38% en statements y 39% en lines.
 
 ## 14. Flujo recomendado para usar la aplicacion
 
@@ -858,11 +870,11 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 ## 15. Limitaciones actuales
 
 - Algunos modulos siguen usando datos mock/locales.
-- Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes y sucursales ya pasan por BFF.
+- Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
-- Las pruebas unitarias son las generadas/base y no cubren todavia todos los flujos de negocio.
+- Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
 
@@ -884,6 +896,6 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, envio de bearer token al BFF desde `AuthService`, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF y administracion de planes armables con kit de items.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, envio de bearer token al BFF desde `AuthService`, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF, administracion de planes armables con kit de items, mantenedor de recursos y pruebas unitarias con Karma/Jasmine.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

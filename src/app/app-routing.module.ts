@@ -12,6 +12,7 @@ import { FacturacionComponent } from './pages/facturacion/facturacion.component'
 import { InventarioComponent } from './pages/inventario/inventario.component';
 import { PlanesComponent } from './pages/planes/planes.component';
 import { ProductosServiciosComponent } from './pages/productos-servicios/productos-servicios.component';
+import { RecursosComponent } from './pages/recursos/recursos.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { LoginComponent } from './pages/login/login.component';
@@ -32,6 +33,7 @@ const routes: Routes = [
   { path: 'proveedores', component: ProveedoresComponent, data: { title: 'Administración de proveedores', crumb: 'Administración / Proveedores' } },
   { path: 'productos-servicios', component: ProductosServiciosComponent, data: { title: 'Productos y servicios', crumb: 'Administración / Productos y servicios' } },
   { path: 'planes', component: PlanesComponent, data: { title: 'Planes', crumb: 'Administración / Planes' } },
+  { path: 'recursos', component: RecursosComponent, data: { title: 'Recursos', crumb: 'Administración / Recursos' } },
   { path: 'sucursales', component: SucursalesComponent, data: { title: 'Administración de sucursales', crumb: 'Administración / Sucursales' } },
   { path: 'inventario', component: InventarioComponent, data: { title: 'Inventario', crumb: 'Recursos / Inventario' } },
   { path: 'facturacion', component: FacturacionComponent, data: { title: 'Facturación', crumb: 'Finanzas / Facturación' } },

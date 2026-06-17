@@ -23,6 +23,7 @@ import { ProductosServiciosComponent } from './pages/productos-servicios/product
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { SucursalesComponent } from './pages/sucursales/sucursales.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
+import { RecursosComponent } from './pages/recursos/recursos.component';
 import { UiModule } from './ui/ui.module';
 import { MsalModule, MsalRedirectComponent } from '@azure/msal-angular';
 import { PublicClientApplication, InteractionType } from '@azure/msal-browser';
@@ -46,6 +47,7 @@ import { loginRequest, msalConfig } from './auth-config';
     ProductosServiciosComponent,
     FacturacionComponent,
     UsuariosComponent,
+    RecursosComponent,
     SucursalesComponent,
     LoginComponent,
     AuthCallbackComponent
