@@ -1,0 +1,126 @@
+.status-stack {
+  display: grid;
+  gap: .65rem;
+}
+
+.status-message {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe8e2;
+  border-left-width: 4px;
+  border-radius: 8px;
+  display: flex;
+  gap: .65rem;
+  padding: .8rem .95rem;
+}
+
+.status-loading { border-left-color: #6683a5; }
+.status-error { border-left-color: #b5402f; color: #852f22; }
+.status-success { border-left-color: var(--brand); color: var(--brand-strong); }
+.status-warning { border-left-color: #b88725; color: #725411; }
+
+.step-number {
+  align-items: center;
+  background: var(--brand-tint);
+  border-radius: 50%;
+  color: var(--brand-strong);
+  display: inline-flex;
+  flex: none;
+  font-size: .72rem;
+  font-weight: 800;
+  height: 1.65rem;
+  justify-content: center;
+  width: 1.65rem;
+}
+
+.plan-description {
+  align-items: flex-start;
+  background: var(--brand-faint);
+  border: 1px solid var(--brand-tint);
+  border-radius: .7rem;
+  color: var(--brand-strong);
+  display: flex;
+  gap: .55rem;
+  padding: .75rem .9rem;
+}
+
+.quote-items-table tr {
+  cursor: default;
+}
+
+.extra-row {
+  cursor: pointer;
+}
+
+.quote-checkbox {
+  align-items: center;
+  border: 2px solid #c3cac3;
+  border-radius: 6px;
+  color: #fff;
+  display: inline-flex;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.quote-checkbox.checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.quantity-input {
+  max-width: 76px;
+}
+
+.empty-state {
+  background: #f8faf8;
+  border: 1px dashed #d8ddd8;
+  border-radius: .7rem;
+  color: var(--bs-secondary-color);
+  padding: 1rem;
+  text-align: center;
+}
+
+.quote-summary {
+  position: sticky;
+  top: 1rem;
+}
+
+.summary-line {
+  display: flex;
+  font-size: .84rem;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: .65rem;
+}
+
+.summary-line span:first-child {
+  min-width: 0;
+}
+
+.total-value {
+  font-size: 1.5rem;
+}
+
+@media print {
+  button,
+  app-page-head,
+  .status-stack {
+    display: none !important;
+  }
+
+  .col-xl-8,
+  .col-xl-4 {
+    width: 100%;
+  }
+
+  .quote-summary {
+    position: static;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .quote-summary {
+    position: static;
+  }
+}

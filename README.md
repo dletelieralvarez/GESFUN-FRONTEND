@@ -11,7 +11,7 @@ La aplicacion permite revisar y operar sobre:
 - Servicios funerarios y casos activos.
 - Agenda de salas.
 - Catalogo de planes y servicios adicionales.
-- Cotizaciones con calculo de subtotal, IVA y total.
+- Cotizaciones persistidas mediante el BFF, con datos de pagador, fallecido, plan, adicionales, forma de pago y calculo de totales.
 - Clientes o terceros.
 - Usuarios del sistema.
 - Sucursales.
@@ -355,14 +355,34 @@ src/app/pages/cotizacion/
 
 Funcionalidad:
 
-- Seleccion de plan base.
-- Seleccion de servicios adicionales.
-- Calculo de extras.
-- Calculo de subtotal.
-- Calculo de IVA al 19%.
-- Calculo de total.
+- Carga sucursales, planes, productos/servicios, formas de pago, motivos de fallecimiento y comunas desde el BFF.
+- Registra los datos del cliente pagador, tanto persona natural como empresa.
+- Registra los datos personales y antecedentes del fallecido.
+- Permite seleccionar una sucursal y uno de sus planes activos.
+- Carga automaticamente los productos y servicios incluidos en el kit del plan.
+- Permite agregar productos o servicios adicionales y definir sus cantidades.
+- Permite seleccionar forma de pago, fecha de emision y fecha de validez.
+- Calcula subtotal, IVA al 19% para prestaciones afectas y total estimado.
+- Genera la cotizacion mediante `POST /api/cotizaciones`.
+- Envia al backend los UUID de sucursal, plan, forma de pago, motivo de fallecimiento, comuna y productos/servicios.
+- Excluye las prestaciones inactivas que todavia permanezcan asociadas al kit de un plan y muestra una advertencia al usuario.
+- Revalida el catalogo de productos y servicios inmediatamente antes de guardar para evitar enviar elementos desactivados mientras la pantalla estaba abierta.
+- Permite imprimir la propuesta o guardarla como PDF mediante la funcionalidad de impresion del navegador.
 
-El componente inicia con el plan tradicional seleccionado y algunos extras marcados por defecto.
+Endpoints consumidos:
+
+```text
+GET  /api/sucursales
+GET  /api/planes
+GET  /api/plan-kit/plan/{planUuid}
+GET  /api/productos-servicios
+GET  /api/formas-pago
+GET  /api/motivos-fallecimiento
+GET  /api/comunas
+POST /api/cotizaciones
+```
+
+El backend asigna el numero, el estado inicial y los totales definitivos de la cotizacion.
 
 ### 6.7 Clientes
 
@@ -796,6 +816,15 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `POST /api/plan-kit`
   - `PUT /api/plan-kit/{uuid}`
   - `DELETE /api/plan-kit/{uuid}`
+- `CotizacionComponent`
+  - `GET /api/sucursales`
+  - `GET /api/planes`
+  - `GET /api/plan-kit/plan/{planUuid}`
+  - `GET /api/productos-servicios`
+  - `GET /api/formas-pago`
+  - `GET /api/motivos-fallecimiento`
+  - `GET /api/comunas`
+  - `POST /api/cotizaciones`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`
@@ -853,7 +882,7 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 | `npm run test:coverage` | Ejecuta pruebas unitarias y genera reporte de cobertura |
 | `npm run ng` | Acceso directo al Angular CLI |
 
-El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 54 pruebas exitosas con cobertura aproximada de 38% en statements y 39% en lines.
+El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 56 pruebas exitosas. La cobertura debe regenerarse con `npm run test:coverage` cuando se requiera un valor actualizado.
 
 ## 14. Flujo recomendado para usar la aplicacion
 
@@ -871,9 +900,10 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
+- La creacion de cotizaciones y sus catalogos asociados ya pasan por el BFF.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios, facturas, inventario o cotizaciones.
+- No hay persistencia real contra API para servicios funerarios, facturas o inventario.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
@@ -882,6 +912,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - Crear servicios HTTP por dominio:
   - Planes y plan kit.
   - Sucursales.
+  - Cotizaciones.
   - Servicios.
   - Inventario.
   - Facturacion.

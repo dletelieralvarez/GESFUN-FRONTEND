@@ -1,71 +1,281 @@
 <div class="content-wrap">
   <app-page-head title="Nueva cotización" sub="Arma una propuesta de servicio para la familia"></app-page-head>
 
-  <div class="row g-4">
-    <div class="col-12 col-lg-8">
+  <div class="status-stack mb-4" *ngIf="loading || error || success || prestacionesNoDisponibles.length">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i><span>Cargando datos para la cotización...</span>
+    </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+    </div>
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+    <div class="status-message status-warning" *ngIf="prestacionesNoDisponibles.length">
+      <i class="bi bi-exclamation-triangle"></i>
+      <span>Se excluyeron del plan porque están inactivas: {{ prestacionesNoDisponibles.join(', ') }}.</span>
+    </div>
+  </div>
+
+  <div class="row g-4" *ngIf="!loading">
+    <div class="col-12 col-xl-8">
       <div class="d-flex flex-column gap-4">
         <div class="card">
-          <div class="card-header"><span class="fw-bold">Datos de la familia</span></div>
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="step-number">1</span><span>Cliente pagador</span>
+          </div>
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-6"><label class="form-label fw-semibold small">Familiar responsable</label><input class="form-control" value="Roberto Soto Vidal" /></div>
-              <div class="col-md-6"><label class="form-label fw-semibold small">RUT</label><input class="form-control" value="10.224.881-5" /></div>
-              <div class="col-md-6"><label class="form-label fw-semibold small">Teléfono</label><input class="form-control" value="+56 9 8421 5530" /></div>
-              <div class="col-md-6"><label class="form-label fw-semibold small">Comuna</label><input class="form-control" value="Ñuñoa" /></div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Tipo de persona</label>
+                <select class="form-select" [(ngModel)]="pagador.tipoPersona">
+                  <option value="N">Persona natural</option>
+                  <option value="J">Empresa</option>
+                </select>
+              </div>
+              <div class="col-md-5">
+                <label class="form-label fw-semibold small">RUT</label>
+                <input class="form-control" [(ngModel)]="pagador.rut" placeholder="12345678" inputmode="numeric" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold small">DV</label>
+                <input class="form-control text-uppercase" [(ngModel)]="pagador.dv" maxlength="1" placeholder="9" />
+              </div>
+
+              <ng-container *ngIf="pagador.tipoPersona === 'N'; else empresaPagadora">
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Nombres</label>
+                  <input class="form-control" [(ngModel)]="pagador.nombres" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Apellido paterno</label>
+                  <input class="form-control" [(ngModel)]="pagador.apellidoPaterno" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold small">Apellido materno</label>
+                  <input class="form-control" [(ngModel)]="pagador.apellidoMaterno" />
+                </div>
+              </ng-container>
+              <ng-template #empresaPagadora>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">Razón social</label>
+                  <input class="form-control" [(ngModel)]="pagador.razonSocial" />
+                </div>
+              </ng-template>
+
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Email</label>
+                <input class="form-control" type="email" [(ngModel)]="pagador.email" placeholder="cliente@correo.cl" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Teléfono</label>
+                <input class="form-control" [(ngModel)]="pagador.telefono" placeholder="+56 9 1234 5678" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Comuna</label>
+                <select class="form-select" [(ngModel)]="pagador.comunaUuid">
+                  <option *ngFor="let comuna of comunas" [value]="comuna.uuid">{{ comuna.nombre }}</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-header"><span class="fw-bold">Plan base</span></div>
-          <div class="card-body d-flex flex-column gap-2">
-            <label *ngFor="let plan of plans" class="d-flex align-items-center gap-3 p-3 rounded-3" [ngStyle]="{ border: '1.5px solid ' + (selectedPlan.name === plan.name ? 'var(--brand)' : '#e3e7e3'), background: selectedPlan.name === plan.name ? 'var(--brand-faint)' : '#fff', cursor: 'pointer' }" (click)="setPlan(plan)">
-              <div style="width: 19px; height: 19px; border-radius: 50%; border: 2px solid {{ selectedPlan.name === plan.name ? 'var(--brand)' : '#c3cac3' }}; display: grid; place-items: center; flex: none;">
-                <div *ngIf="selectedPlan.name === plan.name" style="width: 9px; height: 9px; border-radius: 50%; background: var(--brand)"></div>
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="step-number">2</span><span>Datos del fallecido</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold small">RUT</label>
+                <input class="form-control" [(ngModel)]="fallecido.rut" placeholder="12345678" inputmode="numeric" />
               </div>
-              <div class="flex-grow-1"><div class="fw-bold">{{ plan.name }}</div><div class="text-secondary" style="font-size: .78rem">{{ plan.items.length }} prestaciones incluidas</div></div>
-              <div class="tnum fw-800">{{ clp(plan.price) }}</div>
-            </label>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold small">DV</label>
+                <input class="form-control text-uppercase" [(ngModel)]="fallecido.dv" maxlength="1" />
+              </div>
+              <div class="col-md-5">
+                <label class="form-label fw-semibold small">Fecha de nacimiento</label>
+                <input class="form-control" type="date" [(ngModel)]="fallecido.fechaNacimiento" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Nombres</label>
+                <input class="form-control" [(ngModel)]="fallecido.nombres" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Apellido paterno</label>
+                <input class="form-control" [(ngModel)]="fallecido.apellidoPaterno" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Apellido materno</label>
+                <input class="form-control" [(ngModel)]="fallecido.apellidoMaterno" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Comuna</label>
+                <select class="form-select" [(ngModel)]="fallecido.comunaUuid">
+                  <option *ngFor="let comuna of comunas" [value]="comuna.uuid">{{ comuna.nombre }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Motivo de fallecimiento</label>
+                <select class="form-select" [(ngModel)]="selectedMotivoUuid">
+                  <option *ngFor="let motivo of motivosFallecimiento" [value]="motivo.uuid">{{ motivo.nombre }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Fecha de fallecimiento</label>
+                <input class="form-control" type="date" [(ngModel)]="fechaFallecimiento" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Hora</label>
+                <input class="form-control" type="time" [(ngModel)]="horaFallecimiento" />
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-semibold small">Lugar de fallecimiento</label>
+                <input class="form-control" [(ngModel)]="lugarFallecimiento" placeholder="Hospital, domicilio o comuna" />
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-header"><span class="fw-bold">Servicios adicionales</span></div>
-          <div class="table-responsive">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="step-number">3</span><span>Plan base</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3 mb-3">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold small">Sucursal</label>
+                <select class="form-select" [(ngModel)]="selectedSucursalUuid" (ngModelChange)="onSucursalChange()">
+                  <option *ngFor="let sucursal of sucursales" [value]="sucursal.uuid">{{ sucursal.nombre }}</option>
+                </select>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label fw-semibold small">Plan</label>
+                <select class="form-select" [(ngModel)]="selectedPlanUuid" (ngModelChange)="onPlanChange()">
+                  <option *ngFor="let plan of planesSucursal" [value]="plan.uuid">{{ plan.nombre }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="plan-description mb-3" *ngIf="selectedPlan">
+              <i class="bi bi-info-circle"></i>
+              <span>{{ selectedPlan.descripcion || 'Plan funerario seleccionado' }}</span>
+            </div>
+
+            <div class="text-secondary small py-3" *ngIf="loadingKit">Cargando prestaciones del plan...</div>
+            <div class="table-responsive" *ngIf="!loadingKit && planKit.length">
+              <table class="table align-middle quote-items-table">
+                <thead><tr><th>Prestación incluida</th><th>Tipo</th><th class="text-center">Cantidad</th><th class="text-end">Valor</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let item of planKit">
+                    <td><div class="fw-semibold">{{ item.producto?.nombre || 'Prestación del plan' }}</div><div class="small text-secondary">{{ item.producto?.codigo }}</div></td>
+                    <td><app-badge cls="b-neutral">{{ item.producto?.tipo_item === 'servicio' ? 'Servicio' : 'Producto' }}</app-badge></td>
+                    <td class="text-center tnum">{{ item.cantidad }}</td>
+                    <td class="text-end tnum fw-semibold">{{ clp(item.cantidad * item.unitario) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="empty-state" *ngIf="!loadingKit && !planKit.length">Este plan no tiene productos o servicios configurados.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="step-number">4</span><span>Productos y servicios adicionales</span>
+          </div>
+          <div class="table-responsive" *ngIf="adicionalesDisponibles.length; else sinAdicionales">
             <table class="table table-hover align-middle mb-0 responsive-card-table">
               <tbody>
-                <tr *ngFor="let service of servicios; index as i" (click)="toggleExtra(i)" style="cursor: pointer;">
+                <tr *ngFor="let item of adicionalesDisponibles" (click)="toggleExtra(item)" class="extra-row">
                   <td class="ps-4 quote-check-cell" data-label="Seleccionar">
-                    <div [ngStyle]="{ width: '20px', height: '20px', borderRadius: '6px', border: '2px solid ' + (extras.has(i) ? 'var(--brand)' : '#c3cac3'), background: extras.has(i) ? 'var(--brand)' : 'transparent', display: 'grid', placeItems: 'center' }">
-                      <i *ngIf="extras.has(i)" class="bi bi-check-lg" style="color: #fff; font-size: .8rem;"></i>
-                    </div>
+                    <span class="quote-checkbox" [class.checked]="isExtraSelected(item.uuid)">
+                      <i *ngIf="isExtraSelected(item.uuid)" class="bi bi-check-lg"></i>
+                    </span>
                   </td>
-                  <td class="fw-semibold" data-label="Servicio">{{ service.name }}</td>
-                  <td data-label="Categoría"><app-badge cls="b-neutral">{{ service.cat }}</app-badge></td>
-                  <td class="text-end pe-4 tnum fw-bold" data-label="Precio">{{ clp(service.price) }}</td>
+                  <td class="fw-semibold" data-label="Nombre">
+                    {{ item.nombre }}
+                    <div class="text-secondary small">{{ item.codigo }}</div>
+                  </td>
+                  <td data-label="Tipo"><app-badge cls="b-neutral">{{ item.tipo_item === 'servicio' ? 'Servicio' : 'Producto' }}</app-badge></td>
+                  <td data-label="Cantidad" (click)="$event.stopPropagation()">
+                    <input class="form-control form-control-sm quantity-input" type="number" min="1"
+                      [disabled]="!isExtraSelected(item.uuid)"
+                      [ngModel]="getCantidadExtra(item.uuid)"
+                      (ngModelChange)="setCantidadExtra(item.uuid, $event)" />
+                  </td>
+                  <td class="text-end pe-4 tnum fw-bold" data-label="Precio">{{ clp(item.precio * getCantidadExtra(item.uuid)) }}</td>
                 </tr>
               </tbody>
             </table>
+          </div>
+          <ng-template #sinAdicionales><div class="empty-state m-3">No hay adicionales disponibles para este plan.</div></ng-template>
+        </div>
+
+        <div class="card">
+          <div class="card-header d-flex align-items-center gap-2">
+            <span class="step-number">5</span><span>Forma de pago y vigencia</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Forma de pago</label>
+                <select class="form-select" [(ngModel)]="selectedFormaPagoUuid">
+                  <option *ngFor="let forma of formasPago" [value]="forma.uuid">{{ forma.nombre }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Fecha</label>
+                <input class="form-control" type="date" [(ngModel)]="fecha" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small">Válida hasta</label>
+                <input class="form-control" type="date" [(ngModel)]="fechaValidez" />
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold small">Observación</label>
+                <textarea class="form-control" rows="3" maxlength="1000" [(ngModel)]="observacion" placeholder="Condiciones o antecedentes relevantes de la cotización"></textarea>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-lg-4">
-      <div class="card" style="position: sticky; top: 0;">
+    <div class="col-12 col-xl-4">
+      <div class="card quote-summary">
         <div class="card-header"><span class="fw-bold">Resumen de cotización</span></div>
         <div class="card-body">
-          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">{{ selectedPlan.name }}</span><span class="tnum fw-semibold">{{ clp(selectedPlan.price) }}</span></div>
-          <ng-container *ngFor="let service of servicios; index as i">
-            <div *ngIf="extras.has(i)" class="d-flex justify-content-between mb-2 text-secondary" style="font-size: .82rem"><span>+ {{ service.name }}</span><span class="tnum">{{ clp(service.price) }}</span></div>
+          <div class="summary-line">
+            <span>{{ selectedPlan?.nombre || 'Plan sin seleccionar' }}</span>
+            <strong class="tnum">{{ clp(planTotal) }}</strong>
+          </div>
+          <ng-container *ngFor="let item of productosServicios">
+            <div class="summary-line text-secondary" *ngIf="isExtraSelected(item.uuid)">
+              <span>+ {{ item.nombre }} × {{ getCantidadExtra(item.uuid) }}</span>
+              <span class="tnum">{{ clp(item.precio * getCantidadExtra(item.uuid)) }}</span>
+            </div>
           </ng-container>
-          <hr class="text-body-tertiary" />
-          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">Subtotal</span><span class="tnum fw-semibold">{{ clp(subtotal) }}</span></div>
-          <div class="d-flex justify-content-between mb-2" style="font-size: .84rem"><span class="text-body-secondary">IVA (19%)</span><span class="tnum fw-semibold">{{ clp(iva) }}</span></div>
-          <hr class="text-body-tertiary" />
-          <div class="d-flex justify-content-between align-items-baseline mb-3"><span class="fw-bold">Total</span><span class="tnum fw-800 text-primary" style="font-size: 1.5rem">{{ clp(total) }}</span></div>
-          <button class="btn btn-primary w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"><i class="bi bi-check-lg"></i>Generar cotización</button>
-          <button class="btn btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-2"><i class="bi bi-printer"></i>Imprimir / PDF</button>
+          <hr />
+          <div class="summary-line"><span class="text-body-secondary">Subtotal</span><strong class="tnum">{{ clp(subtotal) }}</strong></div>
+          <div class="summary-line"><span class="text-body-secondary">IVA (19%)</span><strong class="tnum">{{ clp(iva) }}</strong></div>
+          <hr />
+          <div class="d-flex justify-content-between align-items-baseline mb-4">
+            <span class="fw-bold">Total estimado</span>
+            <span class="tnum fw-800 text-primary total-value">{{ clp(total) }}</span>
+          </div>
+          <button class="btn btn-primary w-100 mb-2 d-inline-flex align-items-center justify-content-center gap-2"
+            type="button" (click)="generarCotizacion()" [disabled]="saving || loadingKit">
+            <i class="bi" [ngClass]="saving ? 'bi-arrow-repeat' : 'bi-check-lg'"></i>
+            {{ saving ? 'Generando...' : 'Generar cotización' }}
+          </button>
+          <button class="btn btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-2"
+            type="button" (click)="imprimir()" [disabled]="saving">
+            <i class="bi bi-printer"></i>Imprimir / PDF
+          </button>
+          <p class="small text-secondary text-center mb-0 mt-3">El backend asignará el número, estado inicial y totales definitivos.</p>
         </div>
       </div>
     </div>
