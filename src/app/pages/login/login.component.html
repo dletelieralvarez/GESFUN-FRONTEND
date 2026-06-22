@@ -39,6 +39,8 @@
 
     <div *ngIf="loading" class="alert alert-info py-2 mb-3">Cargando...</div>
     <div *ngIf="error" class="alert alert-danger py-2 mb-3">{{ error }}</div>
-    <div *ngIf="info" class="alert alert-secondary py-2 mb-3">{{ info }}</div>
+    <div *ngIf="info" class="alert alert-warning py-2 mb-3">
+      <i class="bi bi-exclamation-triangle me-2"></i>{{ info }}
+    </div>
   </div>
 </div>

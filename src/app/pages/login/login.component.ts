@@ -19,9 +19,15 @@ export class LoginComponent implements OnInit {
   constructor(public auth: AuthService, private router: Router) {}
 
   async ngOnInit() {
+    const sessionExpired = this.auth.hasSessionExpired();
+    if (sessionExpired) {
+      this.info = 'Tu sesión expiró. Inicia sesión nuevamente para continuar.';
+    }
+
     try {
       const account = await this.auth.handleRedirectResponse();
-      if (account) {
+      if (account && !this.auth.hasSessionExpired()) {
+        this.info = null;
         this.router.navigate(['/dashboard']);
       }
     } catch (err: any) {

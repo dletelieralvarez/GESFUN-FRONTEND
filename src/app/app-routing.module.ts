@@ -7,6 +7,7 @@ import { ClientesComponent } from './pages/clientes/clientes.component';
 import { EmpleadosComponent } from './pages/empleados/empleados.component';
 import { ProveedoresComponent } from './pages/proveedores/proveedores.component';
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
+import { CotizacionesComponent } from './pages/cotizaciones/cotizaciones.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
@@ -25,6 +26,7 @@ const routes: Routes = [
   { path: 'agenda', component: AgendaComponent, data: { title: 'Agenda de salas', crumb: 'Operación / Agenda' } },
   { path: 'catalogo', component: CatalogoComponent, data: { title: 'Catálogo y planes', crumb: 'Comercial / Catálogo' } },
   { path: 'cotizacion', component: CotizacionComponent, data: { title: 'Cotizaciones', crumb: 'Comercial / Cotizaciones' } },
+  { path: 'cotizaciones', component: CotizacionesComponent, data: { title: 'Cotizaciones creadas', crumb: 'Comercial / Cotizaciones creadas' } },
   { path: 'login', component: LoginComponent, data: { title: 'Login' } },
   { path: 'auth/callback', component: AuthCallbackComponent, data: { title: 'Autenticacion' } },
   { path: 'clientes', component: ClientesComponent, data: { title: 'Clientes', crumb: 'Comercial / Clientes' } },

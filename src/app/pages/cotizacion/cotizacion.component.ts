@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { CotizacionPdfData, CotizacionPdfService } from '../../services/cotizacion-pdf.service';
 import {
   Comuna,
   FormaPago,
@@ -82,7 +83,11 @@ export class CotizacionComponent implements OnInit {
   success: string | null = null;
   clp = CLP;
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(
+    private http: HttpClient,
+    private auth: AuthService,
+    private cotizacionPdf: CotizacionPdfService
+  ) {}
 
   async ngOnInit() {
     await this.loadCatalogos();
@@ -199,9 +204,16 @@ export class CotizacionComponent implements OnInit {
       ));
       const created = this.unwrapPayload<any>(response);
       const numero = created?.numero ?? created?.folio ?? created?.uuid;
-      this.success = numero
-        ? `Cotización ${numero} creada correctamente.`
-        : 'Cotización creada correctamente.';
+      const creadaMessage = numero
+        ? `Cotización ${numero} creada correctamente`
+        : 'Cotización creada correctamente';
+      try {
+        await this.cotizacionPdf.generar(this.toPdfData(created, numero));
+        this.success = `${creadaMessage} y PDF descargado.`;
+      } catch {
+        this.success = `${creadaMessage}.`;
+        this.error = 'La cotización quedó guardada, pero no se pudo descargar el PDF. Revisa los permisos de descarga del navegador.';
+      }
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudo crear la cotización.');
     } finally {
@@ -353,6 +365,76 @@ export class CotizacionComponent implements OnInit {
       pagador: this.toApiPersona(this.pagador),
       fallecido: this.toApiPersona(this.fallecido),
       detalles: Array.from(detalles.values())
+    };
+  }
+
+  private toPdfData(created: any, numero: any): CotizacionPdfData {
+    const sucursal = this.sucursales.find(item => item.uuid === this.selectedSucursalUuid);
+    const plan = this.planes.find(item => item.uuid === this.selectedPlanUuid);
+    const formaPago = this.formasPago.find(item => item.uuid === this.selectedFormaPagoUuid);
+    const motivo = this.motivosFallecimiento.find(item => item.uuid === this.selectedMotivoUuid);
+    const detalles = [
+      ...this.planKit.map(item => ({
+        codigo: item.producto?.codigo,
+        nombre: item.producto?.nombre || 'Prestación del plan',
+        tipo: item.producto?.tipo_item === 'servicio' ? 'Servicio' : 'Producto',
+        cantidad: item.cantidad,
+        unitario: item.unitario,
+        total: item.cantidad * item.unitario,
+        observacion: item.observacion || 'Incluido en el plan'
+      })),
+      ...this.productosServicios
+        .filter(item => this.extras.has(item.uuid))
+        .map(item => {
+          const cantidad = this.getCantidadExtra(item.uuid);
+          return {
+            codigo: item.codigo,
+            nombre: item.nombre,
+            tipo: item.tipo_item === 'servicio' ? 'Servicio' : 'Producto',
+            cantidad,
+            unitario: item.precio,
+            total: cantidad * item.precio,
+            observacion: 'Adicional'
+          };
+        })
+    ];
+
+    return {
+      numero: String(numero || 'Sin folio'),
+      fecha: created?.fecha ?? this.fecha,
+      fechaValidez: created?.fechaValidez ?? created?.fecha_validez ?? this.fechaValidez,
+      sucursal: sucursal?.nombre || 'No informada',
+      direccionSucursal: sucursal?.direccion,
+      telefonoSucursal: sucursal?.telefono,
+      plan: plan?.nombre || 'No informado',
+      descripcionPlan: plan?.descripcion,
+      formaPago: formaPago?.nombre || 'No informada',
+      motivoFallecimiento: motivo?.nombre || 'No informado',
+      fechaFallecimiento: this.fechaFallecimiento,
+      horaFallecimiento: this.horaFallecimiento,
+      lugarFallecimiento: this.lugarFallecimiento,
+      pagador: this.toPdfPersona(this.pagador),
+      fallecido: this.toPdfPersona(this.fallecido),
+      detalles,
+      subtotal: Number(created?.subtotal ?? created?.neto ?? this.subtotal),
+      iva: Number(created?.iva ?? this.iva),
+      total: Number(created?.total ?? this.total),
+      observacion: this.observacion
+    };
+  }
+
+  private toPdfPersona(persona: PersonaCotizacionForm) {
+    const comuna = this.comunas.find(item => item.uuid === persona.comunaUuid);
+    return {
+      tipoPersona: persona.tipoPersona,
+      rut: `${this.rutNumerico(persona.rut).toLocaleString('es-CL')}-${persona.dv.trim().toUpperCase()}`,
+      nombre: persona.tipoPersona === 'J'
+        ? persona.razonSocial.trim()
+        : [persona.nombres, persona.apellidoPaterno, persona.apellidoMaterno].filter(Boolean).join(' '),
+      email: persona.email.trim(),
+      telefono: persona.telefono.trim(),
+      fechaNacimiento: persona.fechaNacimiento,
+      comuna: comuna?.nombre
     };
   }
 

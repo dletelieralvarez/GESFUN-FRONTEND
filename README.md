@@ -12,6 +12,8 @@ La aplicacion permite revisar y operar sobre:
 - Agenda de salas.
 - Catalogo de planes y servicios adicionales.
 - Cotizaciones persistidas mediante el BFF, con datos de pagador, fallecido, plan, adicionales, forma de pago y calculo de totales.
+- Consulta de cotizaciones creadas, cambio de estado y reimpresion de documentos.
+- Generacion de PDF comercial y contrato asociado a la cotizacion.
 - Clientes o terceros.
 - Usuarios del sistema.
 - Sucursales.
@@ -31,6 +33,7 @@ La aplicacion permite revisar y operar sobre:
 - Angular HttpClient.
 - MSAL Angular.
 - MSAL Browser.
+- jsPDF y jsPDF AutoTable para documentos comerciales.
 - Karma/Jasmine para pruebas base generadas por Angular.
 
 ## 3. Instalacion del proyecto
@@ -103,6 +106,7 @@ src/
       catalogo/
       clientes/
       cotizacion/
+      cotizaciones/
       dashboard/
       empleados/
       facturacion/
@@ -116,6 +120,7 @@ src/
       usuarios/
     services/
       auth.service.ts
+      cotizacion-pdf.service.ts
     ui/
       ui.module.ts
     app-routing.module.ts
@@ -188,7 +193,8 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/casos` | `CasosComponent` | Servicios funerarios |
 | `/agenda` | `AgendaComponent` | Agenda de salas |
 | `/catalogo` | `CatalogoComponent` | Catalogo y planes |
-| `/cotizacion` | `CotizacionComponent` | Cotizaciones |
+| `/cotizacion` | `CotizacionComponent` | Nueva cotizacion |
+| `/cotizaciones` | `CotizacionesComponent` | Consulta y gestion de cotizaciones creadas |
 | `/clientes` | `ClientesComponent` | Clientes/terceros |
 | `/usuarios` | `UsuariosComponent` | Administracion de usuarios |
 | `/empleados` | `EmpleadosComponent` | Administracion de empleados |
@@ -367,7 +373,9 @@ Funcionalidad:
 - Envia al backend los UUID de sucursal, plan, forma de pago, motivo de fallecimiento, comuna y productos/servicios.
 - Excluye las prestaciones inactivas que todavia permanezcan asociadas al kit de un plan y muestra una advertencia al usuario.
 - Revalida el catalogo de productos y servicios inmediatamente antes de guardar para evitar enviar elementos desactivados mientras la pantalla estaba abierta.
-- Permite imprimir la propuesta o guardarla como PDF mediante la funcionalidad de impresion del navegador.
+- Genera automaticamente un PDF formal despues de guardar correctamente.
+- El PDF utiliza la identidad visual de Funeraria El Sauce, incorpora logo, folio, datos de las personas, prestaciones, impuestos, total y observaciones.
+- La generacion del documento usa `jsPDF` y `jsPDF AutoTable`.
 
 Endpoints consumidos:
 
@@ -384,7 +392,39 @@ POST /api/cotizaciones
 
 El backend asigna el numero, el estado inicial y los totales definitivos de la cotizacion.
 
-### 6.7 Clientes
+### 6.7 Cotizaciones creadas
+
+Ubicacion:
+
+```text
+src/app/pages/cotizaciones/
+```
+
+Funcionalidad:
+
+- Lista las cotizaciones persistidas desde `GET /api/cotizaciones`.
+- Permite buscar por numero, cliente, fallecido, plan o estado.
+- Muestra fecha, vigencia, plan, estado y total.
+- Consulta el detalle mediante `GET /api/cotizaciones/{uuid}` antes de reimprimir.
+- Permite volver a descargar el PDF de cotizacion.
+- Carga los estados activos desde `GET /api/estados-cotizacion`.
+- Actualiza el estado mediante `PATCH /api/cotizaciones/{uuid}/estado`.
+- Muestra el estado real entregado por el backend, incluido el estado inicial `BORRADOR`.
+- Al cambiar a `GEN_CONTR` genera un PDF titulado `Contrato de prestacion de servicios`.
+- El contrato incluye prestaciones, precio, condiciones y espacios para firma del cliente y del representante.
+- `GEN_CONTR` es un estado terminal: la interfaz bloquea nuevos cambios y el backend aplica la misma regla.
+- Una firma electronica avanzada verificable requiere integrar posteriormente un proveedor de firma y certificados.
+
+Endpoints consumidos:
+
+```text
+GET   /api/cotizaciones
+GET   /api/cotizaciones/{uuid}
+GET   /api/estados-cotizacion
+PATCH /api/cotizaciones/{uuid}/estado
+```
+
+### 6.8 Clientes
 
 Ubicacion:
 
@@ -419,7 +459,7 @@ Funcionalidad:
   - `PATCH /api/clientes/{uuid}/desactivar`
 - El BFF reenvia al backend real y aplica el rol `CLIENTE`.
 
-### 6.8 Empleados
+### 6.9 Empleados
 
 Ubicacion:
 
@@ -446,7 +486,7 @@ Funcionalidad:
   - `PATCH /api/empleados/{uuid}/desactivar`
 - El BFF reenvia al backend real y aplica el rol `EMPLEADO`.
 
-### 6.9 Proveedores
+### 6.10 Proveedores
 
 Ubicacion:
 
@@ -473,7 +513,7 @@ Funcionalidad:
   - `PATCH /api/proveedores/{uuid}/desactivar`
 - El BFF reenvia al backend real y aplica el rol `PROVEEDOR`.
 
-### 6.10 Productos Y Servicios
+### 6.11 Productos Y Servicios
 
 Ubicacion:
 
@@ -509,7 +549,7 @@ Funcionalidad:
   - `empresaUuid`
 - Muestra los registros desactivados y bloquea su edicion.
 
-### 6.11 Planes
+### 6.12 Planes
 
 Ubicacion:
 
@@ -554,7 +594,7 @@ Funcionalidad:
   - `planUuid`
 - Muestra los planes desactivados y bloquea su edicion.
 
-### 6.12 Usuarios
+### 6.13 Usuarios
 
 Ubicacion:
 
@@ -573,7 +613,7 @@ Funcionalidad:
 
 Importante: estos cambios son locales en memoria.
 
-### 6.13 Sucursales
+### 6.14 Sucursales
 
 Ubicacion:
 
@@ -607,7 +647,7 @@ Funcionalidad:
 - Usa confirmacion visual inline para desactivar, sin `alert` ni `confirm` nativo del navegador.
 - Conserva los UUID reales de comuna y empresa recibidos desde el BFF para evitar enviar identificadores mock al backend durante la edicion.
 
-### 6.14 Inventario
+### 6.15 Inventario
 
 Ubicacion:
 
@@ -628,7 +668,7 @@ Funcionalidad:
 - Calcula cantidad de productos bajo stock minimo.
 - Usa `trackBySku` para optimizar renderizado de filas.
 
-### 6.15 Facturacion
+### 6.16 Facturacion
 
 Ubicacion:
 
@@ -691,7 +731,8 @@ El flujo actual usa:
 - Scope del BFF/API.
 - Logout por popup.
 - Obtencion silenciosa de token cuando existe una cuenta activa.
-- Fallback interactivo para token cuando MSAL lo requiere.
+- Deteccion de sesion expirada cuando la renovacion silenciosa del token requiere interaccion.
+- Redireccion al login con el mensaje `Tu sesion expiro. Inicia sesion nuevamente para continuar`.
 - `MsalRedirectComponent` para procesar respuestas de Microsoft Entra ID.
 
 ## 9. Servicio de autenticacion
@@ -736,7 +777,8 @@ Responsabilidades:
 
 - Obtener access token para el scope del BFF.
 - Intentar primero `acquireTokenSilent`.
-- Usar `acquireTokenPopup` como fallback cuando MSAL requiere interaccion o cuando ocurre `monitor_window_timeout`.
+- Evitar popups automaticos cuando MSAL requiere interaccion, ya que el navegador puede bloquearlos.
+- Marcar la sesion como expirada y redirigir al login.
 - Entregar el token a los componentes para llamar al BFF con:
 
 ```http
@@ -825,6 +867,11 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/motivos-fallecimiento`
   - `GET /api/comunas`
   - `POST /api/cotizaciones`
+- `CotizacionesComponent`
+  - `GET /api/cotizaciones`
+  - `GET /api/cotizaciones/{uuid}`
+  - `GET /api/estados-cotizacion`
+  - `PATCH /api/cotizaciones/{uuid}/estado`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`
@@ -894,13 +941,15 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 6. Completar login Microsoft Entra ID.
 7. Volver automaticamente al dashboard.
 8. Navegar a los modulos desde el sidebar.
-9. Revisar dashboard, casos, agenda, catalogo, cotizacion, clientes, empleados, proveedores, productos y servicios, planes, usuarios, sucursales, inventario y facturacion.
+9. Revisar dashboard, casos, agenda, catalogo, nueva cotizacion, cotizaciones creadas, clientes, empleados, proveedores, productos y servicios, planes, usuarios, sucursales, inventario y facturacion.
 
 ## 15. Limitaciones actuales
 
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
-- La creacion de cotizaciones y sus catalogos asociados ya pasan por el BFF.
+- La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
+- Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
+- El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
 - No hay persistencia real contra API para servicios funerarios, facturas o inventario.
@@ -927,6 +976,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, modelos de dominio, datos de ejemplo, autenticacion MSAL, envio de bearer token al BFF desde `AuthService`, administracion de usuarios conectada al BFF, administracion de terceros por rol conectada al BFF, administracion de productos/servicios conectada al BFF, administracion de planes armables con kit de items, mantenedor de recursos y pruebas unitarias con Karma/Jasmine.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, mantenedores conectados al BFF y un flujo comercial de cotizaciones que permite crear, listar, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

@@ -1,0 +1,16 @@
+.quote-search {
+  max-width: 620px;
+}
+
+.quote-search .form-control:focus,
+.quote-search .input-group-text {
+  box-shadow: none;
+}
+
+tbody tr {
+  cursor: default;
+}
+
+.quote-state-cell {
+  min-width: 255px;
+}

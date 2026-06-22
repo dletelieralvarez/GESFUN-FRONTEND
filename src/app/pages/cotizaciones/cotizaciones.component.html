@@ -1,0 +1,103 @@
+<div class="content-wrap">
+  <app-page-head title="Cotizaciones creadas" [sub]="cotizaciones.length + ' cotizaciones registradas'">
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+        type="button" (click)="cargarCotizaciones()" [disabled]="loading">
+        <i class="bi bi-arrow-clockwise"></i>Actualizar
+      </button>
+      <button class="btn btn-primary d-inline-flex align-items-center gap-2"
+        type="button" (click)="nuevaCotizacion()">
+        <i class="bi bi-plus-lg"></i>Nueva cotización
+      </button>
+    </div>
+  </app-page-head>
+
+  <div class="status-stack mb-3" *ngIf="loading || error || success">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i><span>Cargando cotizaciones...</span>
+    </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+    </div>
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body border-bottom">
+      <div class="input-group quote-search">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-secondary"></i></span>
+        <input class="form-control border-start-0" type="search" [(ngModel)]="filtro"
+          placeholder="Buscar por número, cliente, fallecido, plan o estado" />
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="cotizacionesFiltradas.length; else emptyState">
+      <table class="table table-hover align-middle responsive-card-table">
+        <thead>
+          <tr>
+            <th class="ps-4">Cotización</th>
+            <th>Cliente</th>
+            <th>Fallecido</th>
+            <th>Plan</th>
+            <th>Vigencia</th>
+            <th>Estado</th>
+            <th class="text-end">Total</th>
+            <th class="text-end pe-4">Documento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cotizacion of cotizacionesFiltradas; trackBy: trackByUuid">
+            <td class="ps-4" data-label="Cotización">
+              <div class="fw-bold">{{ cotizacion.numero }}</div>
+              <div class="small text-secondary">{{ formatFecha(cotizacion.fecha) }}</div>
+            </td>
+            <td data-label="Cliente">
+              <div class="fw-semibold">{{ cotizacion.cliente }}</div>
+            </td>
+            <td class="text-body-secondary" data-label="Fallecido">{{ cotizacion.fallecido }}</td>
+            <td class="text-body-secondary" data-label="Plan">{{ cotizacion.plan }}</td>
+            <td class="text-body-secondary tnum" data-label="Vigencia">{{ formatFecha(cotizacion.fechaValidez) }}</td>
+            <td data-label="Estado" class="quote-state-cell">
+              <app-badge [cls]="badgeEstado(cotizacion.estado)">{{ cotizacion.estado }}</app-badge>
+              <div class="d-flex gap-2 mt-2">
+                <select class="form-select form-select-sm" [(ngModel)]="estadosSeleccionados[cotizacion.uuid]"
+                  [disabled]="changingUuid === cotizacion.uuid || esEstadoFinal(cotizacion)">
+                  <option *ngFor="let estado of estados" [value]="estado.uuid">{{ estado.nombre }}</option>
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" type="button"
+                  (click)="cambiarEstado(cotizacion)"
+                  [disabled]="changingUuid === cotizacion.uuid
+                    || esEstadoFinal(cotizacion)
+                    || estadosSeleccionados[cotizacion.uuid] === cotizacion.estadoUuid">
+                  {{ changingUuid === cotizacion.uuid ? 'Guardando...' : 'Cambiar' }}
+                </button>
+              </div>
+              <div class="small text-secondary mt-1" *ngIf="esEstadoFinal(cotizacion)">
+                Estado final · no admite modificaciones
+              </div>
+            </td>
+            <td class="text-end fw-bold tnum" data-label="Total">{{ clp(cotizacion.total) }}</td>
+            <td class="text-end pe-4" data-label="Acciones">
+              <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
+                type="button" (click)="reimprimir(cotizacion)"
+                [disabled]="!!printingUuid || !cotizacion.uuid">
+                <i class="bi" [ngClass]="printingUuid === cotizacion.uuid ? 'bi-arrow-repeat' : 'bi-file-earmark-pdf'"></i>
+                {{ printingUuid === cotizacion.uuid
+                  ? 'Generando...'
+                  : (cotizacion.estadoCodigo === 'GEN_CONTR' ? 'Reimprimir contrato' : 'Reimprimir PDF') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty-state m-4" *ngIf="!loading">
+        {{ filtro ? 'No hay cotizaciones que coincidan con la búsqueda.' : 'Aún no hay cotizaciones registradas.' }}
+      </div>
+    </ng-template>
+  </div>
+</div>

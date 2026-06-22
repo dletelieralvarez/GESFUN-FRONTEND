@@ -15,6 +15,8 @@ export const authServiceMock = {
   getAccessToken: () => Promise.resolve('test-token'),
   getActiveAccount: () => ({ name: 'Usuario Test', username: 'test@gesfun.cl' }),
   isAuthenticated: () => true,
+  hasSessionExpired: () => false,
+  handleSessionExpired: () => Promise.resolve(),
   logout: () => Promise.resolve()
 };
 

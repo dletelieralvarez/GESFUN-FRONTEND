@@ -2,16 +2,22 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { MsalService } from '@azure/msal-angular';
 import { AccountInfo, InteractionRequiredAuthError } from '@azure/msal-browser';
+import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { bffApiScope, bffApiUrl, loginRequest, redirectUri } from '../auth-config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   readonly BFF_URL = bffApiUrl;
+  private readonly sessionExpiredKey = 'gesfun.sessionExpired';
   private initialized = false;
   private redirectHandled = false;
 
-  constructor(private http: HttpClient, private msalService: MsalService) {}
+  constructor(
+    private http: HttpClient,
+    private msalService: MsalService,
+    private router: Router
+  ) {}
 
   private async ensureInitialized() {
     if (!this.initialized) {
@@ -22,6 +28,7 @@ export class AuthService {
     if (!this.redirectHandled) {
       const result = await lastValueFrom(this.msalService.handleRedirectObservable());
       if (result?.account) {
+        sessionStorage.removeItem(this.sessionExpiredKey);
         this.msalService.instance.setActiveAccount(result.account);
       } else {
         this.setFirstAccountAsActive();
@@ -50,7 +57,7 @@ export class AuthService {
   }
 
   getActiveAccount(): AccountInfo | null {
-    if (!this.initialized) {
+    if (!this.initialized || this.hasSessionExpired()) {
       return null;
     }
 
@@ -80,10 +87,28 @@ export class AuthService {
       return result.accessToken;
     } catch (error) {
       if (this.requiresInteractiveToken(error)) {
-        const result = await lastValueFrom(this.msalService.acquireTokenPopup(request));
-        return result.accessToken;
+        await this.handleSessionExpired();
+        throw new Error('Tu sesión expiró. Inicia sesión nuevamente para continuar.');
       }
       throw error;
+    }
+  }
+
+  hasSessionExpired() {
+    return sessionStorage.getItem(this.sessionExpiredKey) === 'true';
+  }
+
+  async handleSessionExpired() {
+    sessionStorage.setItem(this.sessionExpiredKey, 'true');
+    if (this.initialized) {
+      this.msalService.instance.setActiveAccount(null);
+    }
+
+    if (!this.router.url.startsWith('/login')) {
+      await this.router.navigate(['/login'], {
+        replaceUrl: true,
+        queryParams: { sessionExpired: 'true' }
+      });
     }
   }
 

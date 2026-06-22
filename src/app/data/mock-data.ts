@@ -146,7 +146,8 @@ export const NAV_BS = [
   ]},
   { group: "Comercial", items: [
     { id: "catalogo", label: "Catálogo y planes", icon: "grid-fill" },
-    { id: "cotizacion", label: "Cotizaciones", icon: "file-earmark-text-fill" },
+    { id: "cotizacion", label: "Nueva cotización", icon: "file-earmark-plus-fill" },
+    { id: "cotizaciones", label: "Cotizaciones creadas", icon: "files" },
     { id: "clientes", label: "Clientes", icon: "people-fill" },
   ]},
   { group: "Administración", items: [
@@ -168,6 +169,7 @@ export const PAGE_META_BS = {
   agenda:      { title: "Agenda de salas", crumb: "Operación / Agenda" },
   catalogo:    { title: "Catálogo y planes", crumb: "Comercial / Catálogo" },
   cotizacion:  { title: "Cotizaciones", crumb: "Comercial / Cotizaciones" },
+  cotizaciones: { title: "Cotizaciones creadas", crumb: "Comercial / Cotizaciones creadas" },
   clientes:    { title: "Clientes", crumb: "Comercial / Clientes" },
   inventario:  { title: "Inventario", crumb: "Recursos / Inventario" },
   facturacion: { title: "Facturación", crumb: "Finanzas / Facturación" },

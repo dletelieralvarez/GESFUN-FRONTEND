@@ -35,13 +35,15 @@ describe('AuthInterceptor', () => {
     expect(wrapped.handledRequest?.headers.get('Authorization')).toBe('Bearer token-123');
   });
 
-  it('should continue without authorization when token retrieval fails', async () => {
+  it('should not send the request when token retrieval fails', async () => {
     const auth: any = { BFF_URL: 'http://localhost:8081', getAccessToken: () => Promise.reject(new Error('boom')) };
     const interceptor = new AuthInterceptor(auth);
     const wrapped = createHandler();
 
-    await firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), wrapped.handler));
+    await expectAsync(
+      firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), wrapped.handler))
+    ).toBeRejectedWithError('boom');
 
-    expect(wrapped.handledRequest?.headers.has('Authorization')).toBeFalse();
+    expect(wrapped.handledRequest).toBeNull();
   });
 });

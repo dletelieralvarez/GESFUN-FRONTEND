@@ -12,6 +12,7 @@ import { CasosComponent } from './pages/casos/casos.component';
 import { AgendaComponent } from './pages/agenda/agenda.component';
 import { CatalogoComponent } from './pages/catalogo/catalogo.component';
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
+import { CotizacionesComponent } from './pages/cotizaciones/cotizaciones.component';
 import { ClientesComponent } from './pages/clientes/clientes.component';
 import { EmpleadosComponent } from './pages/empleados/empleados.component';
 import { ProveedoresComponent } from './pages/proveedores/proveedores.component';
@@ -58,6 +59,7 @@ import { loginRequest, msalConfig } from './auth-config';
     HttpClientModule,
     AppRoutingModule,
     UiModule,
+    CotizacionesComponent,
     MsalModule.forRoot(new PublicClientApplication(msalConfig), {
       interactionType: InteractionType.Redirect,
       authRequest: loginRequest
