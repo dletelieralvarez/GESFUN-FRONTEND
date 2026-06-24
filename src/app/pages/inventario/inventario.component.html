@@ -1,51 +1,261 @@
 <div class="content-wrap">
-  <app-page-head title="Inventario" sub="Control de existencias de ataúdes, urnas, flores e insumos">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Ingresar stock</button>
+  <app-page-head title="Inventario" sub="Consulta stock y registra entradas de productos por sucursal">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2"
+      type="button" (click)="openEntrada()" [disabled]="loading || saving || !selectedSucursalUuid">
+      <i class="bi bi-clipboard2-plus"></i>Registrar entrada
+    </button>
   </app-page-head>
 
-  <div class="row g-3 mb-4">
-    <div class="col-md-4"><app-stat label="Ítems en catálogo" icon="box-seam-fill" [value]="inventory.length" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
-    <div class="col-md-4"><app-stat label="Valor del inventario" icon="cash-stack" [value]="clp(valorTotal)" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
-    <div class="col-md-4"><app-stat label="Bajo el mínimo" icon="exclamation-triangle-fill" [value]="lowCount" delta="reponer" deltaDir="down" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
-  </div>
-
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <app-pills [tabs]="categories" [active]="activeCategory" (selected)="activeCategory = $event"></app-pills>
-    <div class="input-group input-group-sm" style="width: 260px">
-      <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
-      <input class="form-control border-start-0 ps-0" placeholder="Buscar por SKU o nombre…" />
+  <div class="inventory-hero card mb-4">
+    <div class="inventory-hero-mark">
+      <i class="bi bi-box-seam"></i>
+    </div>
+    <div>
+      <div class="eyebrow">Control de bodega</div>
+      <h2>Stock disponible y recepción de productos</h2>
+      <p>
+        Revisa las existencias de la sucursal seleccionada. Si llegan productos,
+        registra el documento y el detalle recibido desde el botón Registrar entrada.
+      </p>
+    </div>
+    <div class="inventory-hero-steps">
+      <span><i class="bi bi-building"></i>Sucursal</span>
+      <span><i class="bi bi-box-seam"></i>Productos</span>
+      <span><i class="bi bi-arrow-repeat"></i>Stock</span>
     </div>
   </div>
 
-  <div class="card">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 responsive-card-table">
-        <thead>
-          <tr>
-            <th class="ps-4">SKU</th>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th class="text-center">Existencias</th>
-            <th>Nivel</th>
-            <th class="text-end pe-4">Valor unit.</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of rows; trackBy: trackBySku">
-            <td class="ps-4 tnum fw-bold text-secondary" data-label="SKU">{{ item.sku }}</td>
-            <td class="fw-semibold" data-label="Producto">{{ item.item }}</td>
-            <td data-label="Categoría"><app-badge cls="b-neutral">{{ item.cat }}</app-badge></td>
-            <td class="text-center" data-label="Existencias"><span class="tnum fw-800" [ngClass]="{ 'text-danger': item.stock < item.min }" style="font-size: 1rem">{{ item.stock }}</span><span class="tnum text-secondary" style="font-size: .75rem"> / {{ item.min }}</span></td>
-            <td style="width: 180px" data-label="Nivel">
-              <div class="d-flex align-items-center gap-2">
-                <div class="flex-grow-1"><app-progress [value]="math.min(100, (item.stock / (item.min * 2)) * 100)" [color]="item.stock < item.min ? '#b5402f' : (item.stock / (item.min * 2) * 100 < 60 ? '#c79a3a' : 'var(--brand)')"></app-progress></div>
-                <app-badge cls="b-danger" *ngIf="item.stock < item.min" [dot]="true">Bajo</app-badge>
+  <div class="status-stack mb-4" *ngIf="loading || loadingStock || error || success || catalogoWarning">
+    <div class="status-message status-loading" *ngIf="loading || loadingStock">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>{{ loading ? 'Cargando catálogos de inventario...' : 'Consultando stock de la sucursal...' }}</span>
+    </div>
+    <div class="status-message status-warning" *ngIf="catalogoWarning && !error">
+      <i class="bi bi-info-circle"></i><span>{{ catalogoWarning }}</span>
+    </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+    </div>
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><app-stat label="Productos disponibles" icon="box-seam-fill" [value]="productosConStock + ' de ' + totalProductosSucursal" tintBg="#e6edf6" tintFg="#3a5e92"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Stock total en unidades" icon="boxes" [value]="totalUnidades" tintBg="var(--brand-tint)" tintFg="var(--brand)"></app-stat></div>
+    <div class="col-md-4"><app-stat label="Valor referencial" icon="cash-stack" [value]="clp(valorTotal)" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+  </div>
+
+  <div class="row g-4">
+    <div [ngClass]="formVisible ? 'col-xl-7' : 'col-12'">
+      <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-3">
+        <div class="inventory-branch-select">
+          <label class="form-label fw-semibold small">Sucursal</label>
+          <select class="form-select" [(ngModel)]="selectedSucursalUuid" (ngModelChange)="onSucursalChange()"
+            [disabled]="loading || saving">
+            <option *ngFor="let sucursal of sucursales" [value]="sucursal.uuid">
+              {{ sucursal.codigo ? sucursal.codigo + ' · ' : '' }}{{ sucursal.nombre }}
+            </option>
+          </select>
+        </div>
+        <div class="input-group inventory-search">
+          <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+          <input class="form-control border-start-0 ps-0" [(ngModel)]="filtro"
+            placeholder="Buscar por código, producto o unidad" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-responsive" *ngIf="rows.length; else stockVacio">
+          <table class="table table-hover align-middle mb-0 responsive-card-table">
+            <thead>
+              <tr>
+                <th class="ps-4">Código</th>
+                <th>Producto</th>
+                <th>Unidad</th>
+                <th class="text-end">Entradas</th>
+                <th class="text-end">Salidas</th>
+                <th class="text-end pe-4">Stock actual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of rows; trackBy: trackByProducto">
+                <td class="ps-4 tnum fw-bold text-secondary" data-label="Código">{{ item.productoCodigo }}</td>
+                <td class="fw-semibold" data-label="Producto">{{ item.productoNombre }}</td>
+                <td data-label="Unidad"><app-badge cls="b-neutral">{{ item.unidadMedidaNombre || item.unidadMedidaCodigo }}</app-badge></td>
+                <td class="text-end tnum text-success" data-label="Entradas">{{ item.totalEntradas }}</td>
+                <td class="text-end tnum text-danger" data-label="Salidas">{{ item.totalSalidas }}</td>
+                <td class="text-end pe-4" data-label="Stock actual">
+                  <span class="tnum fw-800" [class.text-danger]="item.stockActual <= 0">{{ item.stockActual }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #stockVacio>
+          <div class="empty-state m-4" *ngIf="!loading && !loadingStock">
+            {{ filtro ? 'No hay productos que coincidan con la búsqueda.' : 'La sucursal todavía no registra movimientos de inventario.' }}
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
+    <div class="col-xl-5" *ngIf="formVisible">
+      <div class="card inventory-entry-card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span><i class="bi bi-clipboard2-check me-2"></i>Registrar entrada de productos</span>
+          <button class="btn btn-sm btn-soft" type="button" (click)="cancelEntrada()" [disabled]="saving">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="entry-section-title">
+            <span>Datos del documento</span>
+            <small>Información general de la recepción</small>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Sucursal</label>
+              <select class="form-select" [(ngModel)]="form.sucursalUuid" disabled>
+                <option *ngFor="let sucursal of sucursales" [value]="sucursal.uuid">{{ sucursal.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Tipo de movimiento</label>
+              <select class="form-select" [(ngModel)]="form.tipoMovimientoUuid">
+                <option *ngFor="let tipo of tiposEntrada" [value]="tipo.uuid">{{ tipo.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Proveedor</label>
+              <select class="form-select" [(ngModel)]="form.terceroUuid">
+                <option value="">Sin proveedor</option>
+                <option *ngFor="let proveedor of proveedores" [value]="proveedor.uuid">{{ proveedor.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Forma de pago</label>
+              <select class="form-select" [(ngModel)]="form.formaPagoUuid">
+                <option value="">Sin forma de pago</option>
+                <option *ngFor="let forma of formasPago" [value]="forma.uuid">{{ forma.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Usuario responsable</label>
+              <select class="form-select" [(ngModel)]="form.usuarioUuid">
+                <option *ngFor="let usuario of usuarios" [value]="usuario.uuid">{{ usuario.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Recibido por</label>
+              <select class="form-select" [(ngModel)]="form.recibidoPorUuid">
+                <option value="">No informado</option>
+                <option *ngFor="let empleado of empleados" [value]="empleado.uuid">{{ empleado.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Fecha documento</label>
+              <input class="form-control" type="date" [(ngModel)]="form.fechaDocumento" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Fecha recepción</label>
+              <input class="form-control" type="date" [(ngModel)]="form.fechaRecepcion" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Fecha pago</label>
+              <input class="form-control" type="date" [(ngModel)]="form.fechaPago" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">N° orden compra</label>
+              <input class="form-control" maxlength="30" [(ngModel)]="form.numeroOc" placeholder="OC-001" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">N° guía</label>
+              <input class="form-control" maxlength="30" [(ngModel)]="form.numeroGuia" placeholder="GUIA-001" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">N° factura</label>
+              <input class="form-control" maxlength="30" [(ngModel)]="form.numeroFactura" placeholder="FACT-001" />
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center justify-content-between mt-4 mb-2">
+            <div>
+              <div class="entry-section-title mb-0">
+                <span>Productos recibidos</span>
+                <small>Agrega cada producto con su cantidad y costo</small>
               </div>
-            </td>
-            <td class="text-end pe-4 tnum fw-bold" data-label="Valor unit.">{{ clp(item.price) }}</td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="addDetalle()"
+              [disabled]="form.detalles.length >= productos.length">
+              <i class="bi bi-plus-lg"></i> Agregar
+            </button>
+          </div>
+
+          <div class="inventory-detail" *ngFor="let detalle of form.detalles; let i = index; trackBy: trackByDetalle">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <strong class="small">Detalle {{ i + 1 }}</strong>
+              <button class="btn btn-sm btn-soft text-danger" type="button" (click)="removeDetalle(i)" [disabled]="saving">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+            <div class="row g-2">
+              <div class="col-12">
+                <label class="form-label small">Producto</label>
+                <select class="form-select form-select-sm" [(ngModel)]="detalle.productoUuid"
+                  (ngModelChange)="onProductoChange(detalle)">
+                  <option value="">Seleccionar producto</option>
+                  <option *ngFor="let producto of productos" [value]="producto.uuid"
+                    [disabled]="!productoDisponible(producto.uuid, i)">
+                    {{ producto.codigo }} · {{ producto.nombre }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-4">
+                <label class="form-label small">Cantidad</label>
+                <input class="form-control form-control-sm" type="number" min="0.01" step="0.01"
+                  [(ngModel)]="detalle.cantidad" />
+              </div>
+              <div class="col-4">
+                <label class="form-label small">Costo unitario</label>
+                <input class="form-control form-control-sm" type="number" min="0"
+                  [(ngModel)]="detalle.costoUnitario" />
+              </div>
+              <div class="col-4">
+                <label class="form-label small">Descuento</label>
+                <input class="form-control form-control-sm" type="number" min="0"
+                  [(ngModel)]="detalle.descuento" />
+              </div>
+              <div class="col-12">
+                <input class="form-control form-control-sm" maxlength="500"
+                  [(ngModel)]="detalle.observacion" placeholder="Observación del producto" />
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-semibold small">Observación general</label>
+            <textarea class="form-control" rows="2" maxlength="500" [(ngModel)]="form.observacion"
+              placeholder="Antecedentes generales de la recepción"></textarea>
+          </div>
+
+          <div class="entry-total mt-3">
+            <div>
+              <span>Total de la entrada</span>
+              <small>{{ totalProductosEntrada }} producto(s) · {{ totalUnidadesEntrada }} unidad(es)</small>
+            </div>
+            <strong class="tnum">{{ clp(totalEntrada) }}</strong>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary flex-grow-1" type="button" (click)="registrarEntrada()" [disabled]="saving">
+              {{ saving ? 'Registrando...' : 'Registrar entrada' }}
+            </button>
+            <button class="btn btn-outline-secondary" type="button" (click)="cancelEntrada()" [disabled]="saving">Cancelar</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

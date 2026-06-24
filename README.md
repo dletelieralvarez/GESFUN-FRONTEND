@@ -17,7 +17,7 @@ La aplicacion permite revisar y operar sobre:
 - Clientes o terceros.
 - Usuarios del sistema.
 - Sucursales.
-- Inventario.
+- Inventario con consulta de stock por sucursal y registro de entradas con detalle de productos mediante el BFF.
 - Facturacion.
 - Login con Microsoft Entra ID y prueba de acceso a un endpoint protegido del BFF.
 
@@ -203,7 +203,7 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/planes` | `PlanesComponent` | Administracion de planes armables |
 | `/recursos` | `RecursosComponent` | Administracion de tipos de recurso |
 | `/sucursales` | `SucursalesComponent` | Administracion de sucursales |
-| `/inventario` | `InventarioComponent` | Inventario |
+| `/inventario` | `InventarioComponent` | Inventario, stock por sucursal y registro de entradas |
 | `/facturacion` | `FacturacionComponent` | Facturacion |
 | `**` | Redireccion | Redirige a `/login` |
 
@@ -657,16 +657,22 @@ src/app/pages/inventario/
 
 Funcionalidad:
 
-- Lista productos de inventario.
-- Filtra por categoria:
-  - Todas.
-  - Ataudes.
-  - Urnas.
-  - Flores.
-  - Insumos.
-- Calcula valor total del inventario.
-- Calcula cantidad de productos bajo stock minimo.
-- Usa `trackBySku` para optimizar renderizado de filas.
+- Consulta stock real por sucursal desde el BFF.
+- Carga catalogos necesarios para registrar entradas:
+  - Sucursales.
+  - Tipos de movimiento.
+  - Formas de pago.
+  - Proveedores.
+  - Empleados para el campo opcional `recibidoPorUuid`.
+  - Usuarios responsables.
+  - Productos/servicios filtrados como productos inventariables.
+- Permite registrar una entrada de inventario con cabecera y multiples detalles en un unico JSON.
+- Envia el movimiento al endpoint `POST /api/inventario/entradas`.
+- Refresca el stock de la sucursal despues de guardar correctamente.
+- Evita repetir el mismo producto dentro de una misma entrada.
+- Calcula el total de la entrada como `cantidad * costoUnitario - descuento`, sin agregar IVA automaticamente.
+- Muestra indicadores de productos disponibles, stock total en unidades y valor referencial.
+- Mantiene la pantalla util aunque fallen catalogos opcionales, como empleados.
 
 ### 6.16 Facturacion
 
@@ -872,6 +878,16 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/cotizaciones/{uuid}`
   - `GET /api/estados-cotizacion`
   - `PATCH /api/cotizaciones/{uuid}/estado`
+- `InventarioComponent`
+  - `GET /api/sucursales`
+  - `GET /api/tipos-movimiento`
+  - `GET /api/formas-pago`
+  - `GET /api/proveedores`
+  - `GET /api/empleados`
+  - `GET /api/usuarios`
+  - `GET /api/productos-servicios`
+  - `GET /api/inventario/stock?sucursalUuid={uuid}`
+  - `POST /api/inventario/entradas`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`
@@ -952,7 +968,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios funerarios, facturas o inventario.
+- No hay persistencia real contra API para servicios funerarios o facturas. Inventario ya consulta stock y registra entradas mediante el BFF.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos

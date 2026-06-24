@@ -1,0 +1,146 @@
+.inventory-hero {
+  align-items: center;
+  background: linear-gradient(135deg, #f7fbf7 0%, #eef5ee 54%, #f8f1df 100%);
+  border: 1px solid #dce7dc;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto 1fr auto;
+  padding: 1.25rem;
+}
+
+.inventory-hero-mark {
+  align-items: center;
+  background: var(--brand);
+  border-radius: 1rem;
+  color: #fff;
+  display: flex;
+  font-size: 1.9rem;
+  height: 4rem;
+  justify-content: center;
+  width: 4rem;
+}
+
+.inventory-hero .eyebrow {
+  color: var(--brand-strong);
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.inventory-hero h2 {
+  color: var(--ink);
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 850;
+  letter-spacing: -.03em;
+  margin: .1rem 0 .25rem;
+}
+
+.inventory-hero p {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.inventory-hero-steps {
+  display: grid;
+  gap: .5rem;
+}
+
+.inventory-hero-steps span {
+  align-items: center;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  color: var(--brand-strong);
+  display: inline-flex;
+  font-weight: 750;
+  gap: .35rem;
+  padding: .35rem .7rem;
+  white-space: nowrap;
+}
+
+.inventory-branch-select {
+  min-width: min(100%, 340px);
+}
+
+.inventory-entry-card {
+  position: sticky;
+  top: 1rem;
+}
+
+.inventory-entry-card .card-header {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 800;
+}
+
+.entry-section-title {
+  margin-bottom: .75rem;
+}
+
+.entry-section-title span {
+  display: block;
+  font-weight: 850;
+}
+
+.entry-section-title small {
+  color: var(--ink-soft);
+  display: block;
+}
+
+.inventory-detail {
+  background: var(--brand-faint);
+  border: 1px dashed #cfdccc;
+  border-radius: .8rem;
+  margin-top: .75rem;
+  padding: .85rem;
+}
+
+.entry-total {
+  align-items: center;
+  background: var(--brand-tint);
+  border-radius: .75rem;
+  color: var(--brand-strong);
+  display: flex;
+  font-size: 1rem;
+  justify-content: space-between;
+  padding: .8rem 1rem;
+}
+
+.entry-total span,
+.entry-total small {
+  display: block;
+}
+
+.entry-total small {
+  color: var(--ink-soft);
+}
+
+.status-warning {
+  background: #fff8e5;
+  border-color: #f1d48a;
+  color: #7a5a0b;
+}
+
+@media (max-width: 1199.98px) {
+  .inventory-entry-card {
+    position: static;
+  }
+
+  .inventory-hero {
+    grid-template-columns: auto 1fr;
+  }
+
+  .inventory-hero-steps {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .inventory-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-hero-steps {
+    grid-template-columns: 1fr;
+  }
+}

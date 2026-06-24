@@ -159,8 +159,8 @@ export const NAV_BS = [
     { id: "recursos", label: "Recursos", icon: "tools" },
     { id: "sucursales", label: "Sucursales", icon: "geo-alt-fill" }
   ]},
-  { group: "Recursos", items: [{ id: "inventario", label: "Inventario", icon: "box-seam-fill", count: 3 }] },
-  { group: "Finanzas", items: [{ id: "facturacion", label: "Facturación", icon: "receipt", count: 2 }] },
+  { group: "Recursos", items: [{ id: "inventario", label: "Inventario", icon: "box-seam-fill" }] },
+  { group: "Finanzas", items: [{ id: "facturacion", label: "Facturación", icon: "receipt" }] },
 ];
 
 export const PAGE_META_BS = {
