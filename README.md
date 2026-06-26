@@ -9,7 +9,7 @@ El objetivo es entregar una primera version funcional del frontend para una fune
 La aplicacion permite revisar y operar sobre:
 
 - Servicios funerarios y casos activos.
-- Agenda de salas.
+- Agenda de servicios con reserva de recursos por sucursal.
 - Catalogo de planes y servicios adicionales.
 - Cotizaciones persistidas mediante el BFF, con datos de pagador, fallecido, plan, adicionales, forma de pago y calculo de totales.
 - Consulta de cotizaciones creadas, cambio de estado y reimpresion de documentos.
@@ -191,7 +191,7 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/login` | `LoginComponent` | Pantalla de autenticacion |
 | `/dashboard` | `DashboardComponent` | Panel general |
 | `/casos` | `CasosComponent` | Servicios funerarios |
-| `/agenda` | `AgendaComponent` | Agenda de salas |
+| `/agenda` | `AgendaComponent` | Agenda de servicios y reserva de recursos |
 | `/catalogo` | `CatalogoComponent` | Catalogo y planes |
 | `/cotizacion` | `CotizacionComponent` | Nueva cotizacion |
 | `/cotizaciones` | `CotizacionesComponent` | Consulta y gestion de cotizaciones creadas |
@@ -319,7 +319,7 @@ Funcionalidad:
   - Completado.
 - Formatea montos en pesos chilenos usando `CLP`.
 
-### 6.4 Agenda de salas
+### 6.4 Agenda de servicios
 
 Ubicacion:
 
@@ -329,12 +329,33 @@ src/app/pages/agenda/
 
 Funcionalidad:
 
-- Muestra salas disponibles.
-- Muestra agenda por horas.
-- Calcula eventos por sala.
-- Identifica salas ocupadas.
-- Calcula estilos visuales de cada evento segun tipo/color.
+- Carga sucursales, tipos de recurso y cotizaciones desde el BFF.
+- Consulta la agenda real por sucursal desde `GET /api/agendas/sucursal/{sucursalUuid}`.
+- Permite reservar un recurso o servicio, por ejemplo una sala velatoria, capilla o salon ceremonial.
+- Permite asociar opcionalmente una cotizacion al registro de agenda.
+- Registra fecha y hora de inicio, fecha y hora de termino, estado y observacion.
+- Envia al BFF el contrato esperado por `POST /api/agendas`:
+  - `fechaHoraInicio`
+  - `fechaHoraFin`
+  - `estado`
+  - `observacion`
+  - `tipoRecursoUuid`
+  - `sucursalUuid`
+  - `cotizacionUuid`
+- Limita los estados enviados a los valores aceptados por backend: `OCUPADO` y `DISPONIBLE`.
+- Refresca la agenda despues de guardar correctamente.
+- Muestra recursos disponibles u ocupados y eventos por recurso.
 - Trabaja con bloques horarios desde las 08:00 hasta las 21:00.
+
+Endpoints consumidos:
+
+```text
+GET  /api/sucursales
+GET  /api/tipos-recurso
+GET  /api/cotizaciones
+GET  /api/agendas/sucursal/{sucursalUuid}
+POST /api/agendas
+```
 
 ### 6.5 Catalogo y planes
 
@@ -878,6 +899,12 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/cotizaciones/{uuid}`
   - `GET /api/estados-cotizacion`
   - `PATCH /api/cotizaciones/{uuid}/estado`
+- `AgendaComponent`
+  - `GET /api/sucursales`
+  - `GET /api/tipos-recurso`
+  - `GET /api/cotizaciones`
+  - `GET /api/agendas/sucursal/{sucursalUuid}`
+  - `POST /api/agendas`
 - `InventarioComponent`
   - `GET /api/sucursales`
   - `GET /api/tipos-movimiento`
@@ -963,12 +990,13 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
+- La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
 - Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios funerarios o facturas. Inventario ya consulta stock y registra entradas mediante el BFF.
+- No hay persistencia real contra API para servicios funerarios o facturas. Agenda e inventario ya registran operaciones mediante el BFF.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
@@ -980,6 +1008,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
   - Cotizaciones.
   - Servicios.
   - Inventario.
+  - Agenda.
   - Facturacion.
 - Extraer servicios HTTP compartidos para usuarios, terceros y productos/servicios.
 - Reemplazar los modulos restantes que usan mock por llamadas al BFF/API.
@@ -992,6 +1021,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, mantenedores conectados al BFF y un flujo comercial de cotizaciones que permite crear, listar, cambiar estados, reimprimir PDFs y generar contratos.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, mantenedores conectados al BFF, agenda de servicios conectada al BFF y un flujo comercial de cotizaciones que permite crear, listar, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

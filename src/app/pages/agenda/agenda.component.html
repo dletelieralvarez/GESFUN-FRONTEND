@@ -1,14 +1,111 @@
 <div class="content-wrap">
-  <app-page-head title="Agenda de salas" sub="Martes 2 de junio, 2026 · 4 salas de velatorio">
+  <app-page-head title="Agenda de servicios" sub="Reserva velatorios, ceremonias y recursos por sucursal">
     <div class="d-flex gap-2 align-items-center">
       <ul class="nav nav-pills mb-0">
-        <li class="nav-item"><button type="button" class="nav-link">Día</button></li>
-        <li class="nav-item"><button type="button" class="nav-link active">Semana</button></li>
-        <li class="nav-item"><button type="button" class="nav-link">Mes</button></li>
+        <li class="nav-item"><button type="button" class="nav-link active">Día</button></li>
+        <li class="nav-item"><button type="button" class="nav-link">Semana</button></li>
       </ul>
-      <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Reservar sala</button>
+      <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
+        type="button" (click)="openReserva()" [disabled]="!canReserve">
+        <i class="bi bi-plus-lg"></i>Reservar servicio
+      </button>
     </div>
   </app-page-head>
+
+  <div class="status-stack mb-4" *ngIf="loading || error || success">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i><span>Cargando agenda de servicios...</span>
+    </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+    </div>
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+  </div>
+
+  <div class="agenda-toolbar mb-4">
+    <div>
+      <label class="form-label fw-semibold small">Sucursal</label>
+      <select class="form-select" [(ngModel)]="selectedSucursalUuid" (ngModelChange)="onSucursalChange()"
+        [disabled]="loading || saving">
+        <option value="">Seleccionar sucursal</option>
+        <option *ngFor="let sucursal of sucursales" [value]="sucursal.uuid">
+          {{ sucursal.codigo ? sucursal.codigo + ' · ' : '' }}{{ sucursal.nombre }}
+        </option>
+      </select>
+    </div>
+    <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2"
+      type="button" (click)="openReserva()" [disabled]="!canReserve">
+      <i class="bi bi-calendar-plus"></i>Agendar velatorio
+    </button>
+  </div>
+
+  <div class="card agenda-form-card mb-4" *ngIf="formVisible">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-calendar2-plus me-2"></i>Agendar servicio</span>
+      <button class="btn btn-sm btn-soft" type="button" (click)="cancelReserva()" [disabled]="saving">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6 col-xl-3">
+          <label class="form-label fw-semibold small">Sucursal</label>
+          <select class="form-select" [(ngModel)]="form.sucursalUuid">
+            <option *ngFor="let sucursal of sucursales" [value]="sucursal.uuid">{{ sucursal.nombre }}</option>
+          </select>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <label class="form-label fw-semibold small">Recurso o servicio</label>
+          <select class="form-select" [(ngModel)]="form.tipoRecursoUuid">
+            <option *ngFor="let tipo of tiposRecurso" [value]="tipo.uuid">{{ tipo.nombre }}</option>
+          </select>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <label class="form-label fw-semibold small">Cotización asociada</label>
+          <select class="form-select" [(ngModel)]="form.cotizacionUuid">
+            <option value="">Sin cotización</option>
+            <option *ngFor="let cotizacion of cotizaciones" [value]="cotizacion.uuid">{{ cotizacion.nombre }}</option>
+          </select>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <label class="form-label fw-semibold small">Estado</label>
+          <select class="form-select" [(ngModel)]="form.estado">
+            <option value="OCUPADO">Ocupado</option>
+            <option value="DISPONIBLE">Disponible</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Fecha inicio</label>
+          <input class="form-control" type="date" [(ngModel)]="form.fechaInicio" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Hora inicio</label>
+          <input class="form-control" type="time" [(ngModel)]="form.horaInicio" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Fecha término</label>
+          <input class="form-control" type="date" [(ngModel)]="form.fechaTermino" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">Hora término</label>
+          <input class="form-control" type="time" [(ngModel)]="form.horaFin" />
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Observación</label>
+          <textarea class="form-control" rows="2" maxlength="500" [(ngModel)]="form.observacion"
+            placeholder="Ej: Velatorio familia Soto, sala preparada desde las 18:00"></textarea>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" type="button" (click)="registrarAgenda()" [disabled]="saving">
+          {{ saving ? 'Agendando...' : 'Guardar agenda' }}
+        </button>
+        <button class="btn btn-outline-secondary" type="button" (click)="cancelReserva()" [disabled]="saving">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
   <div class="row g-3 mb-4 room-summary">
     <div class="col-12 col-sm-6 col-lg-3" *ngFor="let sala of salas; index as i">
@@ -22,7 +119,7 @@
     </div>
   </div>
 
-  <div class="card mobile-agenda-list mb-4">
+  <div class="card mobile-agenda-list mb-4" *ngIf="eventsToday.length">
     <div class="card-header">
       <div class="fw-bold">Eventos de hoy</div>
       <div class="text-secondary fw-normal" style="font-size: .78rem">Vista rápida para móvil</div>
@@ -44,11 +141,11 @@
 
   <div class="card overflow-hidden agenda-card">
     <div class="agenda-scroll">
-      <div class="agenda-grid">
+      <div class="agenda-grid" [style.grid-template-columns]="agendaGridColumns">
       <div class="agenda-head agenda-corner"></div>
       <div *ngFor="let sala of salas" class="agenda-head fw-bold">{{ sala }}</div>
       <ng-container *ngFor="let hour of hours">
-        <div class="agenda-hour tnum text-secondary fw-semibold">{{ hour.toString().padStart(2, '0') }}:00</div>
+        <div class="agenda-hour tnum text-secondary fw-semibold">{{ formatHourLabel(hour) }}</div>
         <div class="agenda-cell" *ngFor="let sala of salas; index as si">
           <ng-container *ngIf="eventAt(hour, si) as ev">
             <div class="ag-event" [ngStyle]="getEventStyle(ev)">
@@ -61,6 +158,9 @@
         </div>
       </ng-container>
       </div>
+    </div>
+    <div class="empty-state m-4" *ngIf="!loading && !agenda.length">
+      No hay servicios agendados para la sucursal seleccionada.
     </div>
   </div>
 </div>
