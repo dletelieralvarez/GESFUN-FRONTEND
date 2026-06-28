@@ -14,7 +14,13 @@
   <div class="flex-grow-1"></div>
   <div class="input-group input-group-sm" style="width: 280px">
     <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
-    <input class="form-control border-start-0 ps-0" placeholder="Buscar caso, cliente, folio…" />
+    <input
+      class="form-control border-start-0 ps-0"
+      type="search"
+      placeholder="Buscar cotización, cliente, folio…"
+      [(ngModel)]="searchTerm"
+      (keydown.enter)="goSearch()"
+    />
   </div>
   <button class="icon-btn"><i class="bi bi-bell"></i><span class="ping"></span></button>
   <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="goNew()"><i class="bi bi-plus-lg"></i>Nuevo servicio</button>

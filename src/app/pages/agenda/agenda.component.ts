@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { AGENDA, AG_COLOR, SALAS } from '../../data/mock-data';
+import { AG_COLOR } from '../../data/mock-data';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
 
@@ -38,6 +38,9 @@ interface AgendaEvent {
   fechaHoraInicio?: string;
   fechaHoraFin?: string;
   estado?: string;
+  fechaKey?: string;
+  fechaInicioKey?: string;
+  fechaFinKey?: string;
 }
 
 interface AgendaForm {
@@ -58,11 +61,13 @@ interface AgendaForm {
   styleUrls: ['./agenda.component.css']
 })
 export class AgendaComponent implements OnInit {
-  agenda: AgendaEvent[] = this.mapMockAgenda();
+  agenda: AgendaEvent[] = [];
   sucursales: CatalogoItem[] = [];
   tiposRecurso: CatalogoItem[] = [];
   cotizaciones: CatalogoItem[] = [];
   selectedSucursalUuid = '';
+  selectedDate = this.toDateInput(new Date());
+  viewMode: 'dia' | 'semana' = 'dia';
   formVisible = false;
   loading = false;
   saving = false;
@@ -79,11 +84,15 @@ export class AgendaComponent implements OnInit {
   }
 
   get salas() {
-    return this.tiposRecurso.length ? this.tiposRecurso.map(item => item.nombre) : SALAS;
+    return this.tiposRecurso.map(item => item.nombre);
   }
 
-  get eventsToday() {
-    return this.agenda.filter((a) => a.color !== 'neutral');
+  get visibleAgenda() {
+    return this.agenda.filter(item => this.isInCurrentRange(item.fechaKey, item));
+  }
+
+  get visibleEvents() {
+    return this.visibleAgenda.filter((a) => a.color !== 'neutral');
   }
 
   get canReserve() {
@@ -94,12 +103,23 @@ export class AgendaComponent implements OnInit {
     return `60px repeat(${Math.max(1, this.salas.length)}, minmax(150px, 1fr))`;
   }
 
+  get rangeTitle() {
+    if (this.viewMode === 'dia') return this.formatDateLabel(this.selectedDate);
+    return `${this.formatDateLabel(this.selectedDate)} a ${this.formatDateLabel(this.addDays(this.selectedDate, 6))}`;
+  }
+
   eventAt(hour: number, salaIndex: number) {
-    return this.agenda.find((a) => a.sala === salaIndex && Math.floor(a.start) === hour);
+    return this.visibleAgenda.find((a) => a.sala === salaIndex && Math.floor(a.start) === hour);
   }
 
   getEventsCount(salaIndex: number) {
-    return this.agenda.filter((a) => a.sala === salaIndex).length;
+    return this.visibleAgenda.filter((a) => a.sala === salaIndex).length;
+  }
+
+  getEventsCountLabel(salaIndex: number) {
+    const count = this.getEventsCount(salaIndex);
+    const suffix = this.viewMode === 'dia' ? 'en el día' : 'en la semana';
+    return `${count} evento${count !== 1 ? 's' : ''} ${suffix}`;
   }
 
   getEventStyle(ev: any) {
@@ -123,12 +143,32 @@ export class AgendaComponent implements OnInit {
     return `${hour.toString().padStart(2, '0')}:00`;
   }
 
+  formatEventDates(ev: AgendaEvent) {
+    const inicio = ev.fechaInicioKey || ev.fechaKey || '';
+    const fin = ev.fechaFinKey || inicio;
+    if (!inicio) return 'Fecha no informada';
+    if (inicio === fin) return this.formatDateLabel(inicio);
+    return `${this.formatDateLabel(inicio)} al ${this.formatDateLabel(fin)}`;
+  }
+
+  formatEventSchedule(ev: AgendaEvent) {
+    return `${this.formatEventDates(ev)} · ${this.formatHour(ev.start)}-${this.formatHour(ev.end)}`;
+  }
+
   isOccupied(salaIndex: number) {
-    return this.agenda.some((a) => a.sala === salaIndex && a.color === 'ok');
+    return this.visibleAgenda.some((a) => a.sala === salaIndex && a.color === 'ok');
   }
 
   async onSucursalChange() {
     await this.loadAgenda();
+  }
+
+  onDateChange() {
+    this.clearMessages();
+  }
+
+  setViewMode(mode: 'dia' | 'semana') {
+    this.viewMode = mode;
   }
 
   openReserva() {
@@ -205,7 +245,7 @@ export class AgendaComponent implements OnInit {
 
   private async loadAgenda(existingHeaders?: { Authorization: string }) {
     if (!this.selectedSucursalUuid) {
-      this.agenda = this.mapMockAgenda();
+      this.agenda = [];
       return;
     }
 
@@ -289,12 +329,11 @@ export class AgendaComponent implements OnInit {
       color: this.colorByEstado(item.estado),
       fechaHoraInicio: item.fechaHoraInicio,
       fechaHoraFin: item.fechaHoraFin,
-      estado: item.estado
+      estado: item.estado,
+      fechaKey: this.toDateKey(inicio),
+      fechaInicioKey: this.toDateKey(inicio),
+      fechaFinKey: this.toDateKey(fin)
     };
-  }
-
-  private mapMockAgenda(): AgendaEvent[] {
-    return AGENDA.map(item => ({ ...item, color: item.color as keyof typeof AG_COLOR }));
   }
 
   private colorByEstado(estado?: string): keyof typeof AG_COLOR {
@@ -349,6 +388,32 @@ export class AgendaComponent implements OnInit {
     if (!value) return null;
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private isInCurrentRange(fechaKey?: string, item?: AgendaEvent) {
+    const inicio = item?.fechaInicioKey || fechaKey;
+    const fin = item?.fechaFinKey || inicio;
+    if (!inicio || !fin) return false;
+    const rangeStart = this.selectedDate;
+    const rangeEnd = this.viewMode === 'dia' ? this.selectedDate : this.addDays(this.selectedDate, 6);
+    return inicio <= rangeEnd && fin >= rangeStart;
+  }
+
+  private toDateKey(date: Date | null) {
+    return date ? this.toDateInput(date) : '';
+  }
+
+  private addDays(dateValue: string, days: number) {
+    const date = new Date(`${dateValue}T00:00:00`);
+    date.setDate(date.getDate() + days);
+    return this.toDateInput(date);
+  }
+
+  private formatDateLabel(dateValue: string) {
+    const date = new Date(`${dateValue}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? dateValue
+      : date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   private toLocalDateTime(date: string, time: string) {

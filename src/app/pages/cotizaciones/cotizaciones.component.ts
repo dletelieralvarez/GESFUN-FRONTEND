@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { lastValueFrom } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { lastValueFrom, Subscription } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { CLP } from '../../data/mock-data';
 import { AuthService } from '../../services/auth.service';
@@ -43,7 +43,7 @@ interface EstadoCotizacionOption {
   templateUrl: './cotizaciones.component.html',
   styleUrls: ['./cotizaciones.component.css']
 })
-export class CotizacionesComponent implements OnInit {
+export class CotizacionesComponent implements OnInit, OnDestroy {
   cotizaciones: CotizacionGuardada[] = [];
   estados: EstadoCotizacionOption[] = [];
   estadosSeleccionados: Record<string, string> = {};
@@ -54,16 +54,27 @@ export class CotizacionesComponent implements OnInit {
   error: string | null = null;
   success: string | null = null;
   clp = CLP;
+  private subscriptions = new Subscription();
 
   constructor(
     private http: HttpClient,
     private auth: AuthService,
     private pdf: CotizacionPdfService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   async ngOnInit() {
+    this.subscriptions.add(
+      this.route.queryParamMap.subscribe(params => {
+        this.filtro = params.get('q') || '';
+      })
+    );
     await Promise.all([this.cargarEstados(), this.cargarCotizaciones()]);
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
   }
 
   get cotizacionesFiltradas() {

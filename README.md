@@ -11,8 +11,10 @@ La aplicacion permite revisar y operar sobre:
 - Servicios funerarios y casos activos.
 - Agenda de servicios con reserva de recursos por sucursal.
 - Catalogo de planes y servicios adicionales.
+- Dashboard operativo con datos reales de cotizaciones, agenda e inventario consumidos desde el BFF.
 - Cotizaciones persistidas mediante el BFF, con datos de pagador, fallecido, plan, adicionales, forma de pago y calculo de totales.
 - Consulta de cotizaciones creadas, cambio de estado y reimpresion de documentos.
+- Busqueda superior conectada al listado de cotizaciones por numero, cliente, fallecido, plan o estado.
 - Generacion de PDF comercial y contrato asociado a la cotizacion.
 - Clientes o terceros.
 - Usuarios del sistema.
@@ -290,14 +292,24 @@ src/app/pages/dashboard/
 
 Funcionalidad:
 
-- Muestra servicios activos.
-- Calcula cantidad de casos en curso o programados.
-- Calcula actividades de agenda del dia.
-- Calcula ingresos pagados.
-- Detecta productos con bajo stock.
-- Muestra resumen operativo para la administracion.
+- Carga sucursales activas desde el BFF.
+- Permite seleccionar la sucursal operativa del panel.
+- Lista cotizaciones recientes reales desde `GET /api/cotizaciones`.
+- Calcula cotizaciones activas y pendientes segun el estado entregado por backend.
+- Calcula reservas del dia desde la agenda real de la sucursal.
+- Calcula ingresos cotizados del mes con montos reales de cotizaciones.
+- Consulta stock por sucursal desde inventario y destaca productos sin stock o con stock bajo.
+- Muestra agenda de hoy, cotizaciones recientes e inventario con alerta.
+- Informa errores de conexion con el BFF y conserva el panel util cuando fallan datos opcionales.
 
-Los datos provienen de `SERVICIOS`, `AGENDA` e `INVENTARIO_PRODUCTOS`.
+Endpoints consumidos:
+
+```text
+GET /api/sucursales
+GET /api/cotizaciones
+GET /api/agendas/sucursal/{sucursalUuid}
+GET /api/inventario/stock?sucursalUuid={uuid}
+```
 
 ### 6.3 Servicios funerarios
 
@@ -345,6 +357,10 @@ Funcionalidad:
 - Limita los estados enviados a los valores aceptados por backend: `OCUPADO` y `DISPONIBLE`.
 - Refresca la agenda despues de guardar correctamente.
 - Muestra recursos disponibles u ocupados y eventos por recurso.
+- Permite seleccionar fecha de inicio de vista.
+- Permite alternar la visualizacion entre dia y semana.
+- Muestra el rango de fechas reservado cuando un servicio ocupa mas de un dia.
+- Ya no usa datos mock como fallback cuando no hay sucursal o cuando el BFF no devuelve agenda.
 - Trabaja con bloques horarios desde las 08:00 hasta las 21:00.
 
 Endpoints consumidos:
@@ -425,6 +441,7 @@ Funcionalidad:
 
 - Lista las cotizaciones persistidas desde `GET /api/cotizaciones`.
 - Permite buscar por numero, cliente, fallecido, plan o estado.
+- Recibe busquedas desde la barra superior mediante `/cotizaciones?q=texto`.
 - Muestra fecha, vigencia, plan, estado y total.
 - Consulta el detalle mediante `GET /api/cotizaciones/{uuid}` antes de reimprimir.
 - Permite volver a descargar el PDF de cotizacion.
@@ -851,6 +868,11 @@ El frontend siempre debe llamar al BFF en `http://localhost:8081`; el BFF reenvi
 
 Los siguientes modulos ya cuentan con eventos reales contra el BFF:
 
+- `DashboardComponent`
+  - `GET /api/sucursales`
+  - `GET /api/cotizaciones`
+  - `GET /api/agendas/sucursal/{sucursalUuid}`
+  - `GET /api/inventario/stock?sucursalUuid={uuid}`
 - `UsuariosComponent`
   - `GET /api/usuarios`
   - `POST /api/usuarios`
@@ -990,13 +1012,14 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
+- El dashboard ya consume cotizaciones, agenda e inventario desde el BFF, pero sus metricas dependen de que esos endpoints entreguen datos completos por sucursal.
 - La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
 - Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios funerarios o facturas. Agenda e inventario ya registran operaciones mediante el BFF.
+- No hay persistencia real contra API para servicios funerarios o facturas. Dashboard, agenda e inventario ya consultan o registran operaciones mediante el BFF.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
@@ -1021,6 +1044,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, mantenedores conectados al BFF, agenda de servicios conectada al BFF y un flujo comercial de cotizaciones que permite crear, listar, cambiar estados, reimprimir PDFs y generar contratos.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

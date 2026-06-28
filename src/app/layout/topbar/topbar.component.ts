@@ -11,6 +11,7 @@ import { LayoutService } from '../../services/layout.service';
 export class TopbarComponent implements OnInit, OnDestroy {
   title = 'Panel general';
   crumb = 'Inicio';
+  searchTerm = '';
   private subscriptions = new Subscription();
 
   constructor(private router: Router, private route: ActivatedRoute, public layout: LayoutService) {}
@@ -38,5 +39,14 @@ export class TopbarComponent implements OnInit, OnDestroy {
 
   goNew() {
     this.router.navigate(['/cotizacion']);
+  }
+
+  goSearch() {
+    const q = this.searchTerm.trim();
+    if (!q) return;
+
+    this.router.navigate(['/cotizaciones'], {
+      queryParams: { q }
+    });
   }
 }

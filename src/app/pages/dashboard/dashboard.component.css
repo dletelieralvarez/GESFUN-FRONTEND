@@ -1,0 +1,19 @@
+.dashboard-branch-select {
+  min-width: min(280px, 100%);
+}
+
+.dashboard-agenda-bar {
+  background: var(--brand);
+  border-radius: 4px;
+  flex: none;
+  height: 42px;
+  width: 4px;
+}
+
+.dashboard-stock-icon {
+  background: #f6efdf;
+  color: #8a6a1f;
+  font-size: 1rem;
+  height: 32px;
+  width: 32px;
+}

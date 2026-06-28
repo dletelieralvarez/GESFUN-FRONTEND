@@ -67,6 +67,43 @@ describe('AgendaComponent', () => {
     expect(['OCUPADO', 'DISPONIBLE']).toContain(component.form.estado);
   });
 
+  it('should clear agenda instead of showing mock data when no branch is selected', fakeAsync(() => {
+    component.agenda = [{ sala: 0, start: 9, end: 10, tipo: 'Mock', titulo: 'Mock', sub: 'Mock', color: 'ok' }];
+    component.selectedSucursalUuid = '';
+
+    component.onSucursalChange();
+    tick();
+
+    expect(component.agenda).toEqual([]);
+  }));
+
+  it('should switch between day and week view modes', () => {
+    component.setViewMode('semana');
+    expect(component.viewMode).toBe('semana');
+
+    component.setViewMode('dia');
+    expect(component.viewMode).toBe('dia');
+  });
+
+  it('should show reservations that overlap the selected week', () => {
+    component.selectedDate = '2026-06-25';
+    component.setViewMode('semana');
+    component.agenda = [{
+      sala: 0,
+      start: 18,
+      end: 9,
+      tipo: 'Sala velatoria',
+      titulo: 'Cotización 10',
+      sub: 'Velatorio',
+      color: 'ok',
+      fechaInicioKey: '2026-06-24',
+      fechaFinKey: '2026-06-26'
+    }];
+
+    expect(component.visibleAgenda.length).toBe(1);
+    expect(component.formatEventDates(component.visibleAgenda[0])).toBe('24-06-2026 al 26-06-2026');
+  });
+
   afterEach(() => {
     httpMock.verify();
   });

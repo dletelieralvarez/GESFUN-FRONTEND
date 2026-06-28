@@ -2,8 +2,12 @@
   <app-page-head title="Agenda de servicios" sub="Reserva velatorios, ceremonias y recursos por sucursal">
     <div class="d-flex gap-2 align-items-center">
       <ul class="nav nav-pills mb-0">
-        <li class="nav-item"><button type="button" class="nav-link active">Día</button></li>
-        <li class="nav-item"><button type="button" class="nav-link">Semana</button></li>
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="viewMode === 'dia'" (click)="setViewMode('dia')">Día</button>
+        </li>
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="viewMode === 'semana'" (click)="setViewMode('semana')">Semana</button>
+        </li>
       </ul>
       <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
         type="button" (click)="openReserva()" [disabled]="!canReserve">
@@ -35,10 +39,10 @@
         </option>
       </select>
     </div>
-    <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2"
-      type="button" (click)="openReserva()" [disabled]="!canReserve">
-      <i class="bi bi-calendar-plus"></i>Agendar velatorio
-    </button>
+    <div>
+      <label class="form-label fw-semibold small">{{ viewMode === 'dia' ? 'Fecha' : 'Inicio de semana' }}</label>
+      <input class="form-control" type="date" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()" />
+    </div>
   </div>
 
   <div class="card agenda-form-card mb-4" *ngIf="formVisible">
@@ -114,18 +118,18 @@
           <div class="fw-bold" style="font-size: .85rem">{{ sala }}</div>
           <app-badge [cls]="isOccupied(i) ? 'b-ok' : 'b-neutral'" [dot]="true">{{ isOccupied(i) ? 'Ocupada' : 'Disponible' }}</app-badge>
         </div>
-        <div class="text-secondary mt-1" style="font-size: .78rem">{{ getEventsCount(i) }} evento{{ getEventsCount(i) !== 1 ? 's' : '' }} hoy</div>
+        <div class="text-secondary mt-1" style="font-size: .78rem">{{ getEventsCountLabel(i) }}</div>
       </div>
     </div>
   </div>
 
-  <div class="card mobile-agenda-list mb-4" *ngIf="eventsToday.length">
+  <div class="card mobile-agenda-list mb-4" *ngIf="visibleEvents.length">
     <div class="card-header">
-      <div class="fw-bold">Eventos de hoy</div>
-      <div class="text-secondary fw-normal" style="font-size: .78rem">Vista rápida para móvil</div>
+      <div class="fw-bold">{{ viewMode === 'dia' ? 'Eventos del día' : 'Eventos de la semana' }}</div>
+      <div class="text-secondary fw-normal" style="font-size: .78rem">{{ rangeTitle }}</div>
     </div>
     <div class="list-group list-group-flush">
-      <div class="list-group-item d-flex gap-3 border-0" *ngFor="let ev of eventsToday">
+      <div class="list-group-item d-flex gap-3 border-0" *ngFor="let ev of visibleEvents">
         <div class="agenda-time tnum">{{ formatHour(ev.start) }}</div>
         <div class="flex-grow-1">
           <div class="d-flex justify-content-between gap-2">
@@ -133,7 +137,7 @@
             <app-badge cls="b-neutral">{{ salas[ev.sala] }}</app-badge>
           </div>
           <div class="text-secondary" style="font-size: .78rem">{{ ev.tipo }} · {{ ev.sub }}</div>
-          <div class="tnum text-secondary" style="font-size: .75rem">{{ formatHour(ev.start) }}–{{ formatHour(ev.end) }}</div>
+          <div class="tnum text-secondary" style="font-size: .75rem">{{ formatEventSchedule(ev) }}</div>
         </div>
       </div>
     </div>
@@ -151,6 +155,7 @@
             <div class="ag-event" [ngStyle]="getEventStyle(ev)">
               <div class="fw-bold text-uppercase" style="font-size: .64rem; letter-spacing: .03em">{{ ev.tipo }}</div>
               <div class="fw-bold" style="font-size: .78rem; margin-top: 1px">{{ ev.titulo }}</div>
+              <div class="ag-event-date tnum">{{ formatEventDates(ev) }}</div>
               <div class="text-secondary" style="font-size: .72rem">{{ ev.sub }}</div>
               <div class="tnum text-secondary" style="font-size: .68rem; margin-top: 2px">{{ formatHour(ev.start) }}–{{ formatHour(ev.end) }}</div>
             </div>
@@ -159,8 +164,11 @@
       </ng-container>
       </div>
     </div>
-    <div class="empty-state m-4" *ngIf="!loading && !agenda.length">
-      No hay servicios agendados para la sucursal seleccionada.
+    <div class="empty-state m-4" *ngIf="!loading && !selectedSucursalUuid">
+      Selecciona una sucursal para consultar su agenda.
+    </div>
+    <div class="empty-state m-4" *ngIf="!loading && selectedSucursalUuid && !visibleAgenda.length">
+      No hay servicios agendados para el rango seleccionado.
     </div>
   </div>
 </div>

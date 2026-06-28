@@ -64,6 +64,12 @@
   z-index: 1;
 }
 
+.ag-event-date {
+  font-size: .68rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
 .mobile-agenda-list {
   display: none;
 }
