@@ -4,6 +4,10 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.billing-actions--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .billing-panel {
   background: #fff;
   border: 1px solid var(--border);
@@ -26,10 +30,6 @@
   padding: 16px;
 }
 
-.billing-grid--dte {
-  grid-template-columns: minmax(0, 1fr) 180px;
-}
-
 .billing-grid label,
 .billing-observation {
   display: grid;
@@ -43,6 +43,13 @@
 }
 
 .billing-observation {
+  padding: 0;
+}
+
+.billing-notes {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 0 16px 16px;
 }
 
@@ -56,7 +63,7 @@
 @media (max-width: 992px) {
   .billing-actions,
   .billing-grid,
-  .billing-grid--dte {
+  .billing-notes {
     grid-template-columns: 1fr;
   }
 }

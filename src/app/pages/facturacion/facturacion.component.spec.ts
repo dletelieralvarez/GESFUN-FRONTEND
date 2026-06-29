@@ -10,14 +10,17 @@ describe('FacturacionComponent', () => {
   let component: FacturacionComponent;
   let fixture: ComponentFixture<FacturacionComponent>;
   let httpMock: HttpTestingController;
+  let documentoPdf: jasmine.SpyObj<DocumentoTributarioPdfService>;
 
   beforeEach(() => {
+    documentoPdf = jasmine.createSpyObj<DocumentoTributarioPdfService>('DocumentoTributarioPdfService', ['generar']);
+    documentoPdf.generar.and.returnValue(Promise.resolve());
     TestBed.configureTestingModule({
       imports: commonTestingImports,
       declarations: [FacturacionComponent],
       providers: [
         commonTestingProviders,
-        { provide: DocumentoTributarioPdfService, useValue: { generar: () => Promise.resolve() } }
+        { provide: DocumentoTributarioPdfService, useValue: documentoPdf }
       ]
     });
     httpMock = TestBed.inject(HttpTestingController);
@@ -83,6 +86,105 @@ describe('FacturacionComponent', () => {
 
     expect(message).toContain('HTTP 500');
     expect(message).toContain('/api/documentos-tributarios/emitir');
+  });
+
+  it('should register payment and emit dte in one action', async () => {
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'BOLETA',
+      observacion: 'Abono inicial',
+      observacionDte: 'Emision por pago de servicio funerario'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    const pagoRequest = httpMock.expectOne(`${bffApiUrl}/api/pagos`);
+    expect(pagoRequest.request.method).toBe('POST');
+    expect(pagoRequest.request.body.cotizacionUuid).toBe('cot-1');
+    pagoRequest.flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const dteRequest = httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`);
+    expect(dteRequest.request.method).toBe('POST');
+    expect(dteRequest.request.body).toEqual({
+      pagoUuid: 'pago-1',
+      tipoDocumentoCodigo: 'BOLETA',
+      observacion: 'Emision por pago de servicio funerario'
+    });
+    dteRequest.flush({
+      success: true,
+      payload: {
+        uuid: 'doc-1',
+        pagoUuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        tipoDocumentoCodigo: 'BOLETA',
+        estado: 'EMITIDO',
+        total: 150000
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    httpMock.expectOne(`${bffApiUrl}/api/cotizaciones/cot-1`).flush({ success: true, payload: { detalles: [] } });
+    await action;
+
+    expect(component.pagos.length).toBe(1);
+    expect(component.documentos.length).toBe(1);
+    expect(documentoPdf.generar).toHaveBeenCalled();
+    expect(component.success).toContain('Pago registrado');
+  });
+
+  it('should hide fully paid cotizaciones from payment selector', () => {
+    component.cotizaciones = [
+      { uuid: 'cot-pagada', numero: '1', cliente: 'Cliente pagado', total: 100000 },
+      { uuid: 'cot-pendiente', numero: '2', cliente: 'Cliente pendiente', total: 150000 }
+    ];
+    component.pagos = [
+      {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-pagada',
+        cotizacionNumero: '1',
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 100000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO',
+        observacion: ''
+      },
+      {
+        uuid: 'pago-2',
+        cotizacionUuid: 'cot-pendiente',
+        cotizacionNumero: '2',
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 50000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO',
+        observacion: ''
+      }
+    ];
+
+    expect(component.cotizacionesPendientes.map(item => item.uuid)).toEqual(['cot-pendiente']);
+    expect(component.saldoCotizacion(component.cotizaciones[1])).toBe(100000);
   });
 
 });

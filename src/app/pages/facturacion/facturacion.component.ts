@@ -73,7 +73,6 @@ export class FacturacionComponent implements OnInit {
   tab = 'Todos';
   loading = false;
   savingPago = false;
-  emitting = false;
   processingUuid: string | null = null;
   error: string | null = null;
   warning: string | null = null;
@@ -81,7 +80,6 @@ export class FacturacionComponent implements OnInit {
   clp = CLP;
 
   pagoForm = this.createPagoForm();
-  dteForm = this.createDteForm();
   tipoDocumentos = [
     { codigo: 'BOLETA', nombre: 'Boleta' },
     { codigo: 'FACTURA', nombre: 'Factura' }
@@ -130,6 +128,10 @@ export class FacturacionComponent implements OnInit {
     return this.pagosRegistrados.filter(pago => !this.documentoPorPago(pago.uuid));
   }
 
+  get cotizacionesPendientes() {
+    return this.cotizaciones.filter(cotizacion => this.saldoCotizacion(cotizacion) > 0);
+  }
+
   async cargarFacturacion() {
     this.loading = true;
     this.error = null;
@@ -161,8 +163,8 @@ export class FacturacionComponent implements OnInit {
   }
 
   async registrarPago() {
-    if (!this.pagoForm.cotizacionUuid || !this.pagoForm.formaPagoUuid || !this.pagoForm.monto || this.pagoForm.monto <= 0) {
-      this.error = 'Selecciona cotización, forma de pago y un monto mayor a cero.';
+    if (!this.pagoForm.cotizacionUuid || !this.pagoForm.formaPagoUuid || !this.pagoForm.monto || this.pagoForm.monto <= 0 || !this.pagoForm.tipoDocumentoCodigo) {
+      this.error = 'Selecciona cotización, forma de pago, documento y un monto mayor a cero.';
       return;
     }
 
@@ -181,43 +183,16 @@ export class FacturacionComponent implements OnInit {
       const response = await lastValueFrom(this.http.post(`${bffApiUrl}/api/pagos`, payload, { headers }));
       const pago = this.fromPago(this.unwrapPayload(response));
       this.pagos = [pago, ...this.pagos.filter(item => item.uuid !== pago.uuid)];
+      const documento = await this.emitirDocumentoParaPago(pago, headers);
+      this.documentos = [documento, ...this.documentos.filter(item => item.uuid !== documento.uuid)];
       this.pagoForm = this.createPagoForm();
       this.applyFormDefaults();
-      this.success = `Pago registrado para la cotización ${pago.cotizacionNumero}.`;
+      await this.generarDocumentoPdf(documento);
+      this.success = `Pago registrado y ${documento.tipoDocumentoNombre || documento.tipoDocumentoCodigo} emitida para la cotización ${pago.cotizacionNumero}.`;
     } catch (err: any) {
-      this.error = this.getErrorMessage(err, 'No se pudo registrar el pago.');
+      this.error = this.getErrorMessage(err, 'No se pudo registrar el pago o emitir el documento tributario.');
     } finally {
       this.savingPago = false;
-    }
-  }
-
-  async emitirDocumento() {
-    if (!this.dteForm.pagoUuid || !this.dteForm.tipoDocumentoCodigo) {
-      this.error = 'Selecciona un pago y el tipo de documento.';
-      return;
-    }
-
-    this.emitting = true;
-    this.error = null;
-    this.success = null;
-    try {
-      const headers = await this.authHeaders();
-      const payload = {
-        pagoUuid: this.dteForm.pagoUuid,
-        tipoDocumentoCodigo: this.dteForm.tipoDocumentoCodigo,
-        observacion: this.dteForm.observacion || null
-      };
-      const response = await lastValueFrom(this.http.post(`${bffApiUrl}/api/documentos-tributarios/emitir`, payload, { headers }));
-      const documento = this.fromDocumento(this.unwrapPayload(response));
-      this.documentos = [documento, ...this.documentos.filter(item => item.uuid !== documento.uuid)];
-      this.dteForm = this.createDteForm();
-      this.applyFormDefaults();
-      await this.generarDocumentoPdf(documento);
-      this.success = `Documento ${documento.tipoDocumentoCodigo} emitido y PDF descargado.`;
-    } catch (err: any) {
-      this.error = this.getErrorMessage(err, 'No se pudo emitir el documento tributario.');
-    } finally {
-      this.emitting = false;
     }
   }
 
@@ -267,6 +242,20 @@ export class FacturacionComponent implements OnInit {
 
   pagoLabel(pago: Pago) {
     return `Cotización ${pago.cotizacionNumero} · ${this.clp(pago.monto)} · ${this.formatFecha(pago.fechaPago)}`;
+  }
+
+  saldoCotizacion(cotizacion: CotizacionOption) {
+    if (!cotizacion.total || cotizacion.total <= 0) return Number.MAX_SAFE_INTEGER;
+    const pagado = this.pagosRegistrados
+      .filter(pago => pago.cotizacionUuid === cotizacion.uuid)
+      .reduce((sum, pago) => sum + pago.monto, 0);
+    return Math.max(0, cotizacion.total - pagado);
+  }
+
+  cotizacionLabel(cotizacion: CotizacionOption) {
+    const saldo = this.saldoCotizacion(cotizacion);
+    const saldoLabel = saldo === Number.MAX_SAFE_INTEGER ? this.clp(cotizacion.total) : `Saldo ${this.clp(saldo)}`;
+    return `${cotizacion.numero} · ${cotizacion.cliente} · ${saldoLabel}`;
   }
 
   badgePago(estado: string) {
@@ -376,6 +365,16 @@ export class FacturacionComponent implements OnInit {
     this.documentos = this.documentos.map(item => item.uuid === documento.uuid ? documento : item);
   }
 
+  private async emitirDocumentoParaPago(pago: Pago, headers: { Authorization: string }) {
+    const payload = {
+      pagoUuid: pago.uuid,
+      tipoDocumentoCodigo: this.pagoForm.tipoDocumentoCodigo,
+      observacion: this.pagoForm.observacionDte || this.pagoForm.observacion || null
+    };
+    const response = await lastValueFrom(this.http.post(`${bffApiUrl}/api/documentos-tributarios/emitir`, payload, { headers }));
+    return this.fromDocumento(this.unwrapPayload(response));
+  }
+
   private async toDocumentoPdfData(documento: DocumentoTributario): Promise<DocumentoTributarioPdfData> {
     const neto = documento.montoNeto || Math.round((documento.total / 1.19) * 100) / 100;
     const iva = documento.iva || Math.max(0, Math.round((documento.total - neto) * 100) / 100);
@@ -444,9 +443,10 @@ export class FacturacionComponent implements OnInit {
   }
 
   private applyFormDefaults() {
-    if (!this.pagoForm.cotizacionUuid) this.pagoForm.cotizacionUuid = this.cotizaciones[0]?.uuid || '';
+    if (!this.cotizacionesPendientes.some(item => item.uuid === this.pagoForm.cotizacionUuid)) {
+      this.pagoForm.cotizacionUuid = this.cotizacionesPendientes[0]?.uuid || '';
+    }
     if (!this.pagoForm.formaPagoUuid) this.pagoForm.formaPagoUuid = this.formasPago[0]?.uuid || '';
-    if (!this.dteForm.pagoUuid) this.dteForm.pagoUuid = this.pagosDisponiblesDte[0]?.uuid || '';
   }
 
   private createPagoForm() {
@@ -455,15 +455,9 @@ export class FacturacionComponent implements OnInit {
       formaPagoUuid: '',
       monto: null as number | null,
       fechaPago: this.toDateTimeInput(new Date()),
-      observacion: ''
-    };
-  }
-
-  private createDteForm() {
-    return {
-      pagoUuid: '',
       tipoDocumentoCodigo: 'BOLETA',
-      observacion: 'Emision por pago de servicio funerario'
+      observacion: '',
+      observacionDte: 'Emision por pago de servicio funerario'
     };
   }
 

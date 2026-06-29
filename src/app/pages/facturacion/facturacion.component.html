@@ -28,19 +28,19 @@
     <div class="col-md-3"><app-stat label="DTE emitidos/enviados" icon="send-check-fill" [value]="documentosEmitidos" tintBg="#e8edf7" tintFg="#314f88"></app-stat></div>
   </div>
 
-  <div class="billing-actions mb-4">
+  <div class="billing-actions billing-actions--single mb-4">
     <section class="billing-panel">
       <div class="billing-panel__head">
         <i class="bi bi-cash-coin"></i>
-        <strong>Registrar pago</strong>
+        <strong>Registrar pago y emitir DTE</strong>
       </div>
       <div class="billing-grid">
         <label>
           <span>Cotización</span>
           <select class="form-select" [(ngModel)]="pagoForm.cotizacionUuid">
             <option value="">Seleccionar cotización</option>
-            <option *ngFor="let cotizacion of cotizaciones" [value]="cotizacion.uuid">
-              {{ cotizacion.numero }} · {{ cotizacion.cliente }} · {{ clp(cotizacion.total) }}
+            <option *ngFor="let cotizacion of cotizacionesPendientes" [value]="cotizacion.uuid">
+              {{ cotizacionLabel(cotizacion) }}
             </option>
           </select>
         </label>
@@ -59,47 +59,27 @@
           <span>Fecha pago</span>
           <input class="form-control" type="datetime-local" [(ngModel)]="pagoForm.fechaPago" />
         </label>
-      </div>
-      <label class="billing-observation">
-        <span>Observación</span>
-        <textarea class="form-control" rows="2" [(ngModel)]="pagoForm.observacion" placeholder="Abono inicial"></textarea>
-      </label>
-      <div class="billing-panel__actions">
-        <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
-          (click)="registrarPago()" [disabled]="savingPago || loading">
-          <i class="bi bi-plus-lg"></i>{{ savingPago ? 'Registrando...' : 'Registrar pago' }}
-        </button>
-      </div>
-    </section>
-
-    <section class="billing-panel">
-      <div class="billing-panel__head">
-        <i class="bi bi-receipt"></i>
-        <strong>Emitir DTE simulado</strong>
-      </div>
-      <div class="billing-grid billing-grid--dte">
         <label>
-          <span>Pago</span>
-          <select class="form-select" [(ngModel)]="dteForm.pagoUuid">
-            <option value="">Seleccionar pago registrado</option>
-            <option *ngFor="let pago of pagosDisponiblesDte" [value]="pago.uuid">{{ pagoLabel(pago) }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Documento</span>
-          <select class="form-select" [(ngModel)]="dteForm.tipoDocumentoCodigo">
+          <span>Documento tributario</span>
+          <select class="form-select" [(ngModel)]="pagoForm.tipoDocumentoCodigo">
             <option *ngFor="let tipo of tipoDocumentos" [value]="tipo.codigo">{{ tipo.nombre }}</option>
           </select>
         </label>
       </div>
-      <label class="billing-observation">
-        <span>Observación</span>
-        <textarea class="form-control" rows="2" [(ngModel)]="dteForm.observacion"></textarea>
-      </label>
+      <div class="billing-notes">
+        <label class="billing-observation">
+          <span>Observación pago</span>
+          <textarea class="form-control" rows="2" [(ngModel)]="pagoForm.observacion" placeholder="Abono inicial"></textarea>
+        </label>
+        <label class="billing-observation">
+          <span>Observación DTE</span>
+          <textarea class="form-control" rows="2" [(ngModel)]="pagoForm.observacionDte"></textarea>
+        </label>
+      </div>
       <div class="billing-panel__actions">
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
-          (click)="emitirDocumento()" [disabled]="emitting || loading || !pagosDisponiblesDte.length">
-          <i class="bi bi-send"></i>{{ emitting ? 'Emitiendo...' : 'Emitir DTE' }}
+          (click)="registrarPago()" [disabled]="savingPago || loading">
+          <i class="bi bi-send"></i>{{ savingPago ? 'Procesando...' : 'Registrar pago y emitir DTE' }}
         </button>
       </div>
     </section>
