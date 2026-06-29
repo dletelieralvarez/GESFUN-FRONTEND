@@ -722,17 +722,33 @@ src/app/pages/facturacion/
 
 Funcionalidad:
 
-- Lista facturas.
-- Filtra por estado:
-  - Todas.
-  - Pendiente.
-  - Parcial.
-  - Pagada.
-  - Vencida.
-- Calcula monto por cobrar.
-- Calcula monto cobrado.
-- Calcula cantidad de facturas vencidas.
-- Aplica badges visuales segun estado.
+- Consulta pagos reales desde el BFF.
+- Permite registrar pagos asociados a una cotizacion.
+- Permite anular pagos registrados.
+- Consulta documentos tributarios emitidos desde el BFF.
+- Permite emitir DTE simulado para pagos registrados con selector fijo:
+  - Boleta (`BOLETA`).
+  - Factura (`FACTURA`).
+- No consume `/api/tipos-documento` para DTE, porque esos tipos corresponden a documentos operacionales funerarios.
+- Evita emitir DTE para pagos anulados o pagos que ya tienen un DTE activo.
+- Permite anular documentos tributarios.
+- Genera PDF fisico de Boleta o Factura con `jsPDF`.
+- El PDF incluye folio, receptor, RUT, cotizacion asociada, montos, IVA, track ID, proveedor `DTEEMITE_SIMULADO` y datos de trazabilidad.
+- El PDF desglosa los productos o servicios de la cotizacion mediante `GET /api/cotizaciones/{cotizacionUuid}`.
+- Si no se puede obtener el detalle de la cotizacion, el PDF usa una linea de respaldo asociada al pago de la cotizacion.
+- Mejora los mensajes de error del BFF mostrando el mensaje interno o el estado HTTP con endpoint.
+
+Endpoints usados:
+
+- `GET /api/pagos`
+- `POST /api/pagos`
+- `PATCH /api/pagos/{uuid}/anular`
+- `GET /api/documentos-tributarios`
+- `POST /api/documentos-tributarios/emitir`
+- `PATCH /api/documentos-tributarios/{uuid}/anular`
+- `GET /api/cotizaciones`
+- `GET /api/cotizaciones/{uuid}`
+- `GET /api/formas-pago`
 
 ## 7. Componentes reutilizables de UI
 
@@ -937,6 +953,16 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/productos-servicios`
   - `GET /api/inventario/stock?sucursalUuid={uuid}`
   - `POST /api/inventario/entradas`
+- `FacturacionComponent`
+  - `GET /api/pagos`
+  - `POST /api/pagos`
+  - `PATCH /api/pagos/{uuid}/anular`
+  - `GET /api/documentos-tributarios`
+  - `POST /api/documentos-tributarios/emitir`
+  - `PATCH /api/documentos-tributarios/{uuid}/anular`
+  - `GET /api/cotizaciones`
+  - `GET /api/cotizaciones/{uuid}`
+  - `GET /api/formas-pago`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`
@@ -1015,11 +1041,13 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - El dashboard ya consume cotizaciones, agenda e inventario desde el BFF, pero sus metricas dependen de que esos endpoints entreguen datos completos por sucursal.
 - La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
+- Facturacion ya registra pagos, emite DTE simulado, anula pagos/documentos y genera PDF de Boleta o Factura desde datos del BFF.
 - Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
+- La emision DTE usa el proveedor simulado `DTEEMITE_SIMULADO`; no integra aun SII ni proveedor tributario real.
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios funerarios o facturas. Dashboard, agenda e inventario ya consultan o registran operaciones mediante el BFF.
+- No hay persistencia real contra API para servicios funerarios. Dashboard, agenda, inventario y facturacion ya consultan o registran operaciones mediante el BFF.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
@@ -1044,6 +1072,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para pagos y DTE, y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

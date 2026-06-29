@@ -1,44 +1,205 @@
 <div class="content-wrap">
-  <app-page-head title="Facturación" sub="Estado de cobranza de los servicios">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2"><i class="bi bi-plus-lg"></i>Emitir factura</button>
+  <app-page-head title="Facturación" sub="Pagos y documentos tributarios emitidos por el BFF">
+    <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+      type="button" (click)="cargarFacturacion()" [disabled]="loading">
+      <i class="bi bi-arrow-clockwise"></i>Actualizar
+    </button>
   </app-page-head>
 
+  <div class="status-stack mb-3" *ngIf="loading || error || warning || success">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i><span>Cargando facturación...</span>
+    </div>
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
+    </div>
+    <div class="status-message status-warning" *ngIf="warning">
+      <i class="bi bi-exclamation-triangle"></i><span>{{ warning }}</span>
+    </div>
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
-    <div class="col-md-4"><app-stat label="Cobrado este mes" icon="check-circle-fill" [value]="clp(cobrado)" delta="+14%" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
-    <div class="col-md-4"><app-stat label="Por cobrar" icon="clock-fill" [value]="clp(porCobrar)" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
-    <div class="col-md-4"><app-stat label="Facturas vencidas" icon="exclamation-octagon-fill" [value]="vencidas" delta="gestionar" deltaDir="down" tintBg="#f6e6e3" tintFg="#9a3b2c"></app-stat></div>
+    <div class="col-md-3"><app-stat label="Cobrado este mes" icon="check-circle-fill" [value]="clp(cobradoMes)" tintBg="#e7f0e9" tintFg="#3d6b50"></app-stat></div>
+    <div class="col-md-3"><app-stat label="Pagos registrados" icon="cash-stack" [value]="pagosRegistrados.length" tintBg="#edf3f4" tintFg="#245b63"></app-stat></div>
+    <div class="col-md-3"><app-stat label="Por documentar" icon="receipt" [value]="pagosPorDocumentar" tintBg="#f6efdf" tintFg="#8a6a1f"></app-stat></div>
+    <div class="col-md-3"><app-stat label="DTE emitidos/enviados" icon="send-check-fill" [value]="documentosEmitidos" tintBg="#e8edf7" tintFg="#314f88"></app-stat></div>
+  </div>
+
+  <div class="billing-actions mb-4">
+    <section class="billing-panel">
+      <div class="billing-panel__head">
+        <i class="bi bi-cash-coin"></i>
+        <strong>Registrar pago</strong>
+      </div>
+      <div class="billing-grid">
+        <label>
+          <span>Cotización</span>
+          <select class="form-select" [(ngModel)]="pagoForm.cotizacionUuid">
+            <option value="">Seleccionar cotización</option>
+            <option *ngFor="let cotizacion of cotizaciones" [value]="cotizacion.uuid">
+              {{ cotizacion.numero }} · {{ cotizacion.cliente }} · {{ clp(cotizacion.total) }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Forma de pago</span>
+          <select class="form-select" [(ngModel)]="pagoForm.formaPagoUuid">
+            <option value="">Seleccionar forma</option>
+            <option *ngFor="let forma of formasPago" [value]="forma.uuid">{{ forma.nombre }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Monto</span>
+          <input class="form-control" type="number" min="1" [(ngModel)]="pagoForm.monto" />
+        </label>
+        <label>
+          <span>Fecha pago</span>
+          <input class="form-control" type="datetime-local" [(ngModel)]="pagoForm.fechaPago" />
+        </label>
+      </div>
+      <label class="billing-observation">
+        <span>Observación</span>
+        <textarea class="form-control" rows="2" [(ngModel)]="pagoForm.observacion" placeholder="Abono inicial"></textarea>
+      </label>
+      <div class="billing-panel__actions">
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
+          (click)="registrarPago()" [disabled]="savingPago || loading">
+          <i class="bi bi-plus-lg"></i>{{ savingPago ? 'Registrando...' : 'Registrar pago' }}
+        </button>
+      </div>
+    </section>
+
+    <section class="billing-panel">
+      <div class="billing-panel__head">
+        <i class="bi bi-receipt"></i>
+        <strong>Emitir DTE simulado</strong>
+      </div>
+      <div class="billing-grid billing-grid--dte">
+        <label>
+          <span>Pago</span>
+          <select class="form-select" [(ngModel)]="dteForm.pagoUuid">
+            <option value="">Seleccionar pago registrado</option>
+            <option *ngFor="let pago of pagosDisponiblesDte" [value]="pago.uuid">{{ pagoLabel(pago) }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Documento</span>
+          <select class="form-select" [(ngModel)]="dteForm.tipoDocumentoCodigo">
+            <option *ngFor="let tipo of tipoDocumentos" [value]="tipo.codigo">{{ tipo.nombre }}</option>
+          </select>
+        </label>
+      </div>
+      <label class="billing-observation">
+        <span>Observación</span>
+        <textarea class="form-control" rows="2" [(ngModel)]="dteForm.observacion"></textarea>
+      </label>
+      <div class="billing-panel__actions">
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
+          (click)="emitirDocumento()" [disabled]="emitting || loading || !pagosDisponiblesDte.length">
+          <i class="bi bi-send"></i>{{ emitting ? 'Emitiendo...' : 'Emitir DTE' }}
+        </button>
+      </div>
+    </section>
   </div>
 
   <div class="mb-4"><app-pills [tabs]="tabs" [active]="tab" (selected)="tab = $event"></app-pills></div>
 
-  <div class="card">
-    <div class="table-responsive">
+  <section class="card mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <strong>Pagos</strong>
+      <span class="text-secondary small">{{ clp(totalRegistrado) }} registrados</span>
+    </div>
+    <div class="table-responsive" *ngIf="pagosFiltrados.length; else noPagos">
       <table class="table table-hover align-middle mb-0 responsive-card-table">
         <thead>
           <tr>
-            <th class="ps-4">Folio</th>
-            <th>Caso</th>
-            <th>Cliente</th>
-            <th>Emitida</th>
-            <th>Vence</th>
+            <th class="ps-4">Cotización</th>
+            <th>Fecha</th>
+            <th>Forma</th>
             <th>Estado</th>
+            <th>Documento</th>
             <th class="text-end">Monto</th>
-            <th class="text-end pe-4">Saldo</th>
+            <th class="text-end pe-4">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let invoice of rows">
-            <td class="ps-4 tnum fw-bold text-primary" data-label="Folio">{{ invoice.folio }}</td>
-            <td class="tnum text-secondary" data-label="Caso">{{ invoice.caso }}</td>
-            <td class="fw-semibold" data-label="Cliente">{{ invoice.cliente }}</td>
-            <td class="tnum text-body-secondary" data-label="Emitida">{{ invoice.emitida }}</td>
-            <td class="tnum" data-label="Vence" [ngClass]="{ 'text-danger fw-bold': invoice.estado === 'Vencida', 'text-body-secondary': invoice.estado !== 'Vencida' }">{{ invoice.vence }}</td>
-            <td data-label="Estado"><app-badge [cls]="invEstado[invoice.estado]" [dot]="true">{{ invoice.estado }}</app-badge></td>
-            <td class="text-end tnum fw-semibold" data-label="Monto">{{ clp(invoice.monto) }}</td>
-            <td class="text-end pe-4 tnum fw-bold" data-label="Saldo" [ngClass]="{ 'text-danger': invoice.monto - invoice.abonado > 0, 'text-primary': invoice.monto - invoice.abonado === 0 }">{{ invoice.monto - invoice.abonado > 0 ? clp(invoice.monto - invoice.abonado) : '—' }}</td>
+          <tr *ngFor="let pago of pagosFiltrados">
+            <td class="ps-4 fw-bold tnum" data-label="Cotización">{{ pago.cotizacionNumero }}</td>
+            <td class="text-body-secondary" data-label="Fecha">{{ formatFecha(pago.fechaPago) }}</td>
+            <td data-label="Forma">{{ pago.formaPagoNombre }}</td>
+            <td data-label="Estado"><app-badge [cls]="badgePago(pago.estado)" [dot]="true">{{ pago.estado }}</app-badge></td>
+            <td data-label="Documento">
+              <ng-container *ngIf="documentoPorPago(pago.uuid) as doc; else sinDocumento">
+                <app-badge [cls]="badgeDocumento(doc.estado)" [dot]="true">{{ doc.tipoDocumentoCodigo }} {{ doc.estado }}</app-badge>
+              </ng-container>
+              <ng-template #sinDocumento><span class="text-secondary">Pendiente</span></ng-template>
+            </td>
+            <td class="text-end fw-bold tnum" data-label="Monto">{{ clp(pago.monto) }}</td>
+            <td class="text-end pe-4" data-label="Acciones">
+              <button class="btn btn-sm btn-outline-danger" type="button"
+                (click)="anularPago(pago)"
+                [disabled]="pago.estado === 'ANULADO' || processingUuid === pago.uuid">
+                {{ processingUuid === pago.uuid ? 'Procesando...' : 'Anular' }}
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
+    <ng-template #noPagos>
+      <div class="empty-state m-4" *ngIf="!loading">No hay pagos para mostrar.</div>
+    </ng-template>
+  </section>
+
+  <section class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <strong>Documentos tributarios</strong>
+      <span class="text-secondary small">{{ documentos.length }} documentos</span>
+    </div>
+    <div class="table-responsive" *ngIf="documentos.length; else noDocumentos">
+      <table class="table table-hover align-middle mb-0 responsive-card-table">
+        <thead>
+          <tr>
+            <th class="ps-4">Folio</th>
+            <th>Cotización</th>
+            <th>Tipo</th>
+            <th>Receptor</th>
+            <th>Track ID</th>
+            <th>Estado</th>
+            <th class="text-end">Total</th>
+            <th class="text-end pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let doc of documentos">
+            <td class="ps-4 fw-bold tnum" data-label="Folio">{{ doc.folio || 'Sin folio' }}</td>
+            <td class="tnum" data-label="Cotización">{{ doc.cotizacionNumero }}</td>
+            <td data-label="Tipo">{{ doc.tipoDocumentoNombre || doc.tipoDocumentoCodigo }}</td>
+            <td data-label="Receptor">{{ doc.razonSocialReceptor }}</td>
+            <td class="tnum text-body-secondary" data-label="Track ID">{{ doc.trackId || 'No informado' }}</td>
+            <td data-label="Estado"><app-badge [cls]="badgeDocumento(doc.estado)" [dot]="true">{{ doc.estado }}</app-badge></td>
+            <td class="text-end fw-bold tnum" data-label="Total">{{ clp(doc.total) }}</td>
+            <td class="text-end pe-4" data-label="Acciones">
+              <div class="d-inline-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" type="button"
+                  (click)="generarDocumentoPdf(doc)" [disabled]="doc.estado === 'ANULADO'">
+                  PDF
+                </button>
+                <button class="btn btn-sm btn-outline-danger" type="button"
+                  (click)="anularDocumento(doc)" [disabled]="doc.estado === 'ANULADO' || processingUuid === doc.uuid">
+                  Anular
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #noDocumentos>
+      <div class="empty-state m-4" *ngIf="!loading">No hay documentos tributarios emitidos.</div>
+    </ng-template>
+  </section>
 </div>
