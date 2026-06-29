@@ -705,6 +705,7 @@ Funcionalidad:
   - Usuarios responsables.
   - Productos/servicios filtrados como productos inventariables.
 - Permite registrar una entrada de inventario con cabecera y multiples detalles en un unico JSON.
+- El registro de entrada se abre en modal desde el boton `Registrar entrada`, manteniendo la tabla de stock a ancho completo.
 - Envia el movimiento al endpoint `POST /api/inventario/entradas`.
 - Refresca el stock de la sucursal despues de guardar correctamente.
 - Evita repetir el mismo producto dentro de una misma entrada.
@@ -724,6 +725,9 @@ Funcionalidad:
 
 - Consulta pagos reales desde el BFF.
 - Permite registrar pagos asociados a una cotizacion.
+- Registra el pago y emite el DTE en una sola accion del usuario.
+- El selector de cotizacion muestra solo cotizaciones con saldo pendiente; las cotizaciones completamente pagadas no quedan disponibles para nuevos pagos.
+- El selector muestra el saldo pendiente de cada cotizacion disponible.
 - Permite anular pagos registrados.
 - Consulta documentos tributarios emitidos desde el BFF.
 - Permite emitir DTE simulado para pagos registrados con selector fijo:
@@ -1041,7 +1045,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - El dashboard ya consume cotizaciones, agenda e inventario desde el BFF, pero sus metricas dependen de que esos endpoints entreguen datos completos por sucursal.
 - La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
-- Facturacion ya registra pagos, emite DTE simulado, anula pagos/documentos y genera PDF de Boleta o Factura desde datos del BFF.
+- Facturacion ya registra pagos y emite DTE simulado en una sola accion, anula pagos/documentos, filtra cotizaciones pagadas del selector y genera PDF de Boleta o Factura desde datos del BFF.
 - Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
 - La emision DTE usa el proveedor simulado `DTEEMITE_SIMULADO`; no integra aun SII ni proveedor tributario real.
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
@@ -1072,6 +1076,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para pagos y DTE, y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para registrar pagos y emitir DTE en una sola accion, y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

@@ -48,7 +48,7 @@
   </div>
 
   <div class="row g-4">
-    <div [ngClass]="formVisible ? 'col-xl-7' : 'col-12'">
+    <div class="col-12">
       <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-3">
         <div class="inventory-branch-select">
           <label class="form-label fw-semibold small">Sucursal</label>
@@ -101,15 +101,16 @@
       </div>
     </div>
 
-    <div class="col-xl-5" *ngIf="formVisible">
-      <div class="card inventory-entry-card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+    <div class="modal d-block" tabindex="-1" *ngIf="formVisible" (click)="saving ? null : cancelEntrada()">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" (click)="$event.stopPropagation()">
+      <div class="modal-content inventory-entry-modal">
+        <div class="modal-header card-header d-flex align-items-center justify-content-between">
           <span><i class="bi bi-clipboard2-check me-2"></i>Registrar entrada de productos</span>
           <button class="btn btn-sm btn-soft" type="button" (click)="cancelEntrada()" [disabled]="saving">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
-        <div class="card-body">
+        <div class="modal-body card-body">
           <div class="entry-section-title">
             <span>Datos del documento</span>
             <small>Información general de la recepción</small>
@@ -255,6 +256,7 @@
             <button class="btn btn-outline-secondary" type="button" (click)="cancelEntrada()" [disabled]="saving">Cancelar</button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

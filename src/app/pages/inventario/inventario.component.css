@@ -61,12 +61,11 @@
   min-width: min(100%, 340px);
 }
 
-.inventory-entry-card {
-  position: sticky;
-  top: 1rem;
+.modal.d-block {
+  background: rgba(21, 32, 28, .48);
 }
 
-.inventory-entry-card .card-header {
+.inventory-entry-modal .card-header {
   background: var(--brand);
   color: #fff;
   font-weight: 800;
@@ -121,10 +120,6 @@
 }
 
 @media (max-width: 1199.98px) {
-  .inventory-entry-card {
-    position: static;
-  }
-
   .inventory-hero {
     grid-template-columns: auto 1fr;
   }
