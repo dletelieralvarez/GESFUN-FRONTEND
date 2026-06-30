@@ -146,6 +146,8 @@ export interface Servicio {
   id: number;
   uuid: string;
   folio: string;
+  cotizacion_uuid?: string;
+  cotizacion_numero?: string;
   tercero_id: number;
   tercero_nombre: string;
   tercero_rut: string;
@@ -154,17 +156,22 @@ export interface Servicio {
   motivo_fallecimiento_id: number;
   suscripcion_plan_id: number;
   plan_nombre: string;
-  estado: 'pendiente' | 'programado' | 'en_curso' | 'completado';
+  estado: 'PENDIENTE' | 'PROGRAMADO' | 'EN_CURSO' | 'COMPLETADO' | 'ANULADO';
   sucursal_id: number;
   sucursal_nombre: string;
+  agenda_uuid?: string;
+  sala_nombre?: string;
   responsable_usuario_id: number;
   responsable_nombre: string;
   fecha_ingreso: string;
   monto_total: number;
   monto_pagado: number;
+  saldo_pendiente?: number;
   fecha_velatorio?: string;
   fecha_ceremonia?: string;
+  fecha_termino?: string;
   destino?: string;
+  observacion?: string;
 }
 
 export interface Factura {

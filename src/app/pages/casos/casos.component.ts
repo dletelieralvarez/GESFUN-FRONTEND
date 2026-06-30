@@ -1,16 +1,30 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { CLP, SERVICIOS, SUSCRIPCION_PLANS, TERCEROS } from '../../data/mock-data';
+import { CLP, SUSCRIPCION_PLANS, TERCEROS } from '../../data/mock-data';
 import { Servicio, Sucursal, SuscripcionPlan, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
-import { environment } from 'src/environments/environment.prod';
 
 interface CatalogItem {
   id: number;
   uuid: string;
   nombre: string;
+}
+
+interface CotizacionOption {
+  uuid: string;
+  numero: string;
+  cliente: string;
+  fallecido: string;
+  total: number;
+}
+
+interface AgendaOption {
+  uuid: string;
+  nombre: string;
+  sucursalUuid: string;
+  cotizacionUuid: string;
 }
 
 type ServicioView = Servicio & {
@@ -28,14 +42,15 @@ type ServicioView = Servicio & {
   styleUrls: ['./casos.component.css']
 })
 export class CasosComponent implements OnInit {
-  private readonly storageKey = 'gesfun-servicios-funerarios';
   private backendAvailable = true;
-  cases: ServicioView[] = SERVICIOS.map(item => ({ ...item, activo: true })) as ServicioView[];
+  cases: ServicioView[] = [];
   clientes: Tercero[] = TERCEROS.filter(item => item.rol === 'CLIENTE');
   planes: SuscripcionPlan[] = SUSCRIPCION_PLANS;
   sucursales: Sucursal[] = [];
   motivos: CatalogItem[] = [];
   responsables: CatalogItem[] = [];
+  cotizaciones: CotizacionOption[] = [];
+  agendas: AgendaOption[] = [];
 
   loading = false;
   saving = false;
@@ -49,7 +64,7 @@ export class CasosComponent implements OnInit {
 
   clp = CLP;
   tab = 'Todas';
-  tabs = ['Todas', 'En curso', 'Programado', 'Pendiente', 'Completado'];
+  tabs = ['Todas', 'En curso', 'Programado', 'Pendiente', 'Completado', 'Anulado'];
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -65,7 +80,11 @@ export class CasosComponent implements OnInit {
   }
 
   get activeCount() {
-    return this.cases.filter(item => item.activo && item.estado !== 'completado').length;
+    return this.cases.filter(item => item.activo && !['COMPLETADO', 'ANULADO'].includes(item.estado)).length;
+  }
+
+  get serviciosBackendReady() {
+    return this.backendAvailable;
   }
 
   setTab(value: string) {
@@ -127,8 +146,8 @@ export class CasosComponent implements OnInit {
         }));
         await this.loadServicios();
       } else {
-        item.activo = false;
-        this.persistLocalServicios();
+        this.error = 'No se puede desactivar el servicio porque el endpoint /api/servicios no esta disponible en el BFF.';
+        return;
       }
       this.success = 'Servicio funerario desactivado correctamente.';
       this.casePendingDeactivate = null;
@@ -154,6 +173,10 @@ export class CasosComponent implements OnInit {
       this.error = 'Selecciona familiar responsable, plan y sucursal.';
       return;
     }
+    if (!this.form.fecha_ingreso) {
+      this.error = 'Indica la fecha de ingreso del servicio.';
+      return;
+    }
     if (Number(this.form.monto_pagado || 0) > Number(this.form.monto_total || 0)) {
       this.error = 'El monto pagado no puede ser mayor que el total.';
       return;
@@ -163,26 +186,24 @@ export class CasosComponent implements OnInit {
     const item = this.getFullServicioFromForm();
 
     try {
-      if (this.backendAvailable) {
-        const token = await this.auth.getAccessToken();
-        if (this.isEditing && this.selectedCase) {
-          await lastValueFrom(this.http.put(`${bffApiUrl}/api/servicios/${this.selectedCase.uuid}`, this.toApiPayload(item), {
-            headers: { Authorization: `Bearer ${token}` }
-          }));
-          this.success = 'Servicio funerario actualizado correctamente.';
-        } else {
-          await lastValueFrom(this.http.post(`${bffApiUrl}/api/servicios`, this.toApiPayload(item), {
-            headers: { Authorization: `Bearer ${token}` }
-          }));
-          this.success = 'Servicio funerario creado correctamente.';
-        }
-        await this.loadServicios();
-      } else {
-        this.saveLocalServicio(item);
-        this.success = this.isEditing
-          ? 'Servicio funerario actualizado localmente.'
-          : 'Servicio funerario creado localmente.';
+      if (!this.backendAvailable) {
+        this.error = 'No se puede guardar el servicio porque el endpoint /api/servicios no esta disponible en el BFF.';
+        return;
       }
+
+      const token = await this.auth.getAccessToken();
+      if (this.isEditing && this.selectedCase) {
+        await lastValueFrom(this.http.put(`${bffApiUrl}/api/servicios/${this.selectedCase.uuid}`, this.toApiPayload(item), {
+          headers: { Authorization: `Bearer ${token}` }
+        }));
+        this.success = 'Servicio funerario actualizado correctamente.';
+      } else {
+        await lastValueFrom(this.http.post(`${bffApiUrl}/api/servicios`, this.toApiPayload(item), {
+          headers: { Authorization: `Bearer ${token}` }
+        }));
+        this.success = 'Servicio funerario creado correctamente.';
+      }
+      await this.loadServicios();
       this.cancel();
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudo guardar el servicio funerario.');
@@ -200,16 +221,29 @@ export class CasosComponent implements OnInit {
 
   getEstadoLabel(estado: Servicio['estado']) {
     const labels: Record<Servicio['estado'], string> = {
-      pendiente: 'Pendiente',
-      programado: 'Programado',
-      en_curso: 'En curso',
-      completado: 'Completado'
+      PENDIENTE: 'Pendiente',
+      PROGRAMADO: 'Programado',
+      EN_CURSO: 'En curso',
+      COMPLETADO: 'Completado',
+      ANULADO: 'Anulado'
     };
     return labels[estado] || estado;
   }
 
   getSaldo(item: ServicioView) {
+    if (item.saldo_pendiente !== undefined && item.saldo_pendiente !== null) {
+      return Math.max(0, Number(item.saldo_pendiente || 0));
+    }
     return Math.max(0, Number(item.monto_total || 0) - Number(item.monto_pagado || 0));
+  }
+
+  get agendasFiltradas() {
+    const selectedSucursalUuid = this.sucursales.find(item => item.id === Number(this.form.sucursal_id))?.uuid;
+    return this.agendas.filter(item => {
+      const bySucursal = !selectedSucursalUuid || !item.sucursalUuid || item.sucursalUuid === selectedSucursalUuid;
+      const byCotizacion = !this.form.cotizacion_uuid || !item.cotizacionUuid || item.cotizacionUuid === this.form.cotizacion_uuid;
+      return bySucursal && byCotizacion;
+    });
   }
 
   private createEmptyForm(): Partial<ServicioView> {
@@ -220,7 +254,7 @@ export class CasosComponent implements OnInit {
       fallecido_rut: '',
       motivo_fallecimiento_id: this.motivos[0]?.id,
       suscripcion_plan_id: this.planes[0]?.id,
-      estado: 'pendiente',
+      estado: 'PENDIENTE',
       sucursal_id: this.sucursales[0]?.id,
       responsable_usuario_id: this.responsables[0]?.id,
       fecha_ingreso: new Date().toISOString().slice(0, 10),
@@ -228,7 +262,11 @@ export class CasosComponent implements OnInit {
       monto_pagado: 0,
       fecha_velatorio: '',
       fecha_ceremonia: '',
+      fecha_termino: '',
       destino: '',
+      observacion: '',
+      cotizacion_uuid: '',
+      agenda_uuid: '',
       activo: true
     };
   }
@@ -243,6 +281,8 @@ export class CasosComponent implements OnInit {
       id: Number(this.form.id || 0),
       uuid: this.form.uuid || '',
       folio: this.form.folio || '',
+      cotizacion_uuid: this.form.cotizacion_uuid || undefined,
+      cotizacion_numero: this.form.cotizacion_numero || undefined,
       tercero_id: Number(this.form.tercero_id),
       tercero_nombre: cliente?.nombre_completo || this.form.tercero_nombre || '',
       tercero_rut: cliente ? `${cliente.ruc || ''}${cliente.dv ? `-${cliente.dv}` : ''}` : this.form.tercero_rut || '',
@@ -251,17 +291,22 @@ export class CasosComponent implements OnInit {
       motivo_fallecimiento_id: Number(this.form.motivo_fallecimiento_id || 0),
       suscripcion_plan_id: Number(this.form.suscripcion_plan_id),
       plan_nombre: plan?.nombre || this.form.plan_nombre || '',
-      estado: this.form.estado || 'pendiente',
+      estado: this.form.estado || 'PENDIENTE',
       sucursal_id: Number(this.form.sucursal_id),
       sucursal_nombre: sucursal?.nombre || this.form.sucursal_nombre || '',
+      agenda_uuid: this.form.agenda_uuid || undefined,
+      sala_nombre: this.form.sala_nombre || '',
       responsable_usuario_id: Number(this.form.responsable_usuario_id || 0),
       responsable_nombre: responsable?.nombre || this.form.responsable_nombre || '',
       fecha_ingreso: this.form.fecha_ingreso || '',
       monto_total: Number(this.form.monto_total || 0),
       monto_pagado: Number(this.form.monto_pagado || 0),
+      saldo_pendiente: this.form.saldo_pendiente,
       fecha_velatorio: this.form.fecha_velatorio || undefined,
       fecha_ceremonia: this.form.fecha_ceremonia || undefined,
+      fecha_termino: this.form.fecha_termino || undefined,
       destino: this.form.destino || undefined,
+      observacion: this.form.observacion || undefined,
       activo: this.form.activo !== false
     };
   }
@@ -276,11 +321,10 @@ export class CasosComponent implements OnInit {
       }));
       this.cases = this.extractPayload<any>(response).map((item, index) => this.fromApiServicio(item, index));
       this.backendAvailable = true;
-      this.persistLocalServicios();
     } catch (err: any) {
       this.backendAvailable = false;
-      this.cases = this.loadLocalServicios();
-      this.error = 'El backend aun no expone el CRUD de servicios funerarios. Los cambios se guardaran localmente en este navegador.';
+      this.cases = [];
+      this.error = `No se pudieron cargar servicios funerarios desde el BFF. ${this.getErrorMessage(err, 'Verifica que exista el endpoint /api/servicios.')}`;
     } finally {
       this.loading = false;
     }
@@ -297,12 +341,14 @@ export class CasosComponent implements OnInit {
       }
     };
 
-    const [clientes, planes, sucursales, motivos, usuarios] = await Promise.all([
+    const [clientes, planes, sucursales, motivos, usuarios, cotizaciones, agendas] = await Promise.all([
       safeGet('/api/clientes'),
       safeGet('/api/planes'),
       safeGet('/api/sucursales'),
       safeGet('/api/motivos-fallecimiento'),
-      safeGet('/api/usuarios')
+      safeGet('/api/usuarios'),
+      safeGet('/api/cotizaciones'),
+      safeGet('/api/agendas')
     ]);
 
     if (clientes.length) this.clientes = clientes.map((item, index) => this.fromApiCliente(item, index));
@@ -314,6 +360,8 @@ export class CasosComponent implements OnInit {
       uuid: item.uuid,
       nombre: [item.nombre, item.paterno, item.materno].filter(Boolean).join(' ') || item.email || `Usuario ${index + 1}`
     }));
+    if (cotizaciones.length) this.cotizaciones = cotizaciones.map((item, index) => this.fromApiCotizacion(item, index));
+    if (agendas.length) this.agendas = agendas.map((item, index) => this.fromApiAgenda(item, index));
 
     this.form = this.createEmptyForm();
   }
@@ -330,16 +378,19 @@ export class CasosComponent implements OnInit {
       fallecidoNombre: item.fallecido_nombre,
       fallecidoRut: item.fallecido_rut,
       estado: item.estado,
-      fechaIngreso: item.fecha_ingreso,
-      fechaVelatorio: item.fecha_velatorio || null,
-      fechaCeremonia: item.fecha_ceremonia || null,
+      fechaIngreso: this.toBackendDateTime(item.fecha_ingreso),
+      fechaVelatorio: this.toBackendDateTime(item.fecha_velatorio),
+      fechaCeremonia: this.toBackendDateTime(item.fecha_ceremonia),
+      fechaTermino: this.toBackendDateTime(item.fecha_termino),
       destino: item.destino || null,
       montoTotal: item.monto_total,
       montoPagado: item.monto_pagado,
-      activo: item.activo ? 1 : 0,
+      observacion: item.observacion || null,
+      cotizacionUuid: item.cotizacion_uuid || null,
       terceroUuid: cliente?.uuid || item.tercero_uuid,
       suscripcionPlanUuid: plan?.uuid || item.plan_uuid,
       sucursalUuid: sucursal?.uuid || item.sucursal_uuid,
+      agendaUuid: item.agenda_uuid || null,
       motivoFallecimientoUuid: motivo?.uuid || item.motivo_uuid,
       responsableUsuarioUuid: responsable?.uuid || item.responsable_uuid
     };
@@ -351,17 +402,21 @@ export class CasosComponent implements OnInit {
     const sucursalUuid = item.sucursalUuid ?? item.sucursal_uuid ?? item.sucursal?.uuid;
     const motivoUuid = item.motivoFallecimientoUuid ?? item.motivo_fallecimiento_uuid ?? item.motivoFallecimiento?.uuid;
     const responsableUuid = item.responsableUsuarioUuid ?? item.responsable_usuario_uuid ?? item.responsableUsuario?.uuid;
+    const cotizacionUuid = item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid;
+    const agendaUuid = item.agendaUuid ?? item.agenda_uuid ?? item.agenda?.uuid;
     const cliente = this.clientes.find(row => row.uuid === terceroUuid);
     const plan = this.planes.find(row => row.uuid === planUuid);
     const sucursal = this.sucursales.find(row => row.uuid === sucursalUuid);
     const motivo = this.motivos.find(row => row.uuid === motivoUuid);
     const responsable = this.responsables.find(row => row.uuid === responsableUuid);
-    const estado = String(item.estado ?? 'pendiente').toLowerCase().replace(' ', '_') as Servicio['estado'];
+    const estado = this.normalizeEstado(item.estado);
 
     return {
       id: Number(item.id ?? index + 1),
       uuid: item.uuid,
       folio: item.folio ?? '',
+      cotizacion_uuid: cotizacionUuid,
+      cotizacion_numero: String(item.cotizacionNumero ?? item.cotizacion_numero ?? item.cotizacion?.numero ?? ''),
       tercero_id: cliente?.id || Number(item.tercero_id ?? item.terceroId ?? 0),
       tercero_nombre: item.terceroNombre ?? item.tercero_nombre ?? item.tercero?.nombreCompleto ?? cliente?.nombre_completo ?? '',
       tercero_rut: String(item.terceroRut ?? item.tercero_rut ?? item.tercero?.rut ?? cliente?.ruc ?? ''),
@@ -370,17 +425,22 @@ export class CasosComponent implements OnInit {
       motivo_fallecimiento_id: motivo?.id || Number(item.motivo_fallecimiento_id ?? item.motivoFallecimientoId ?? 0),
       suscripcion_plan_id: plan?.id || Number(item.suscripcion_plan_id ?? item.suscripcionPlanId ?? 0),
       plan_nombre: item.planNombre ?? item.plan_nombre ?? item.suscripcionPlan?.nombre ?? plan?.nombre ?? '',
-      estado: ['pendiente', 'programado', 'en_curso', 'completado'].includes(estado) ? estado : 'pendiente',
+      estado,
       sucursal_id: sucursal?.id || Number(item.sucursal_id ?? item.sucursalId ?? 0),
       sucursal_nombre: item.sucursalNombre ?? item.sucursal_nombre ?? item.sucursal?.nombre ?? sucursal?.nombre ?? '',
+      agenda_uuid: agendaUuid,
+      sala_nombre: item.salaNombre ?? item.sala_nombre ?? item.agenda?.salaNombre ?? '',
       responsable_usuario_id: responsable?.id || Number(item.responsable_usuario_id ?? item.responsableUsuarioId ?? 0),
       responsable_nombre: item.responsableNombre ?? item.responsable_nombre ?? responsable?.nombre ?? '',
-      fecha_ingreso: item.fechaIngreso ?? item.fecha_ingreso ?? '',
+      fecha_ingreso: this.toDateInputValue(item.fechaIngreso ?? item.fecha_ingreso ?? ''),
       monto_total: Number(item.montoTotal ?? item.monto_total ?? 0),
       monto_pagado: Number(item.montoPagado ?? item.monto_pagado ?? 0),
-      fecha_velatorio: item.fechaVelatorio ?? item.fecha_velatorio,
-      fecha_ceremonia: item.fechaCeremonia ?? item.fecha_ceremonia,
+      saldo_pendiente: item.saldoPendiente ?? item.saldo_pendiente,
+      fecha_velatorio: this.toDateTimeInputValue(item.fechaVelatorio ?? item.fecha_velatorio),
+      fecha_ceremonia: this.toDateTimeInputValue(item.fechaCeremonia ?? item.fecha_ceremonia),
+      fecha_termino: this.toDateTimeInputValue(item.fechaTermino ?? item.fecha_termino),
       destino: item.destino,
+      observacion: item.observacion,
       activo: item.activo === undefined || item.activo === true || item.activo === 1,
       tercero_uuid: terceroUuid,
       plan_uuid: planUuid,
@@ -412,41 +472,38 @@ export class CasosComponent implements OnInit {
     return { id: Number(item.id ?? index + 1), uuid: item.uuid, nombre: item.nombre ?? item.descripcion ?? `Opcion ${index + 1}` };
   }
 
+  private fromApiCotizacion(item: any, index: number): CotizacionOption {
+    const pagador = item.pagador ?? item.cliente ?? item.terceroPagador ?? item.tercero_pagador;
+    const fallecido = item.fallecido ?? item.terceroFallecido ?? item.tercero_fallecido;
+    return {
+      uuid: String(item.uuid ?? ''),
+      numero: String(item.numero ?? item.folio ?? item.codigo ?? index + 1),
+      cliente: this.nombrePersona(pagador) || item.pagadorNombre || item.clienteNombre || 'No informado',
+      fallecido: this.nombrePersona(fallecido) || item.fallecidoNombre || 'No informado',
+      total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0)
+    };
+  }
+
+  private fromApiAgenda(item: any, index: number): AgendaOption {
+    const recurso = item.tipoRecurso ?? item.tipo_recurso ?? {};
+    const sucursal = item.sucursal ?? {};
+    const inicio = this.formatFechaHora(item.fechaHoraInicio ?? item.fecha_hora_inicio);
+    const fin = this.formatFechaHora(item.fechaHoraFin ?? item.fecha_hora_fin);
+    return {
+      uuid: String(item.uuid ?? ''),
+      nombre: [
+        item.tipoRecursoNombre ?? item.tipo_recurso_nombre ?? recurso.nombre ?? `Agenda ${index + 1}`,
+        inicio && fin ? `${inicio} - ${fin}` : inicio
+      ].filter(Boolean).join(' · '),
+      sucursalUuid: String(item.sucursalUuid ?? item.sucursal_uuid ?? sucursal.uuid ?? ''),
+      cotizacionUuid: String(item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid ?? '')
+    };
+  }
+
   private extractPayload<T>(response: any): T[] {
     const payload = response?.payload?.payload ?? response?.payload ?? response;
-    return Array.isArray(payload) ? payload : [];
-  }
-
-  private loadLocalServicios(): ServicioView[] {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (error) {
-      console.warn('No se pudieron recuperar los servicios locales', error);
-    }
-    return SERVICIOS.map(item => ({ ...item, activo: true })) as ServicioView[];
-  }
-
-  private saveLocalServicio(item: ServicioView) {
-    if (this.isEditing && this.selectedCase) {
-      const index = this.cases.findIndex(row => row.uuid === this.selectedCase?.uuid);
-      if (index >= 0) this.cases[index] = { ...this.selectedCase, ...item };
-    } else {
-      const nextId = this.cases.length ? Math.max(...this.cases.map(row => row.id)) + 1 : 1;
-      this.cases = [...this.cases, { ...item, id: nextId, uuid: crypto.randomUUID(), activo: true }];
-    }
-    this.persistLocalServicios();
-  }
-
-  private persistLocalServicios() {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.cases));
-    } catch (error) {
-      console.warn('No se pudieron guardar los servicios localmente', error);
-    }
+    if (Array.isArray(payload)) return payload;
+    return payload?.content ?? payload?.items ?? [];
   }
 
   private clearMessages() {
@@ -457,5 +514,45 @@ export class CasosComponent implements OnInit {
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     return err?.error?.message || err?.error?.payload?.message || err?.message || fallback;
+  }
+
+  private normalizeEstado(value: any): Servicio['estado'] {
+    const estado = String(value || 'PENDIENTE').trim().toLocaleUpperCase('es-CL').replace(/ /g, '_');
+    return ['PENDIENTE', 'PROGRAMADO', 'EN_CURSO', 'COMPLETADO', 'ANULADO'].includes(estado)
+      ? estado as Servicio['estado']
+      : 'PENDIENTE';
+  }
+
+  private toBackendDateTime(value?: string) {
+    if (!value) return null;
+    if (value.length === 10) return `${value}T00:00:00`;
+    if (value.length === 16) return `${value}:00`;
+    return value;
+  }
+
+  private toDateInputValue(value: any) {
+    return value ? String(value).slice(0, 10) : '';
+  }
+
+  private toDateTimeInputValue(value: any) {
+    if (!value) return '';
+    return String(value).slice(0, 16);
+  }
+
+  private formatFechaHora(value: any) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).slice(0, 16);
+    return date.toLocaleDateString('es-CL') + ' ' + date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private nombrePersona(item: any) {
+    if (!item) return '';
+    return item.nombreCompleto
+      ?? item.nombre_completo
+      ?? item.razonSocial
+      ?? item.razon_social
+      ?? [item.nombres, item.apellidoPaterno ?? item.apellido_paterno, item.apellidoMaterno ?? item.apellido_materno]
+        .filter(Boolean).join(' ');
   }
 }

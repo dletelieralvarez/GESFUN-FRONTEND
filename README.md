@@ -12,6 +12,7 @@ La aplicacion permite revisar y operar sobre:
 - Agenda de servicios con reserva de recursos por sucursal.
 - Catalogo de planes y servicios adicionales.
 - Dashboard operativo con datos reales de cotizaciones, agenda e inventario consumidos desde el BFF.
+- Notificaciones operativas en la barra superior para alertas de pagos, DTE y cotizaciones.
 - Cotizaciones persistidas mediante el BFF, con datos de pagador, fallecido, plan, adicionales, forma de pago y calculo de totales.
 - Consulta de cotizaciones creadas, cambio de estado y reimpresion de documentos.
 - Busqueda superior conectada al listado de cotizaciones por numero, cliente, fallecido, plan o estado.
@@ -321,15 +322,47 @@ src/app/pages/casos/
 
 Funcionalidad:
 
-- Lista servicios/casos funerarios.
-- Muestra folio, fallecido, familiar, plan, sala, fechas, destino y encargado.
+- Lista servicios/casos funerarios reales desde el BFF.
+- Representa el seguimiento operativo de un caso real, distinto al catalogo comercial de productos y servicios.
+- Muestra folio, fallecido, familiar responsable, cotizacion asociada, plan, sala, estado y saldo pendiente.
 - Permite filtrar por estado usando tabs:
   - Todas.
   - En curso.
   - Programado.
   - Pendiente.
   - Completado.
+  - Anulado.
+- Permite crear servicios funerarios mediante `POST /api/servicios`.
+- Permite editar servicios funerarios mediante `PUT /api/servicios/{uuid}`.
+- Permite desactivar/anular servicios mediante `PATCH /api/servicios/{uuid}/desactivar`.
+- Permite asociar cotizacion, agenda/sala reservada, sucursal, plan, motivo de fallecimiento y responsable interno.
+- Registra fechas de ingreso, velatorio, ceremonia y termino.
+- Registra monto total, monto pagado, observacion y destino.
+- Usa los estados validos del backend:
+  - `PENDIENTE`
+  - `PROGRAMADO`
+  - `EN_CURSO`
+  - `COMPLETADO`
+  - `ANULADO`
+- Usa `saldoPendiente` cuando el backend lo entrega calculado.
+- Ya no usa datos mock ni almacenamiento local como respaldo cuando falla el endpoint.
 - Formatea montos en pesos chilenos usando `CLP`.
+
+Endpoints consumidos:
+
+```text
+GET   /api/servicios
+POST  /api/servicios
+PUT   /api/servicios/{uuid}
+PATCH /api/servicios/{uuid}/desactivar
+GET   /api/clientes
+GET   /api/planes
+GET   /api/sucursales
+GET   /api/motivos-fallecimiento
+GET   /api/usuarios
+GET   /api/cotizaciones
+GET   /api/agendas
+```
 
 ### 6.4 Agenda de servicios
 
@@ -769,6 +802,26 @@ En `src/app/ui/ui.module.ts` se implemento un modulo con componentes compartidos
 
 Estos componentes permiten mantener una interfaz consistente entre las pantallas.
 
+## 7.1 Barra superior y notificaciones
+
+El `TopbarComponent` muestra la busqueda global, el acceso rapido a nuevo servicio y una campana de notificaciones operativas.
+
+La campana consulta datos reales del BFF y genera alertas de trabajo para:
+
+- Cotizaciones aceptadas, aprobadas, vigentes o con contrato generado que aun no registran pago.
+- Pagos registrados que aun no tienen DTE activo.
+- Documentos tributarios en estado `PENDIENTE` o `RECHAZADO`.
+
+Endpoints consumidos:
+
+```text
+GET /api/cotizaciones
+GET /api/pagos
+GET /api/documentos-tributarios
+```
+
+Las notificaciones marcadas como leidas se guardan en `localStorage` para no volver a destacarlas en la misma sesion del navegador.
+
 ## 8. Autenticacion con Microsoft Entra ID
 
 La configuracion esta en:
@@ -969,6 +1022,22 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/cotizaciones`
   - `GET /api/cotizaciones/{uuid}`
   - `GET /api/formas-pago`
+- `CasosComponent`
+  - `GET /api/servicios`
+  - `POST /api/servicios`
+  - `PUT /api/servicios/{uuid}`
+  - `PATCH /api/servicios/{uuid}/desactivar`
+  - `GET /api/clientes`
+  - `GET /api/planes`
+  - `GET /api/sucursales`
+  - `GET /api/motivos-fallecimiento`
+  - `GET /api/usuarios`
+  - `GET /api/cotizaciones`
+  - `GET /api/agendas`
+- `TopbarComponent`
+  - `GET /api/cotizaciones`
+  - `GET /api/pagos`
+  - `GET /api/documentos-tributarios`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`
@@ -1045,6 +1114,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - Algunos modulos siguen usando datos mock/locales.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
 - El dashboard ya consume cotizaciones, agenda e inventario desde el BFF, pero sus metricas dependen de que esos endpoints entreguen datos completos por sucursal.
+- Servicios funerarios ya consume el CRUD operativo desde el BFF mediante `/api/servicios`.
 - La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
 - Facturacion ya registra pagos y emite DTE simulado en una sola accion, anula pagos/documentos, filtra cotizaciones pagadas del selector y genera PDF de Boleta o Factura desde datos del BFF.
@@ -1053,7 +1123,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
 - El presupuesto de error del bundle inicial esta configurado en `2mb`; el warning se mantiene en `500kb` para seguir visibilizando crecimiento del bundle.
 - No hay guards de ruta para bloquear pantallas privadas si el usuario no esta autenticado.
-- No hay persistencia real contra API para servicios funerarios. Dashboard, agenda, inventario y facturacion ya consultan o registran operaciones mediante el BFF.
 - Existe cobertura unitaria para mantenedores CRUD principales, interceptor y componentes base; todavia falta cubrir flujos de negocio mas profundos, errores HTTP especificos y estados de formularios complejos.
 
 ## 16. Siguientes pasos sugeridos
@@ -1063,7 +1132,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
   - Planes y plan kit.
   - Sucursales.
   - Cotizaciones.
-  - Servicios.
   - Inventario.
   - Agenda.
   - Facturacion.
@@ -1078,6 +1146,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 17. Resumen
 
-GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para registrar pagos y emitir DTE en una sola accion, y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
+GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, servicios funerarios conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para registrar pagos y emitir DTE en una sola accion, notificaciones operativas en la barra superior y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.

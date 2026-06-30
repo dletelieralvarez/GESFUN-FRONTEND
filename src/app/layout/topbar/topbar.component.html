@@ -22,6 +22,50 @@
       (keydown.enter)="goSearch()"
     />
   </div>
-  <button class="icon-btn"><i class="bi bi-bell"></i><span class="ping"></span></button>
+  <div class="notification-wrap">
+    <button class="icon-btn" type="button" aria-label="Ver notificaciones" (click)="toggleNotifications()">
+      <i class="bi bi-bell"></i>
+      <span class="notification-count" *ngIf="unreadNotifications">{{ unreadNotifications }}</span>
+    </button>
+    <div class="notification-overlay" *ngIf="notificationsOpen" (click)="closeNotifications()">
+      <section class="notification-panel" (click)="$event.stopPropagation()">
+        <div class="notification-head">
+          <div>
+            <strong>Notificaciones</strong>
+            <span>{{ unreadNotifications ? unreadNotifications + ' sin leer' : 'Alertas operativas' }}</span>
+          </div>
+          <button class="notification-read-btn" type="button" (click)="markAllAsRead()" [disabled]="!notifications.length || !unreadNotifications">
+            Marcar leidas
+          </button>
+        </div>
+
+        <div class="notification-state" *ngIf="loadingNotifications">
+          <i class="bi bi-arrow-repeat"></i>Cargando alertas...
+        </div>
+        <div class="notification-state text-danger" *ngIf="notificationError && !loadingNotifications">
+          <i class="bi bi-exclamation-circle"></i>{{ notificationError }}
+        </div>
+        <div class="notification-state" *ngIf="!loadingNotifications && !notificationError && !notifications.length">
+          <i class="bi bi-check-circle"></i>Sin alertas operativas.
+        </div>
+
+        <button
+          class="notification-item"
+          type="button"
+          *ngFor="let item of notifications"
+          [class.is-read]="item.read"
+          [class.tone-danger]="item.tone === 'danger'"
+          [class.tone-info]="item.tone === 'info'"
+          (click)="openNotification(item)"
+        >
+          <span class="notification-icon"><i class="bi" [ngClass]="item.icon"></i></span>
+          <span>
+            <strong>{{ item.title }}</strong>
+            <small>{{ item.description }}</small>
+          </span>
+        </button>
+      </section>
+    </div>
+  </div>
   <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="goNew()"><i class="bi bi-plus-lg"></i>Nuevo servicio</button>
 </header>
