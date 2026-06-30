@@ -3,30 +3,12 @@
     <div class="login-header text-center mb-5">
       <div class="login-logo mb-3">GF</div>
       <div class="login-badge mb-3">Acceso corporativo</div>
-      <h2 class="fw-bold mb-2">Bienvenido a GesFun</h2>
-      <p class="text-muted small mb-0">Accede con Microsoft Entra ID usando el tenant corporativo.</p>
+      <h2 class="fw-bold mb-2">Bienvenido a GesFun</h2>      
     </div>
-
-    <form (ngSubmit)="loginWithCredentials()" autocomplete="off">
-      <div class="mb-3 form-floating">
-        <input type="text" class="form-control" [(ngModel)]="userName" name="username" id="username" placeholder="nombre@empresa.com" />
-        <label for="username">Usuario</label>
-      </div>
-      <div class="mb-3 form-floating">
-        <input type="password" class="form-control" [(ngModel)]="password" name="password" id="password" placeholder="Contrasena" />
-        <label for="password">Contrasena</label>
-      </div>
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <button class="btn btn-primary btn-lg px-5" type="submit" [disabled]="loading">Ingresar</button>
-        <button class="btn btn-link text-decoration-none text-secondary small" type="button" (click)="recoverPassword()">Recuperar contrasena</button>
-      </div>
-    </form>
-
-    <div class="divider text-center my-4"><span>O conecta con</span></div>
 
     <div class="d-grid mb-3">
       <button class="btn btn-ms btn-lg" type="button" (click)="login()" [disabled]="loading">
-        <span class="ms-icon"></span>
+        <i class="bi bi-person-check"></i>
         Iniciar sesion con Microsoft
       </button>
     </div>

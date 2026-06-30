@@ -9,9 +9,6 @@ import { Router } from '@angular/router';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent implements OnInit {
-  userName = '';
-  password = '';
-  profile: any = null;
   loading = false;
   error: string | null = null;
   info: string | null = null;
@@ -43,10 +40,9 @@ export class LoginComponent implements OnInit {
     this.loading = true;
     this.error = null;
     this.info = null;
-    this.profile = null;
 
     try {
-      await this.auth.login(this.userName.trim());
+      await this.auth.login();
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudo iniciar sesion con Microsoft.');
     } finally {
@@ -54,16 +50,10 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  async loginWithCredentials() {
-    this.info = 'El acceso local redirige al flujo corporativo de Microsoft Entra ID.';
-    await this.login();
-  }
-
   async logout() {
     this.loading = true;
     this.error = null;
     this.info = null;
-    this.profile = null;
 
     try {
       await this.auth.logout();
@@ -72,10 +62,6 @@ export class LoginComponent implements OnInit {
     } finally {
       this.loading = false;
     }
-  }
-
-  recoverPassword() {
-    window.open('https://passwordreset.microsoftonline.com/', '_blank');
   }
 
   private getErrorMessage(error: any, fallback: string) {

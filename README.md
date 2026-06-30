@@ -791,6 +791,8 @@ El flujo actual usa:
 - `@azure/msal-angular`.
 - `@azure/msal-browser`.
 - Login por redirect.
+- Pantalla de login con una unica accion de autenticacion: `Iniciar sesion con Microsoft`.
+- No solicita usuario ni contrasena local; la autenticacion se delega completamente a Microsoft Entra ID.
 - Cache en `localStorage`.
 - Scope del BFF/API.
 - Logout por popup.
