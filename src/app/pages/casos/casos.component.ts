@@ -16,8 +16,13 @@ interface CotizacionOption {
   uuid: string;
   numero: string;
   cliente: string;
+  clienteUuid: string;
   fallecido: string;
+  fallecidoRut: string;
   total: number;
+  sucursalUuid: string;
+  planUuid: string;
+  motivoUuid: string;
 }
 
 interface AgendaOption {
@@ -165,20 +170,21 @@ export class CasosComponent implements OnInit {
   async save() {
     this.clearMessages();
 
-    if (!this.form.folio || !this.form.fallecido_nombre || !this.form.fallecido_rut) {
-      this.error = 'Completa folio, nombre y RUT del fallecido.';
+    if (!this.form.folio) {
+      this.error = 'Completa el folio del servicio.';
       return;
     }
-    if (!this.form.tercero_id || !this.form.suscripcion_plan_id || !this.form.sucursal_id) {
-      this.error = 'Selecciona familiar responsable, plan y sucursal.';
+    if (!this.form.cotizacion_uuid) {
+      this.error = 'Selecciona la cotizacion asociada al servicio.';
       return;
     }
     if (!this.form.fecha_ingreso) {
       this.error = 'Indica la fecha de ingreso del servicio.';
       return;
     }
-    if (Number(this.form.monto_pagado || 0) > Number(this.form.monto_total || 0)) {
-      this.error = 'El monto pagado no puede ser mayor que el total.';
+    const cotizacion = this.selectedCotizacion;
+    if (!cotizacion?.clienteUuid || !cotizacion.sucursalUuid || !cotizacion.fallecido || !cotizacion.total) {
+      this.error = 'La cotizacion seleccionada no trae cliente, sucursal, fallecido o monto total. Revisa el detalle de la cotizacion en el BFF.';
       return;
     }
 
@@ -238,28 +244,30 @@ export class CasosComponent implements OnInit {
   }
 
   get agendasFiltradas() {
-    const selectedSucursalUuid = this.sucursales.find(item => item.id === Number(this.form.sucursal_id))?.uuid;
     return this.agendas.filter(item => {
-      const bySucursal = !selectedSucursalUuid || !item.sucursalUuid || item.sucursalUuid === selectedSucursalUuid;
       const byCotizacion = !this.form.cotizacion_uuid || !item.cotizacionUuid || item.cotizacionUuid === this.form.cotizacion_uuid;
-      return bySucursal && byCotizacion;
+      return byCotizacion;
     });
+  }
+
+  get selectedCotizacion() {
+    return this.cotizaciones.find(item => item.uuid === this.form.cotizacion_uuid) || null;
+  }
+
+  onCotizacionChange() {
+    const cotizacion = this.selectedCotizacion;
+    if (!cotizacion) return;
+    this.form.cotizacion_numero = cotizacion.numero;
+    if (!this.form.folio) this.form.folio = `ES-${new Date().getFullYear()}-${cotizacion.numero}`;
   }
 
   private createEmptyForm(): Partial<ServicioView> {
     return {
       folio: '',
-      tercero_id: this.clientes[0]?.id,
       fallecido_nombre: '',
       fallecido_rut: '',
-      motivo_fallecimiento_id: this.motivos[0]?.id,
-      suscripcion_plan_id: this.planes[0]?.id,
       estado: 'PENDIENTE',
-      sucursal_id: this.sucursales[0]?.id,
-      responsable_usuario_id: this.responsables[0]?.id,
       fecha_ingreso: new Date().toISOString().slice(0, 10),
-      monto_total: Number(this.planes[0]?.valor || 0),
-      monto_pagado: 0,
       fecha_velatorio: '',
       fecha_ceremonia: '',
       fecha_termino: '',
@@ -272,32 +280,27 @@ export class CasosComponent implements OnInit {
   }
 
   private getFullServicioFromForm(): ServicioView {
-    const cliente = this.clientes.find(item => item.id === Number(this.form.tercero_id));
-    const plan = this.planes.find(item => item.id === Number(this.form.suscripcion_plan_id));
-    const sucursal = this.sucursales.find(item => item.id === Number(this.form.sucursal_id));
-    const responsable = this.responsables.find(item => item.id === Number(this.form.responsable_usuario_id));
-
     return {
       id: Number(this.form.id || 0),
       uuid: this.form.uuid || '',
       folio: this.form.folio || '',
       cotizacion_uuid: this.form.cotizacion_uuid || undefined,
       cotizacion_numero: this.form.cotizacion_numero || undefined,
-      tercero_id: Number(this.form.tercero_id),
-      tercero_nombre: cliente?.nombre_completo || this.form.tercero_nombre || '',
-      tercero_rut: cliente ? `${cliente.ruc || ''}${cliente.dv ? `-${cliente.dv}` : ''}` : this.form.tercero_rut || '',
+      tercero_id: Number(this.form.tercero_id || 0),
+      tercero_nombre: this.form.tercero_nombre || '',
+      tercero_rut: this.form.tercero_rut || '',
       fallecido_nombre: this.form.fallecido_nombre || '',
       fallecido_rut: this.form.fallecido_rut || '',
       motivo_fallecimiento_id: Number(this.form.motivo_fallecimiento_id || 0),
-      suscripcion_plan_id: Number(this.form.suscripcion_plan_id),
-      plan_nombre: plan?.nombre || this.form.plan_nombre || '',
+      suscripcion_plan_id: Number(this.form.suscripcion_plan_id || 0),
+      plan_nombre: this.form.plan_nombre || '',
       estado: this.form.estado || 'PENDIENTE',
-      sucursal_id: Number(this.form.sucursal_id),
-      sucursal_nombre: sucursal?.nombre || this.form.sucursal_nombre || '',
+      sucursal_id: Number(this.form.sucursal_id || 0),
+      sucursal_nombre: this.form.sucursal_nombre || '',
       agenda_uuid: this.form.agenda_uuid || undefined,
       sala_nombre: this.form.sala_nombre || '',
       responsable_usuario_id: Number(this.form.responsable_usuario_id || 0),
-      responsable_nombre: responsable?.nombre || this.form.responsable_nombre || '',
+      responsable_nombre: this.form.responsable_nombre || '',
       fecha_ingreso: this.form.fecha_ingreso || '',
       monto_total: Number(this.form.monto_total || 0),
       monto_pagado: Number(this.form.monto_pagado || 0),
@@ -367,32 +370,24 @@ export class CasosComponent implements OnInit {
   }
 
   private toApiPayload(item: ServicioView) {
-    const cliente = this.clientes.find(row => row.id === item.tercero_id);
-    const plan = this.planes.find(row => row.id === item.suscripcion_plan_id);
-    const sucursal = this.sucursales.find(row => row.id === item.sucursal_id);
-    const motivo = this.motivos.find(row => row.id === item.motivo_fallecimiento_id);
-    const responsable = this.responsables.find(row => row.id === item.responsable_usuario_id);
-
+    const cotizacion = this.cotizaciones.find(row => row.uuid === item.cotizacion_uuid);
     return {
       folio: item.folio,
-      fallecidoNombre: item.fallecido_nombre,
-      fallecidoRut: item.fallecido_rut,
+      fallecidoNombre: cotizacion?.fallecido || item.fallecido_nombre,
+      fallecidoRut: cotizacion?.fallecidoRut || item.fallecido_rut || null,
       estado: item.estado,
       fechaIngreso: this.toBackendDateTime(item.fecha_ingreso),
       fechaVelatorio: this.toBackendDateTime(item.fecha_velatorio),
       fechaCeremonia: this.toBackendDateTime(item.fecha_ceremonia),
       fechaTermino: this.toBackendDateTime(item.fecha_termino),
       destino: item.destino || null,
-      montoTotal: item.monto_total,
-      montoPagado: item.monto_pagado,
+      montoTotal: cotizacion?.total || item.monto_total,
+      montoPagado: item.monto_pagado || 0,
       observacion: item.observacion || null,
       cotizacionUuid: item.cotizacion_uuid || null,
-      terceroUuid: cliente?.uuid || item.tercero_uuid,
-      suscripcionPlanUuid: plan?.uuid || item.plan_uuid,
-      sucursalUuid: sucursal?.uuid || item.sucursal_uuid,
-      agendaUuid: item.agenda_uuid || null,
-      motivoFallecimientoUuid: motivo?.uuid || item.motivo_uuid,
-      responsableUsuarioUuid: responsable?.uuid || item.responsable_uuid
+      terceroUuid: cotizacion?.clienteUuid || item.tercero_uuid,
+      sucursalUuid: cotizacion?.sucursalUuid || item.sucursal_uuid,
+      agendaUuid: item.agenda_uuid || null
     };
   }
 
@@ -475,12 +470,28 @@ export class CasosComponent implements OnInit {
   private fromApiCotizacion(item: any, index: number): CotizacionOption {
     const pagador = item.pagador ?? item.cliente ?? item.terceroPagador ?? item.tercero_pagador;
     const fallecido = item.fallecido ?? item.terceroFallecido ?? item.tercero_fallecido;
+    const sucursal = item.sucursal ?? {};
+    const plan = item.plan ?? item.suscripcionPlan ?? item.suscripcion_plan ?? {};
+    const motivo = item.motivoFallecimiento ?? item.motivo_fallecimiento ?? {};
     return {
       uuid: String(item.uuid ?? ''),
       numero: String(item.numero ?? item.folio ?? item.codigo ?? index + 1),
       cliente: this.nombrePersona(pagador) || item.pagadorNombre || item.clienteNombre || 'No informado',
-      fallecido: this.nombrePersona(fallecido) || item.fallecidoNombre || 'No informado',
-      total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0)
+      clienteUuid: String(
+        item.terceroUuid
+        ?? item.clienteUuid
+        ?? item.pagadorUuid
+        ?? item.terceroPagadorUuid
+        ?? item.tercero_pagador_uuid
+        ?? pagador?.uuid
+        ?? ''
+      ),
+      fallecido: this.nombrePersona(fallecido) || item.fallecidoNombre || item.fallecido_nombre || 'No informado',
+      fallecidoRut: this.rutPersona(fallecido) || String(item.fallecidoRut ?? item.fallecido_rut ?? ''),
+      total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0),
+      sucursalUuid: String(item.sucursalUuid ?? item.sucursal_uuid ?? sucursal.uuid ?? ''),
+      planUuid: String(item.suscripcionPlanUuid ?? item.planUuid ?? item.suscripcion_plan_uuid ?? plan.uuid ?? ''),
+      motivoUuid: String(item.motivoFallecimientoUuid ?? item.motivo_fallecimiento_uuid ?? motivo.uuid ?? '')
     };
   }
 
@@ -554,5 +565,12 @@ export class CasosComponent implements OnInit {
       ?? item.razon_social
       ?? [item.nombres, item.apellidoPaterno ?? item.apellido_paterno, item.apellidoMaterno ?? item.apellido_materno]
         .filter(Boolean).join(' ');
+  }
+
+  private rutPersona(item: any) {
+    if (!item) return '';
+    const rut = item.rut ?? item.ruc ?? '';
+    const dv = item.dv ?? '';
+    return rut ? `${rut}${dv ? `-${dv}` : ''}` : '';
   }
 }

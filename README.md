@@ -335,9 +335,17 @@ Funcionalidad:
 - Permite crear servicios funerarios mediante `POST /api/servicios`.
 - Permite editar servicios funerarios mediante `PUT /api/servicios/{uuid}`.
 - Permite desactivar/anular servicios mediante `PATCH /api/servicios/{uuid}/desactivar`.
-- Permite asociar cotizacion, agenda/sala reservada, sucursal, plan, motivo de fallecimiento y responsable interno.
+- La creacion se realiza desde una cotizacion existente.
+- El formulario no vuelve a pedir pagador, fallecido, plan, motivo, encargado ni montos, porque esos datos pertenecen a la cotizacion.
+- El frontend deriva desde la cotizacion seleccionada los datos obligatorios que exige actualmente el backend:
+  - `terceroUuid`
+  - `sucursalUuid`
+  - `fallecidoNombre`
+  - `fallecidoRut`
+  - `montoTotal`
+- Permite asociar una agenda/sala reservada de forma opcional.
 - Registra fechas de ingreso, velatorio, ceremonia y termino.
-- Registra monto total, monto pagado, observacion y destino.
+- Registra observacion y destino como datos operativos del servicio.
 - Usa los estados validos del backend:
   - `PENDIENTE`
   - `PROGRAMADO`
@@ -345,6 +353,7 @@ Funcionalidad:
   - `COMPLETADO`
   - `ANULADO`
 - Usa `saldoPendiente` cuando el backend lo entrega calculado.
+- Valida antes de guardar que la cotizacion seleccionada traiga cliente, sucursal, fallecido y monto total.
 - Ya no usa datos mock ni almacenamiento local como respaldo cuando falla el endpoint.
 - Formatea montos en pesos chilenos usando `CLP`.
 
