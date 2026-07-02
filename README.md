@@ -176,6 +176,7 @@ Se implemento un layout tipo panel administrativo:
 - `SidebarComponent`: menu lateral con grupos de navegacion.
 - `TopbarComponent`: barra superior con titulo y breadcrumb segun la ruta actual.
 - `AppComponent`: decide si muestra el layout completo o solo la pagina actual.
+- El badge del item `Servicios` en el sidebar se calcula desde `GET /api/servicios`, contando servicios activos no completados ni anulados.
 
 El layout se oculta en rutas de autenticacion como:
 
@@ -325,6 +326,7 @@ Funcionalidad:
 - Lista servicios/casos funerarios reales desde el BFF.
 - Representa el seguimiento operativo de un caso real, distinto al catalogo comercial de productos y servicios.
 - Muestra folio, fallecido, familiar responsable, cotizacion asociada, plan, sala, estado y saldo pendiente.
+- El folio del servicio se genera automaticamente en el frontend y se muestra como solo lectura.
 - Permite filtrar por estado usando tabs:
   - Todas.
   - En curso.
@@ -336,6 +338,7 @@ Funcionalidad:
 - Permite editar servicios funerarios mediante `PUT /api/servicios/{uuid}`.
 - Permite desactivar/anular servicios mediante `PATCH /api/servicios/{uuid}/desactivar`.
 - La creacion se realiza desde una cotizacion existente.
+- Las cotizaciones que ya tienen agenda con horarios programados no quedan disponibles para crear un nuevo servicio.
 - El formulario no vuelve a pedir pagador, fallecido, plan, motivo, encargado ni montos, porque esos datos pertenecen a la cotizacion.
 - El frontend deriva desde la cotizacion seleccionada los datos obligatorios que exige actualmente el backend:
   - `terceroUuid`
@@ -344,15 +347,21 @@ Funcionalidad:
   - `fallecidoRut`
   - `montoTotal`
 - Permite asociar una agenda/sala reservada de forma opcional.
-- Registra fechas de ingreso, velatorio, ceremonia y termino.
+- La fecha de ingreso no se pide visualmente: se completa automaticamente al guardar.
+- La fecha de termino no se pide visualmente y se envia como `null`.
+- Permite registrar fecha y hora de velatorio y ceremonia.
 - Registra observacion y destino como datos operativos del servicio.
+- El estado no es editable por el usuario:
+  - Sin agenda, velatorio ni ceremonia se guarda como `PENDIENTE`.
+  - Con agenda, velatorio o ceremonia se guarda como `PROGRAMADO`.
+  - En edicion conserva estados avanzados como `EN_CURSO`, `COMPLETADO` o `ANULADO`.
 - Usa los estados validos del backend:
   - `PENDIENTE`
   - `PROGRAMADO`
   - `EN_CURSO`
   - `COMPLETADO`
   - `ANULADO`
-- Usa `saldoPendiente` cuando el backend lo entrega calculado.
+- Calcula el saldo pendiente con los pagos reales de `/api/pagos` cuando existe cotizacion asociada; si no hay pagos cargados usa `saldoPendiente` o `montoTotal - montoPagado` como respaldo.
 - Valida antes de guardar que la cotizacion seleccionada traiga cliente, sucursal, fallecido y monto total.
 - Ya no usa datos mock ni almacenamiento local como respaldo cuando falla el endpoint.
 - Formatea montos en pesos chilenos usando `CLP`.
@@ -371,6 +380,7 @@ GET   /api/motivos-fallecimiento
 GET   /api/usuarios
 GET   /api/cotizaciones
 GET   /api/agendas
+GET   /api/pagos
 ```
 
 ### 6.4 Agenda de servicios
@@ -402,8 +412,9 @@ Funcionalidad:
 - Permite seleccionar fecha de inicio de vista.
 - Permite alternar la visualizacion entre dia y semana.
 - Muestra el rango de fechas reservado cuando un servicio ocupa mas de un dia.
+- La grilla horaria se expande automaticamente segun los eventos visibles, por lo que tambien muestra reservas despues de las 21:00.
+- Los eventos que cruzan medianoche se muestran hasta las 24:00 del dia visible para evitar bloques con altura incorrecta.
 - Ya no usa datos mock como fallback cuando no hay sucursal o cuando el BFF no devuelve agenda.
-- Trabaja con bloques horarios desde las 08:00 hasta las 21:00.
 
 Endpoints consumidos:
 
@@ -1047,6 +1058,8 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/cotizaciones`
   - `GET /api/pagos`
   - `GET /api/documentos-tributarios`
+- `SidebarComponent`
+  - `GET /api/servicios`
 - `SucursalesComponent`
   - `GET /api/sucursales`
   - `POST /api/sucursales`

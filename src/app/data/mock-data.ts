@@ -141,7 +141,7 @@ export const INVENTORY = INVENTARIO_PRODUCTOS.map(i => ({
 export const NAV_BS = [
   { group: "General", items: [{ id: "dashboard", label: "Panel", icon: "grid-1x2-fill" }] },
   { group: "Operación", items: [
-    { id: "casos", label: "Servicios", icon: "folder-fill", count: 4 },
+    { id: "casos", label: "Servicios", icon: "folder-fill" },
     { id: "agenda", label: "Agenda de salas", icon: "calendar3" },
   ]},
   { group: "Comercial", items: [

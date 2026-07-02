@@ -17,6 +17,7 @@ interface CotizacionOption {
   numero: string;
   cliente: string;
   clienteUuid: string;
+  responsable: string;
   fallecido: string;
   fallecidoRut: string;
   total: number;
@@ -30,6 +31,13 @@ interface AgendaOption {
   nombre: string;
   sucursalUuid: string;
   cotizacionUuid: string;
+  programada: boolean;
+}
+
+interface PagoResumen {
+  cotizacionUuid: string;
+  monto: number;
+  estado: string;
 }
 
 type ServicioView = Servicio & {
@@ -56,6 +64,7 @@ export class CasosComponent implements OnInit {
   responsables: CatalogItem[] = [];
   cotizaciones: CotizacionOption[] = [];
   agendas: AgendaOption[] = [];
+  pagos: PagoResumen[] = [];
 
   loading = false;
   saving = false;
@@ -171,20 +180,19 @@ export class CasosComponent implements OnInit {
     this.clearMessages();
 
     if (!this.form.folio) {
-      this.error = 'Completa el folio del servicio.';
-      return;
+      this.form.folio = this.generateFolio();
     }
     if (!this.form.cotizacion_uuid) {
       this.error = 'Selecciona la cotizacion asociada al servicio.';
       return;
     }
-    if (!this.form.fecha_ingreso) {
-      this.error = 'Indica la fecha de ingreso del servicio.';
-      return;
-    }
     const cotizacion = this.selectedCotizacion;
     if (!cotizacion?.clienteUuid || !cotizacion.sucursalUuid || !cotizacion.fallecido || !cotizacion.total) {
       this.error = 'La cotizacion seleccionada no trae cliente, sucursal, fallecido o monto total. Revisa el detalle de la cotizacion en el BFF.';
+      return;
+    }
+    if (this.cotizacionTieneAgendaProgramada(cotizacion.uuid) && !this.esCotizacionDelServicioActual(cotizacion.uuid)) {
+      this.error = 'La cotizacion seleccionada ya tiene una agenda con horarios programados.';
       return;
     }
 
@@ -237,6 +245,14 @@ export class CasosComponent implements OnInit {
   }
 
   getSaldo(item: ServicioView) {
+    const pagosCotizacion = this.pagos.filter(pago =>
+      pago.estado.toLocaleUpperCase('es-CL') !== 'ANULADO' && pago.cotizacionUuid && pago.cotizacionUuid === item.cotizacion_uuid
+    );
+    if (pagosCotizacion.length) {
+      const total = Number(item.monto_total || this.cotizaciones.find(row => row.uuid === item.cotizacion_uuid)?.total || 0);
+      const pagado = pagosCotizacion.reduce((sum, pago) => sum + pago.monto, 0);
+      return Math.max(0, total - pagado);
+    }
     if (item.saldo_pendiente !== undefined && item.saldo_pendiente !== null) {
       return Math.max(0, Number(item.saldo_pendiente || 0));
     }
@@ -244,33 +260,43 @@ export class CasosComponent implements OnInit {
   }
 
   get agendasFiltradas() {
+    if (!this.form.cotizacion_uuid) return [];
     return this.agendas.filter(item => {
-      const byCotizacion = !this.form.cotizacion_uuid || !item.cotizacionUuid || item.cotizacionUuid === this.form.cotizacion_uuid;
+      const byCotizacion = !item.cotizacionUuid || item.cotizacionUuid === this.form.cotizacion_uuid;
       return byCotizacion;
     });
+  }
+
+  get cotizacionesDisponibles() {
+    return this.cotizaciones.filter(item =>
+      !this.cotizacionTieneAgendaProgramada(item.uuid) || this.esCotizacionDelServicioActual(item.uuid)
+    );
   }
 
   get selectedCotizacion() {
     return this.cotizaciones.find(item => item.uuid === this.form.cotizacion_uuid) || null;
   }
 
+  get estadoFormulario() {
+    return this.getEstadoLabel(this.getEstadoOperativo(this.form));
+  }
+
   onCotizacionChange() {
     const cotizacion = this.selectedCotizacion;
+    this.form.agenda_uuid = '';
     if (!cotizacion) return;
     this.form.cotizacion_numero = cotizacion.numero;
-    if (!this.form.folio) this.form.folio = `ES-${new Date().getFullYear()}-${cotizacion.numero}`;
+    if (!this.form.folio) this.form.folio = this.generateFolio();
   }
 
   private createEmptyForm(): Partial<ServicioView> {
     return {
-      folio: '',
+      folio: this.generateFolio(),
       fallecido_nombre: '',
       fallecido_rut: '',
       estado: 'PENDIENTE',
-      fecha_ingreso: new Date().toISOString().slice(0, 10),
       fecha_velatorio: '',
       fecha_ceremonia: '',
-      fecha_termino: '',
       destino: '',
       observacion: '',
       cotizacion_uuid: '',
@@ -294,7 +320,7 @@ export class CasosComponent implements OnInit {
       motivo_fallecimiento_id: Number(this.form.motivo_fallecimiento_id || 0),
       suscripcion_plan_id: Number(this.form.suscripcion_plan_id || 0),
       plan_nombre: this.form.plan_nombre || '',
-      estado: this.form.estado || 'PENDIENTE',
+      estado: this.getEstadoOperativo(this.form),
       sucursal_id: Number(this.form.sucursal_id || 0),
       sucursal_nombre: this.form.sucursal_nombre || '',
       agenda_uuid: this.form.agenda_uuid || undefined,
@@ -307,7 +333,7 @@ export class CasosComponent implements OnInit {
       saldo_pendiente: this.form.saldo_pendiente,
       fecha_velatorio: this.form.fecha_velatorio || undefined,
       fecha_ceremonia: this.form.fecha_ceremonia || undefined,
-      fecha_termino: this.form.fecha_termino || undefined,
+      fecha_termino: undefined,
       destino: this.form.destino || undefined,
       observacion: this.form.observacion || undefined,
       activo: this.form.activo !== false
@@ -344,14 +370,15 @@ export class CasosComponent implements OnInit {
       }
     };
 
-    const [clientes, planes, sucursales, motivos, usuarios, cotizaciones, agendas] = await Promise.all([
+    const [clientes, planes, sucursales, motivos, usuarios, cotizaciones, agendas, pagos] = await Promise.all([
       safeGet('/api/clientes'),
       safeGet('/api/planes'),
       safeGet('/api/sucursales'),
       safeGet('/api/motivos-fallecimiento'),
       safeGet('/api/usuarios'),
       safeGet('/api/cotizaciones'),
-      safeGet('/api/agendas')
+      safeGet('/api/agendas'),
+      safeGet('/api/pagos')
     ]);
 
     if (clientes.length) this.clientes = clientes.map((item, index) => this.fromApiCliente(item, index));
@@ -365,6 +392,7 @@ export class CasosComponent implements OnInit {
     }));
     if (cotizaciones.length) this.cotizaciones = cotizaciones.map((item, index) => this.fromApiCotizacion(item, index));
     if (agendas.length) this.agendas = agendas.map((item, index) => this.fromApiAgenda(item, index));
+    this.pagos = pagos.map(item => this.fromApiPago(item));
 
     this.form = this.createEmptyForm();
   }
@@ -375,11 +403,11 @@ export class CasosComponent implements OnInit {
       folio: item.folio,
       fallecidoNombre: cotizacion?.fallecido || item.fallecido_nombre,
       fallecidoRut: cotizacion?.fallecidoRut || item.fallecido_rut || null,
-      estado: item.estado,
-      fechaIngreso: this.toBackendDateTime(item.fecha_ingreso),
+      estado: this.getEstadoOperativo(item),
+      fechaIngreso: this.toBackendDateTime(item.fecha_ingreso) || this.currentBackendDateTime(),
       fechaVelatorio: this.toBackendDateTime(item.fecha_velatorio),
       fechaCeremonia: this.toBackendDateTime(item.fecha_ceremonia),
-      fechaTermino: this.toBackendDateTime(item.fecha_termino),
+      fechaTermino: null,
       destino: item.destino || null,
       montoTotal: cotizacion?.total || item.monto_total,
       montoPagado: item.monto_pagado || 0,
@@ -404,6 +432,7 @@ export class CasosComponent implements OnInit {
     const sucursal = this.sucursales.find(row => row.uuid === sucursalUuid);
     const motivo = this.motivos.find(row => row.uuid === motivoUuid);
     const responsable = this.responsables.find(row => row.uuid === responsableUuid);
+    const cotizacion = this.cotizaciones.find(row => row.uuid === cotizacionUuid);
     const estado = this.normalizeEstado(item.estado);
 
     return {
@@ -411,12 +440,12 @@ export class CasosComponent implements OnInit {
       uuid: item.uuid,
       folio: item.folio ?? '',
       cotizacion_uuid: cotizacionUuid,
-      cotizacion_numero: String(item.cotizacionNumero ?? item.cotizacion_numero ?? item.cotizacion?.numero ?? ''),
+      cotizacion_numero: String(item.cotizacionNumero ?? item.cotizacion_numero ?? item.cotizacion?.numero ?? cotizacion?.numero ?? ''),
       tercero_id: cliente?.id || Number(item.tercero_id ?? item.terceroId ?? 0),
-      tercero_nombre: item.terceroNombre ?? item.tercero_nombre ?? item.tercero?.nombreCompleto ?? cliente?.nombre_completo ?? '',
+      tercero_nombre: item.terceroNombre ?? item.tercero_nombre ?? item.tercero?.nombreCompleto ?? cliente?.nombre_completo ?? cotizacion?.responsable ?? cotizacion?.cliente ?? '',
       tercero_rut: String(item.terceroRut ?? item.tercero_rut ?? item.tercero?.rut ?? cliente?.ruc ?? ''),
-      fallecido_nombre: item.fallecidoNombre ?? item.fallecido_nombre ?? '',
-      fallecido_rut: String(item.fallecidoRut ?? item.fallecido_rut ?? ''),
+      fallecido_nombre: item.fallecidoNombre ?? item.fallecido_nombre ?? cotizacion?.fallecido ?? '',
+      fallecido_rut: String(item.fallecidoRut ?? item.fallecido_rut ?? cotizacion?.fallecidoRut ?? ''),
       motivo_fallecimiento_id: motivo?.id || Number(item.motivo_fallecimiento_id ?? item.motivoFallecimientoId ?? 0),
       suscripcion_plan_id: plan?.id || Number(item.suscripcion_plan_id ?? item.suscripcionPlanId ?? 0),
       plan_nombre: item.planNombre ?? item.plan_nombre ?? item.suscripcionPlan?.nombre ?? plan?.nombre ?? '',
@@ -428,7 +457,7 @@ export class CasosComponent implements OnInit {
       responsable_usuario_id: responsable?.id || Number(item.responsable_usuario_id ?? item.responsableUsuarioId ?? 0),
       responsable_nombre: item.responsableNombre ?? item.responsable_nombre ?? responsable?.nombre ?? '',
       fecha_ingreso: this.toDateInputValue(item.fechaIngreso ?? item.fecha_ingreso ?? ''),
-      monto_total: Number(item.montoTotal ?? item.monto_total ?? 0),
+      monto_total: Number(item.montoTotal ?? item.monto_total ?? cotizacion?.total ?? 0),
       monto_pagado: Number(item.montoPagado ?? item.monto_pagado ?? 0),
       saldo_pendiente: item.saldoPendiente ?? item.saldo_pendiente,
       fecha_velatorio: this.toDateTimeInputValue(item.fechaVelatorio ?? item.fecha_velatorio),
@@ -469,23 +498,45 @@ export class CasosComponent implements OnInit {
 
   private fromApiCotizacion(item: any, index: number): CotizacionOption {
     const pagador = item.pagador ?? item.cliente ?? item.terceroPagador ?? item.tercero_pagador;
+    const responsable = item.familiarResponsable
+      ?? item.familiar_responsable
+      ?? item.responsable
+      ?? item.terceroResponsable
+      ?? item.tercero_responsable
+      ?? pagador;
     const fallecido = item.fallecido ?? item.terceroFallecido ?? item.tercero_fallecido;
     const sucursal = item.sucursal ?? {};
     const plan = item.plan ?? item.suscripcionPlan ?? item.suscripcion_plan ?? {};
     const motivo = item.motivoFallecimiento ?? item.motivo_fallecimiento ?? {};
+    const responsableNombre = this.nombrePersona(responsable)
+      || item.familiarResponsableNombre
+      || item.familiar_responsable_nombre
+      || item.responsableNombre
+      || item.responsable_nombre
+      || item.pagadorNombre
+      || item.clienteNombre
+      || 'No informado';
     return {
       uuid: String(item.uuid ?? ''),
       numero: String(item.numero ?? item.folio ?? item.codigo ?? index + 1),
-      cliente: this.nombrePersona(pagador) || item.pagadorNombre || item.clienteNombre || 'No informado',
+      cliente: this.nombrePersona(pagador) || item.pagadorNombre || item.clienteNombre || responsableNombre,
       clienteUuid: String(
-        item.terceroUuid
+        item.familiarResponsableUuid
+        ?? item.familiar_responsable_uuid
+        ?? item.responsableUuid
+        ?? item.responsable_uuid
+        ?? item.terceroResponsableUuid
+        ?? item.tercero_responsable_uuid
+        ?? item.terceroUuid
         ?? item.clienteUuid
         ?? item.pagadorUuid
         ?? item.terceroPagadorUuid
         ?? item.tercero_pagador_uuid
+        ?? responsable?.uuid
         ?? pagador?.uuid
         ?? ''
       ),
+      responsable: responsableNombre,
       fallecido: this.nombrePersona(fallecido) || item.fallecidoNombre || item.fallecido_nombre || 'No informado',
       fallecidoRut: this.rutPersona(fallecido) || String(item.fallecidoRut ?? item.fallecido_rut ?? ''),
       total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0),
@@ -507,7 +558,16 @@ export class CasosComponent implements OnInit {
         inicio && fin ? `${inicio} - ${fin}` : inicio
       ].filter(Boolean).join(' · '),
       sucursalUuid: String(item.sucursalUuid ?? item.sucursal_uuid ?? sucursal.uuid ?? ''),
-      cotizacionUuid: String(item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid ?? '')
+      cotizacionUuid: String(item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid ?? ''),
+      programada: !!(item.fechaHoraInicio ?? item.fecha_hora_inicio ?? item.fechaHoraFin ?? item.fecha_hora_fin)
+    };
+  }
+
+  private fromApiPago(item: any): PagoResumen {
+    return {
+      cotizacionUuid: String(item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid ?? ''),
+      monto: Number(item.monto ?? 0),
+      estado: String(item.estado ?? 'REGISTRADO')
     };
   }
 
@@ -534,6 +594,12 @@ export class CasosComponent implements OnInit {
       : 'PENDIENTE';
   }
 
+  private getEstadoOperativo(item: Partial<ServicioView>): Servicio['estado'] {
+    const estadoActual = this.normalizeEstado(item.estado);
+    if (['EN_CURSO', 'COMPLETADO', 'ANULADO'].includes(estadoActual)) return estadoActual;
+    return item.agenda_uuid || item.fecha_velatorio || item.fecha_ceremonia ? 'PROGRAMADO' : 'PENDIENTE';
+  }
+
   private toBackendDateTime(value?: string) {
     if (!value) return null;
     if (value.length === 10) return `${value}T00:00:00`;
@@ -548,6 +614,17 @@ export class CasosComponent implements OnInit {
   private toDateTimeInputValue(value: any) {
     if (!value) return '';
     return String(value).slice(0, 16);
+  }
+
+  private currentBackendDateTime() {
+    const date = new Date();
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`;
   }
 
   private formatFechaHora(value: any) {
@@ -572,5 +649,19 @@ export class CasosComponent implements OnInit {
     const rut = item.rut ?? item.ruc ?? '';
     const dv = item.dv ?? '';
     return rut ? `${rut}${dv ? `-${dv}` : ''}` : '';
+  }
+
+  private cotizacionTieneAgendaProgramada(cotizacionUuid?: string) {
+    return !!cotizacionUuid && this.agendas.some(item => item.cotizacionUuid === cotizacionUuid && item.programada);
+  }
+
+  private esCotizacionDelServicioActual(cotizacionUuid?: string) {
+    return !!cotizacionUuid && !!this.selectedCase?.cotizacion_uuid && this.selectedCase.cotizacion_uuid === cotizacionUuid;
+  }
+
+  private generateFolio() {
+    const year = new Date().getFullYear();
+    const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SF-${year}-${random}`;
   }
 }

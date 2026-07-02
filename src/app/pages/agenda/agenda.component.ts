@@ -74,7 +74,6 @@ export class AgendaComponent implements OnInit {
   error: string | null = null;
   success: string | null = null;
   form: AgendaForm = this.createForm();
-  hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
   agColor = AG_COLOR;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
@@ -93,6 +92,15 @@ export class AgendaComponent implements OnInit {
 
   get visibleEvents() {
     return this.visibleAgenda.filter((a) => a.color !== 'neutral');
+  }
+
+  get hours() {
+    const defaultStart = 8;
+    const defaultEnd = 22;
+    const visible = this.visibleAgenda;
+    const minHour = Math.min(defaultStart, ...visible.map(item => Math.floor(item.start)));
+    const maxHour = Math.max(defaultEnd, ...visible.map(item => Math.ceil(item.end)));
+    return Array.from({ length: Math.max(1, maxHour - minHour) }, (_, index) => minHour + index);
   }
 
   get canReserve() {
@@ -124,8 +132,10 @@ export class AgendaComponent implements OnInit {
 
   getEventStyle(ev: any) {
     const color = this.agColor[ev.color as keyof typeof this.agColor] || this.agColor.neutral;
+    const top = Math.max(0, (ev.start - Math.floor(ev.start)) * 46);
     return {
-      height: (ev.end - ev.start) * 46 - 4 + 'px',
+      top: top + 'px',
+      height: Math.max(24, (ev.end - ev.start) * 46 - 4) + 'px',
       background: color.bg,
       borderLeftColor: color.bar,
       color: color.fg,
@@ -317,7 +327,7 @@ export class AgendaComponent implements OnInit {
     const fin = this.parseDate(item.fechaHoraFin);
     const tipoIndex = this.tiposRecurso.findIndex(tipo => tipo.uuid === item.tipoRecursoUuid);
     const start = inicio ? inicio.getHours() + inicio.getMinutes() / 60 : 8;
-    const end = fin ? fin.getHours() + fin.getMinutes() / 60 : start + 1;
+    const end = this.getDisplayEndHour(inicio, fin, start);
     return {
       uuid: item.uuid,
       sala: Math.max(0, tipoIndex),
@@ -388,6 +398,13 @@ export class AgendaComponent implements OnInit {
     if (!value) return null;
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private getDisplayEndHour(inicio: Date | null, fin: Date | null, start: number) {
+    if (!fin) return Math.min(24, start + 1);
+    if (inicio && this.toDateKey(fin) > this.toDateKey(inicio)) return 24;
+    const end = fin.getHours() + fin.getMinutes() / 60;
+    return end > start ? end : Math.min(24, start + 1);
   }
 
   private isInCurrentRange(fechaKey?: string, item?: AgendaEvent) {

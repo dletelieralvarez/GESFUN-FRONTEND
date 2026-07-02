@@ -27,7 +27,7 @@
       <div class="card">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
-            <thead><tr><th class="ps-4">Folio</th><th>Fallecido</th><th>Familiar responsable</th><th>Cotización</th><th>Plan</th><th>Sala</th><th>Estado</th><th class="text-end">Saldo</th><th class="pe-4">Acciones</th></tr></thead>
+            <thead><tr><th class="ps-4">Folio</th><th>Fallecido</th><th>Familiar responsable</th><th>Cotización</th><th>Plan</th><th>Sala</th><th>Estado servicio</th><th class="text-end">Saldo pendiente</th><th class="pe-4">Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let c of rows; trackBy: trackById">
                 <td class="ps-4 tnum fw-bold text-primary" data-label="Folio">{{ c.folio }}</td>
@@ -36,8 +36,8 @@
                 <td class="text-body-secondary" data-label="Cotización">{{ c.cotizacion_numero || 'Sin asociar' }}</td>
                 <td class="text-body-secondary" data-label="Plan">{{ c.plan_nombre }}</td>
                 <td class="text-body-secondary" data-label="Sala">{{ c.sala_nombre || c.sucursal_nombre }}</td>
-                <td data-label="Estado"><app-estado-badge [estado]="c.activo ? getEstadoLabel(c.estado) : 'Desactivado'"></app-estado-badge></td>
-                <td class="text-end tnum fw-bold" data-label="Saldo" [ngClass]="{ 'text-danger': getSaldo(c) > 0, 'text-primary': getSaldo(c) === 0 }">{{ getSaldo(c) > 0 ? clp(getSaldo(c)) : 'Pagado' }}</td>
+                <td data-label="Estado servicio"><app-estado-badge [estado]="c.activo ? getEstadoLabel(c.estado) : 'Desactivado'"></app-estado-badge></td>
+                <td class="text-end tnum fw-bold" data-label="Saldo pendiente" [ngClass]="{ 'text-danger': getSaldo(c) > 0, 'text-primary': getSaldo(c) === 0 }">{{ getSaldo(c) > 0 ? clp(getSaldo(c)) : 'Pagado' }}</td>
                 <td class="pe-4" data-label="Acciones"><div class="d-flex gap-2 justify-content-end">
                   <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(c)" [disabled]="loading || saving || !c.activo">Editar</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(c)" [disabled]="loading || saving || !c.activo">Desactivar</button>
@@ -54,20 +54,18 @@
       <div class="card p-4">
         <h5 class="mb-3">{{ isEditing ? 'Editar servicio funerario' : 'Nuevo servicio funerario' }}</h5>
 
-        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Folio</label><input class="form-control" [(ngModel)]="form.folio" placeholder="ES-2026-0001" /></div><div class="col-6"><label class="form-label">Estado</label><select class="form-select" [(ngModel)]="form.estado"><option value="PENDIENTE">Pendiente</option><option value="PROGRAMADO">Programado</option><option value="EN_CURSO">En curso</option><option value="COMPLETADO">Completado</option><option value="ANULADO">Anulado</option></select></div></div>
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Folio automático</label><input class="form-control" [(ngModel)]="form.folio" readonly /></div><div class="col-6"><label class="form-label">Estado del servicio</label><div class="form-control bg-light d-flex align-items-center"><app-estado-badge [estado]="estadoFormulario"></app-estado-badge></div></div></div>
 
-        <div class="mb-3"><label class="form-label">Cotización asociada</label><select class="form-select" [(ngModel)]="form.cotizacion_uuid" (ngModelChange)="onCotizacionChange()"><option value="">Seleccionar cotización</option><option *ngFor="let cotizacion of cotizaciones" [value]="cotizacion.uuid">{{ cotizacion.numero }} · {{ cotizacion.cliente }}</option></select></div>
+        <div class="mb-3"><label class="form-label">Cotización asociada</label><select class="form-select" [(ngModel)]="form.cotizacion_uuid" (ngModelChange)="onCotizacionChange()"><option value="">Seleccionar cotización</option><option *ngFor="let cotizacion of cotizacionesDisponibles" [value]="cotizacion.uuid">{{ cotizacion.numero }} · {{ cotizacion.cliente }}</option></select><div class="text-secondary small mt-1" *ngIf="cotizaciones.length && !cotizacionesDisponibles.length">No hay cotizaciones disponibles sin agenda programada.</div></div>
 
         <div class="status-message mb-3" *ngIf="selectedCotizacion">
           <i class="bi bi-file-earmark-text"></i>
-          <span>Cotización {{ selectedCotizacion.numero }} · {{ selectedCotizacion.cliente }} · {{ selectedCotizacion.fallecido }} · {{ clp(selectedCotizacion.total) }}</span>
+          <span>Cotización {{ selectedCotizacion.numero }} · Responsable: {{ selectedCotizacion.responsable }} · Fallecido: {{ selectedCotizacion.fallecido }} · {{ clp(selectedCotizacion.total) }}</span>
         </div>
 
         <div class="mb-3"><label class="form-label">Agenda / sala reservada</label><select class="form-select" [(ngModel)]="form.agenda_uuid"><option value="">Sin agenda asociada</option><option *ngFor="let agenda of agendasFiltradas" [value]="agenda.uuid">{{ agenda.nombre }}</option></select></div>
 
-        <div class="mb-3"><label class="form-label">Fecha de ingreso</label><input class="form-control" type="date" [(ngModel)]="form.fecha_ingreso" /></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Velatorio</label><input class="form-control" type="datetime-local" [(ngModel)]="form.fecha_velatorio" /></div><div class="col-6"><label class="form-label">Ceremonia</label><input class="form-control" type="datetime-local" [(ngModel)]="form.fecha_ceremonia" /></div></div>
-        <div class="mb-3"><label class="form-label">Fecha término</label><input class="form-control" type="datetime-local" [(ngModel)]="form.fecha_termino" /></div>
         <div class="mb-3"><label class="form-label">Destino</label><input class="form-control" [(ngModel)]="form.destino" placeholder="Cementerio o crematorio" /></div>
         <div class="mb-3"><label class="form-label">Observación</label><textarea class="form-control" rows="3" [(ngModel)]="form.observacion" placeholder="Notas internas del servicio"></textarea></div>
 

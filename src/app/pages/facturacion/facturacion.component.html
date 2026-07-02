@@ -43,6 +43,7 @@
               {{ cotizacionLabel(cotizacion) }}
             </option>
           </select>
+          <small class="text-secondary d-block mt-1">Solo aparecen cotizaciones con saldo pendiente de pago.</small>
         </label>
         <label>
           <span>Forma de pago</span>
@@ -77,6 +78,9 @@
         </label>
       </div>
       <div class="billing-panel__actions">
+        <div class="status-message status-warning me-auto" *ngIf="!loading && cotizaciones.length && !cotizacionesPendientes.length">
+          <i class="bi bi-info-circle"></i><span>Todas las cotizaciones cargadas figuran sin saldo pendiente.</span>
+        </div>
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
           (click)="registrarPago()" [disabled]="savingPago || loading">
           <i class="bi bi-send"></i>{{ savingPago ? 'Procesando...' : 'Registrar pago y emitir DTE' }}
