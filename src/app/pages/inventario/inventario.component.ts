@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
-import { CLP } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
 
 interface CatalogoItem {

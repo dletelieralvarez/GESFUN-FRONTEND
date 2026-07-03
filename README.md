@@ -1,10 +1,10 @@
 # GESFUN Frontend
 
-Frontend de GESFUN, una aplicacion web para gestion funeraria desarrollada con Angular 16 y Bootstrap 5. El proyecto implementa una interfaz administrativa con modulos de operacion, comercial, administracion, recursos y finanzas, usando datos mock basados en un modelo de negocio real y una integracion de autenticacion con Microsoft Entra ID mediante MSAL.
+Frontend de GESFUN, una aplicacion web para gestion funeraria desarrollada con Angular 16 y Bootstrap 5. El proyecto implementa una interfaz administrativa con modulos de operacion, comercial, administracion, recursos y finanzas, conectada al BFF/API con datos reales y autenticacion Microsoft Entra ID mediante MSAL.
 
 ## 1. Objetivo del proyecto
 
-El objetivo es entregar una primera version funcional del frontend para una funeraria, con pantallas navegables, layout administrativo, componentes reutilizables, datos de ejemplo y una base preparada para conectarse a un backend BFF/API.
+El objetivo es entregar una version funcional del frontend para una funeraria, con pantallas navegables, layout administrativo, componentes reutilizables, autenticacion integrada y consumo real de backend mediante BFF/API.
 
 La aplicacion permite revisar y operar sobre:
 
@@ -95,8 +95,8 @@ Este comando usa Karma y Jasmine con la configuracion base del proyecto Angular.
 src/
   app/
     data/
-      mock-data.ts
       models.ts
+      ui-data.ts
     interceptors/
       auth.interceptor.ts
     layout/
@@ -213,7 +213,7 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 
 Cada ruta incluye metadata como `title` y `crumb`, usada por el `TopbarComponent`.
 
-### 5.6 Datos mock y modelos
+### 5.6 Modelos y datos de interfaz
 
 Se creo una capa local de datos en `src/app/data/`.
 
@@ -237,32 +237,14 @@ Se creo una capa local de datos en `src/app/data/`.
 - `Cotizacion`
 - `InventarioProducto`
 
-`mock-data.ts` contiene datos de ejemplo para:
+`ui-data.ts` contiene solo utilidades y datos de interfaz que no representan informacion de negocio:
 
-- Planes de suscripcion.
-- Productos y servicios.
-- Terceros/clientes.
-- Empleados.
-- Proveedores.
-- Regiones.
-- Servicios funerarios.
-- Facturas.
-- Inventario.
-- Comunas.
-- Salas.
-- Agenda.
-- Navegacion.
-- Estados visuales.
-- Helpers de formato, como `CLP`.
+- Formateador de moneda `CLP`.
+- Colores e iniciales para avatar.
+- Navegacion del sidebar.
+- Clases visuales de estados y agenda.
 
-Tambien se agregaron alias de compatibilidad para componentes, por ejemplo:
-
-- `CASES`
-- `PLANS`
-- `SERVICIOS_SUELTOS`
-- `CLIENTS`
-- `INVOICES`
-- `INVENTORY`
+Las pantallas operativas no inicializan informacion de negocio desde archivos mock. Los planes, productos/servicios, terceros, comunas, regiones, sucursales, agenda, inventario, cotizaciones, pagos y facturacion se consultan desde el BFF. Si un endpoint no responde, la pantalla muestra el estado vacio o el mensaje de error correspondiente en vez de mezclar datos falsos con datos reales.
 
 ## 6. Modulos y pantallas implementadas
 
@@ -436,10 +418,20 @@ src/app/pages/catalogo/
 
 Funcionalidad:
 
-- Lista planes funerarios.
-- Lista servicios/productos adicionales.
-- Muestra precios formateados.
-- Usa datos derivados desde `SUSCRIPCION_PLANS` y `PRODUCTOS_SERVICIOS`.
+- Lista planes funerarios activos desde el BFF.
+- Lista servicios adicionales activos desde `GET /api/productos-servicios`.
+- Consulta la composicion de cada plan desde `GET /api/plan-kit/plan/{planUuid}`.
+- Calcula el valor mostrado del plan segun su kit cuando el BFF entrega detalle.
+- Muestra precios formateados en pesos chilenos.
+- No usa datos mock como respaldo.
+
+Endpoints consumidos:
+
+```text
+GET /api/planes
+GET /api/productos-servicios
+GET /api/plan-kit/plan/{planUuid}
+```
 
 ### 6.6 Cotizaciones
 
@@ -1133,7 +1125,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 ## 15. Limitaciones actuales
 
-- Algunos modulos siguen usando datos mock/locales.
+- Las pantallas activas ya no usan datos mock de negocio; dependen de que el BFF y sus microservicios esten disponibles.
 - Los CRUD de usuarios, clientes, empleados, proveedores, productos/servicios, planes, sucursales y recursos ya pasan por BFF.
 - El dashboard ya consume cotizaciones, agenda e inventario desde el BFF, pero sus metricas dependen de que esos endpoints entreguen datos completos por sucursal.
 - Servicios funerarios ya consume el CRUD operativo desde el BFF mediante `/api/servicios`.
@@ -1158,8 +1150,8 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
   - Agenda.
   - Facturacion.
 - Extraer servicios HTTP compartidos para usuarios, terceros y productos/servicios.
-- Reemplazar los modulos restantes que usan mock por llamadas al BFF/API.
-- Persistir altas, ediciones y eliminaciones en planes, sucursales y demas modulos pendientes.
+- Completar endpoints faltantes o contratos pendientes del BFF cuando algun microservicio no entregue toda la informacion requerida por pantalla.
+- Persistir y validar desde backend todos los flujos transaccionales que aun dependan de contratos parciales.
 - Agregar validaciones de formularios mas completas.
 - Agregar manejo centralizado de errores.
 - Agregar loading states por pantalla.
@@ -1170,4 +1162,4 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 
 GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, servicios funerarios conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para registrar pagos y emitir DTE en una sola accion, notificaciones operativas en la barra superior y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
-La siguiente etapa natural es conectar los modulos operativos restantes con endpoints reales y proteger las rutas internas con autenticacion obligatoria.
+La siguiente etapa natural es proteger las rutas internas con autenticacion obligatoria, consolidar servicios HTTP por dominio y ampliar pruebas automatizadas sobre los flujos integrados con el BFF.

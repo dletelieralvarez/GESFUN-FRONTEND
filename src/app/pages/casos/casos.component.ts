@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { CLP, SUSCRIPCION_PLANS, TERCEROS } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 import { Servicio, Sucursal, SuscripcionPlan, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
@@ -57,8 +57,8 @@ type ServicioView = Servicio & {
 export class CasosComponent implements OnInit {
   private backendAvailable = true;
   cases: ServicioView[] = [];
-  clientes: Tercero[] = TERCEROS.filter(item => item.rol === 'CLIENTE');
-  planes: SuscripcionPlan[] = SUSCRIPCION_PLANS;
+  clientes: Tercero[] = [];
+  planes: SuscripcionPlan[] = [];
   sucursales: Sucursal[] = [];
   motivos: CatalogItem[] = [];
   responsables: CatalogItem[] = [];

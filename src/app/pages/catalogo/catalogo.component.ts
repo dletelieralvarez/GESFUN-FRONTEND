@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { CLP } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 import { ProductoServicio, SuscripcionPlan } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';

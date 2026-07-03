@@ -4,7 +4,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { filter, Subscription } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
-import { NAV_BS } from '../../data/mock-data';
+import { NAV_BS } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
 import { LayoutService } from '../../services/layout.service';
 

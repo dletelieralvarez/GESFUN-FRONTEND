@@ -12,7 +12,7 @@ import {
   Sucursal,
   SuscripcionPlan
 } from '../../data/models';
-import { CLP } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 
 interface PersonaCotizacionForm {
   tipoPersona: 'N' | 'J';

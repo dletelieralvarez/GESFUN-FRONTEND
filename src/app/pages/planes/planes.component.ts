@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { CLP, PRODUCTOS_SERVICIOS, SALAS, SUSCRIPCION_PLANS } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 import { ProductoServicio, Sucursal, SuscripcionPlan } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
@@ -29,27 +29,9 @@ type PlanConKit = SuscripcionPlan & { kit: PlanKitItem[] };
   styleUrls: ['./planes.component.css']
 })
 export class PlanesComponent implements OnInit {
-  productosServicios: ProductoServicio[] = PRODUCTOS_SERVICIOS as ProductoServicio[];
-  planes: PlanConKit[] = SUSCRIPCION_PLANS.map((plan, index) => {
-    const kit = this.createDefaultKit(index);
-    return {
-      ...plan,
-      valor: kit.reduce((sum, item) => sum + item.total, 0) || plan.valor,
-      sucursal_id: index + 1,
-      kit
-    };
-  });
-  sucursales: Sucursal[] = SALAS.map((nombre, index) => ({
-    id: index + 1,
-    uuid: `uuid-sucursal-${index + 1}`,
-    codigo: `SUC-${index + 1}`,
-    nombre,
-    direccion: '',
-    telefono: '',
-    activo: true,
-    empresa_id: 1,
-    comuna_id: 1
-  }));
+  productosServicios: ProductoServicio[] = [];
+  planes: PlanConKit[] = [];
+  sucursales: Sucursal[] = [];
   loading = false;
   saving = false;
   error: string | null = null;
@@ -59,7 +41,7 @@ export class PlanesComponent implements OnInit {
   selectedPlan: PlanConKit | null = null;
   planPendingDeactivate: PlanConKit | null = null;
   form: Partial<PlanConKit> = this.createEmptyForm();
-  selectedProductoServicioId = PRODUCTOS_SERVICIOS[0]?.id || 0;
+  selectedProductoServicioId = 0;
   selectedCantidad = 1;
   selectedObservacion = '';
   clp = CLP;
@@ -483,37 +465,6 @@ export class PlanesComponent implements OnInit {
       unidad_medida_id: Number(item.unidad_medida_id ?? 1),
       empresa_id: Number(item.empresa_id ?? 1),
       categoria: item.categoria ?? 'General'
-    };
-  }
-
-  private createDefaultKit(index: number): PlanKitItem[] {
-    const defaults = [
-      [2, 5],
-      [2, 3, 5],
-      [2, 3, 5, 6]
-    ][index] || [];
-
-    return defaults
-      .map(id => this.productoToKitItem(id, 1))
-      .filter((item): item is PlanKitItem => !!item);
-  }
-
-  private productoToKitItem(productoServicioId: number, cantidad: number): PlanKitItem | null {
-    const productoServicio = PRODUCTOS_SERVICIOS.find(item => item.id === productoServicioId);
-    if (!productoServicio) {
-      return null;
-    }
-
-    return {
-      producto_servicio_id: productoServicio.id,
-      producto_servicio_uuid: productoServicio.uuid,
-      codigo: productoServicio.codigo,
-      nombre: productoServicio.nombre,
-      tipo_item: productoServicio.tipo_item,
-      cantidad,
-      unitario: productoServicio.precio,
-      total: productoServicio.precio * cantidad,
-      activo: true
     };
   }
 

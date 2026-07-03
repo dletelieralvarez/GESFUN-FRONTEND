@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule, Component, Input, Output, EventEmitter } from '@angular/core';
-import { colorFor, initials, ESTADO_BS } from '../data/mock-data';
+import { colorFor, initials, ESTADO_BS } from '../data/ui-data';
 
 @Component({
   selector: 'app-avatar',

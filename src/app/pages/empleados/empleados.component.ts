@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { COMUNAS, REGIONES, TERCEROS } from '../../data/mock-data';
-import { Comuna, Empresa, Tercero } from '../../data/models';
+import { Comuna, Empresa, Region, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
 
@@ -12,9 +11,9 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./empleados.component.css']
 })
 export class EmpleadosComponent implements OnInit {
-  empleados: Tercero[] = TERCEROS.filter(t => t.rol === 'EMPLEADO');
-  regiones = REGIONES;
-  comunas = COMUNAS;
+  empleados: Tercero[] = [];
+  regiones: Region[] = [];
+  comunas: Comuna[] = [];
   empresas: Empresa[] = [];
   loading = false;
   saving = false;
@@ -114,6 +113,10 @@ export class EmpleadosComponent implements OnInit {
       this.error = 'Completa nombre, RUT, email y telefono.';
       return;
     }
+    if (!this.form.comuna_id || !this.form.empresa_id) {
+      this.error = 'Selecciona comuna y empresa.';
+      return;
+    }
 
     this.saving = true;
     const result = this.getFullTerceroFromForm();
@@ -184,8 +187,8 @@ export class EmpleadosComponent implements OnInit {
       email: '',
       telefono: '',
       activo: true,
-      region_id: 1,
-      comuna_id: 1,
+      region_id: this.regiones[0]?.id || this.comunas[0]?.region_id || 0,
+      comuna_id: this.comunas[0]?.id || 0,
       empresa_id: this.empresas[0]?.id || 1
     };
   }
@@ -231,15 +234,19 @@ export class EmpleadosComponent implements OnInit {
   private async loadCatalogos() {
     try {
       const token = await this.auth.getAccessToken();
-      const [comunasResponse, empresasResponse] = await Promise.all([
+      const [comunasResponse, regionesResponse, empresasResponse] = await Promise.all([
         lastValueFrom(this.http.get(`${bffApiUrl}/api/comunas`, { headers: { Authorization: `Bearer ${token}` } })),
+        lastValueFrom(this.http.get(`${bffApiUrl}/api/regiones`, { headers: { Authorization: `Bearer ${token}` } })).catch(() => []),
         lastValueFrom(this.http.get(`${bffApiUrl}/api/empresas`, { headers: { Authorization: `Bearer ${token}` } }))
       ]);
 
       const comunas = this.extractPayload<any>(comunasResponse);
+      const regiones = this.extractPayload<any>(regionesResponse);
       const empresas = this.extractPayload<any>(empresasResponse);
+      this.regiones = regiones.map((region, index) => this.fromApiRegion(region, index));
       if (comunas.length) {
         this.comunas = comunas.map((comuna, index) => this.fromApiComuna(comuna, index));
+        if (!this.regiones.length) this.regiones = this.buildRegionesFromComunas();
         this.form.comuna_id = this.comunas[0]?.id || 1;
         this.form.region_id = this.comunas[0]?.region_id || 1;
       }
@@ -327,7 +334,7 @@ export class EmpleadosComponent implements OnInit {
       telefono: item.telefono ?? '',
       tipo_persona: tipoPersona === 'J' || tipoPersona === 'empresa' ? 'empresa' : 'persona_natural',
       activo: item.activo === undefined || item.activo === true || item.activo === 1,
-      region_id: comuna?.region_id || this.getRegionIdByComunaNombre(item.comuna?.nombre ?? ''),
+      region_id: comuna?.region_id || this.getRegionIdFromApiComuna(item.comuna),
       comuna_id: comuna?.id || Number(item.comuna_id ?? 1),
       empresa_id: empresa?.id || Number(item.empresa_id ?? this.empresas[0]?.id ?? 1)
     };
@@ -340,8 +347,22 @@ export class EmpleadosComponent implements OnInit {
       uuid: item.uuid,
       codigo: String(item.codigo ?? item.code ?? index + 1),
       nombre,
-      region_id: Number(item.region_id ?? item.regionId ?? this.getRegionIdByComunaNombre(nombre))
+      region_id: Number(item.region_id ?? item.regionId ?? item.region?.id ?? this.regiones[0]?.id ?? 0)
     };
+  }
+
+  private fromApiRegion(item: any, index: number): Region {
+    return {
+      id: Number(item.id ?? index + 1),
+      uuid: item.uuid,
+      codigo: String(item.codigo ?? item.code ?? index + 1),
+      nombre: item.nombre ?? item.name ?? `Region ${index + 1}`
+    };
+  }
+
+  private buildRegionesFromComunas(): Region[] {
+    const ids = Array.from(new Set(this.comunas.map(comuna => comuna.region_id).filter(Boolean)));
+    return ids.map(id => ({ id, uuid: '', codigo: String(id), nombre: `Region ${id}` }));
   }
 
   private fromApiEmpresa(item: any, index: number): Empresa {
@@ -386,10 +407,10 @@ export class EmpleadosComponent implements OnInit {
   }
 
   private getRegionIdByComuna(comunaId?: number) {
-    return this.comunas.find(c => c.id === Number(comunaId))?.region_id || 1;
+    return this.comunas.find(c => c.id === Number(comunaId))?.region_id || this.regiones[0]?.id || 0;
   }
 
-  private getRegionIdByComunaNombre(nombre: string) {
-    return COMUNAS.find(comuna => comuna.nombre === nombre)?.region_id || 1;
+  private getRegionIdFromApiComuna(comuna: any) {
+    return Number(comuna?.region_id ?? comuna?.regionId ?? comuna?.region?.id ?? this.regiones[0]?.id ?? 0);
   }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { AG_COLOR } from '../../data/mock-data';
+import { AG_COLOR } from '../../data/ui-data';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
 

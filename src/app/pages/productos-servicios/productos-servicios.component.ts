@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { CLP, PRODUCTOS_SERVICIOS } from '../../data/mock-data';
+import { CLP } from '../../data/ui-data';
 import { Empresa, ProductoServicio, UnidadMedida } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
@@ -14,7 +14,7 @@ type ProductoServicioForm = ProductoServicio & { categoria: string };
   styleUrls: ['./productos-servicios.component.css']
 })
 export class ProductosServiciosComponent implements OnInit {
-  items: ProductoServicioForm[] = PRODUCTOS_SERVICIOS.map(item => ({ ...item })) as ProductoServicioForm[];
+  items: ProductoServicioForm[] = [];
   unidadesMedida: UnidadMedida[] = [];
   empresas: Empresa[] = [];
   loading = false;
