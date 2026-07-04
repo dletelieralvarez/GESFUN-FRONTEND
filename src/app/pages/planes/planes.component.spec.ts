@@ -15,6 +15,30 @@ describe('PlanesComponent', () => {
 
     fixture = TestBed.createComponent(PlanesComponent);
     component = fixture.componentInstance;
+    component.productosServicios = [{
+      id: 1,
+      uuid: 'producto-1',
+      tipo_item: 'producto',
+      codigo: 'URN',
+      nombre: 'Urna',
+      descripcion: '',
+      precio: 100000,
+      activo: true,
+      afecto: true,
+      unidad_medida_id: 1,
+      empresa_id: 1,
+      categoria: 'Producto'
+    }];
+    component.planes = [{
+      id: 1,
+      uuid: 'plan-1',
+      nombre: 'Plan base',
+      descripcion: 'Plan base',
+      valor: 100000,
+      activo: true,
+      sucursal_id: 1,
+      kit: []
+    }];
   });
 
   it('should create', () => {

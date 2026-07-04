@@ -445,6 +445,8 @@ Funcionalidad:
 
 - Carga sucursales, planes, productos/servicios, formas de pago, motivos de fallecimiento y comunas desde el BFF.
 - Registra los datos del cliente pagador, tanto persona natural como empresa.
+- Al ingresar el RUT del pagador, verifica si ya existe como cliente o tercero y autocompleta sus datos.
+- Acepta el RUT del pagador separado en RUT/DV o en formato completo, por ejemplo `12.345.678-9`.
 - Registra los datos personales y antecedentes del fallecido.
 - Permite seleccionar una sucursal y uno de sus planes activos.
 - Carga automaticamente los productos y servicios incluidos en el kit del plan.
@@ -469,6 +471,8 @@ GET  /api/productos-servicios
 GET  /api/formas-pago
 GET  /api/motivos-fallecimiento
 GET  /api/comunas
+GET  /api/clientes
+GET  /api/terceros
 POST /api/cotizaciones
 ```
 
@@ -1002,6 +1006,8 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/formas-pago`
   - `GET /api/motivos-fallecimiento`
   - `GET /api/comunas`
+  - `GET /api/clientes`
+  - `GET /api/terceros`
   - `POST /api/cotizaciones`
 - `CotizacionesComponent`
   - `GET /api/cotizaciones`
@@ -1109,7 +1115,7 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 | `npm run test:coverage` | Ejecuta pruebas unitarias y genera reporte de cobertura |
 | `npm run ng` | Acceso directo al Angular CLI |
 
-El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 56 pruebas exitosas. La cobertura debe regenerarse con `npm run test:coverage` cuando se requiera un valor actualizado.
+El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 84 pruebas exitosas. La cobertura debe regenerarse con `npm run test:coverage` cuando se requiera un valor actualizado.
 
 ## 14. Flujo recomendado para usar la aplicacion
 

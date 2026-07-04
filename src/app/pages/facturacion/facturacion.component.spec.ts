@@ -153,6 +153,204 @@ describe('FacturacionComponent', () => {
     expect(component.success).toContain('Pago registrado');
   });
 
+  it('should emit invoice through BFF without sending inventory items or calling inventory service', async () => {
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'FACTURA',
+      observacion: 'Pago factura',
+      observacionDte: 'Emision por pago de servicio funerario'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/pagos`).flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const dteRequest = httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`);
+    expect(dteRequest.request.method).toBe('POST');
+    expect(dteRequest.request.body).toEqual({
+      pagoUuid: 'pago-1',
+      tipoDocumentoCodigo: 'FACTURA',
+      observacion: 'Emision por pago de servicio funerario'
+    });
+    expect(dteRequest.request.body.productos).toBeUndefined();
+    expect(dteRequest.request.body.detalles).toBeUndefined();
+    expect(dteRequest.request.body.cantidades).toBeUndefined();
+    dteRequest.flush({
+      success: true,
+      payload: {
+        uuid: 'doc-1',
+        pagoUuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        tipoDocumentoCodigo: 'FACTURA',
+        tipoDocumentoNombre: 'Factura',
+        estado: 'EMITIDO',
+        folio: '12345',
+        trackId: 'DTE-20260627-12345',
+        proveedor: 'DTEEMITE_SIMULADO',
+        pdfUrl: 'https://dteemite.local/documentos/12345.pdf',
+        xmlUrl: 'https://dteemite.local/documentos/12345.xml'
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(httpMock.match(request => request.url.includes('/api/inventario/')).length).toBe(0);
+    httpMock.expectOne(`${bffApiUrl}/api/cotizaciones/cot-1`).flush({ success: true, payload: { detalles: [] } });
+    await action;
+
+    expect(component.documentos[0].tipoDocumentoCodigo).toBe('FACTURA');
+    expect(component.documentos[0].folio).toBe('12345');
+    expect(component.documentos[0].trackId).toBe('DTE-20260627-12345');
+    expect(documentoPdf.generar).toHaveBeenCalled();
+  });
+
+  it('should keep payment registered but report DTE errors when document emission fails', async () => {
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'FACTURA',
+      observacion: 'Pago completo',
+      observacionDte: 'Factura solicitada'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/pagos`).flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`).flush({
+      message: 'Error al procesar la petición en el servicio de backend. { "status": 400, "message": "Tipo de documento tributario invalido. Use BOLETA o FACTURA." }'
+    }, { status: 400, statusText: 'Bad Request' });
+
+    await action;
+
+    expect(component.pagos.length).toBe(1);
+    expect(component.documentos.length).toBe(0);
+    expect(component.error).toBe('Tipo de documento tributario invalido. Use BOLETA o FACTURA.');
+    expect(documentoPdf.generar).not.toHaveBeenCalled();
+  });
+
+  it('should show the recommended stock message when BFF rejects DTE emission after inventory output fails', async () => {
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'FACTURA',
+      observacion: 'Pago completo',
+      observacionDte: 'Factura solicitada'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/pagos`).flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`).flush({
+      message: 'Error al procesar la petición en el servicio de backend. { "status": 400, "message": "Stock insuficiente para producto URN-001." }'
+    }, { status: 400, statusText: 'Bad Request' });
+
+    await action;
+
+    expect(component.pagos.length).toBe(1);
+    expect(component.documentos.length).toBe(0);
+    expect(component.error).toBe('No se pudo emitir la factura porque no hay stock suficiente para uno o más productos físicos de la cotización.');
+    expect(documentoPdf.generar).not.toHaveBeenCalled();
+  });
+
+  it('should treat success false DTE responses as emission errors', async () => {
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'BOLETA',
+      observacion: 'Pago completo',
+      observacionDte: 'Boleta solicitada'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/pagos`).flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`).flush({
+      success: false,
+      message: 'Cotización sin productos físicos.'
+    });
+
+    await action;
+
+    expect(component.error).toBe('Cotización sin productos físicos.');
+    expect(component.documentos.length).toBe(0);
+  });
+
   it('should hide fully paid cotizaciones from payment selector', () => {
     component.cotizaciones = [
       { uuid: 'cot-pagada', numero: '1', cliente: 'Cliente pagado', total: 100000 },

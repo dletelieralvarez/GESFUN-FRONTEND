@@ -78,10 +78,13 @@ export class CotizacionComponent implements OnInit {
   cantidadesExtras: Record<string, number> = {};
   loading = false;
   loadingKit = false;
+  loadingPagador = false;
   saving = false;
   error: string | null = null;
   success: string | null = null;
+  pagadorExistenteMessage: string | null = null;
   clp = CLP;
+  private lastPagadorLookupKey = '';
 
   constructor(
     private http: HttpClient,
@@ -223,6 +226,76 @@ export class CotizacionComponent implements OnInit {
 
   imprimir() {
     window.print();
+  }
+
+  onPagadorRutChange() {
+    this.pagadorExistenteMessage = null;
+    this.lastPagadorLookupKey = '';
+  }
+
+  async buscarPagadorExistente() {
+    const { rut, dv } = this.getRutDvPagador();
+    if (!rut || !dv) return;
+
+    const lookupKey = `${rut}-${dv}`;
+    if (lookupKey === this.lastPagadorLookupKey) return;
+    this.lastPagadorLookupKey = lookupKey;
+    this.loadingPagador = true;
+    this.pagadorExistenteMessage = null;
+
+    try {
+      const token = await this.auth.getAccessToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      const cliente = await this.buscarTerceroPorRut(headers, rut, dv);
+
+      if (cliente) {
+        this.autocompletarPagador(cliente);
+        this.pagadorExistenteMessage = 'El cliente ya existe. Se autocompletaron sus datos para esta cotización.';
+      }
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo verificar si el cliente ya existe.');
+    } finally {
+      this.loadingPagador = false;
+    }
+  }
+
+  private getRutDvPagador() {
+    const rutIngresado = String(this.pagador.rut || '').trim();
+    const dvIngresado = String(this.pagador.dv || '').trim().toUpperCase();
+    const rutCompleto = rutIngresado.match(/^(.+)-([0-9kK])$/);
+
+    if (!dvIngresado && rutCompleto) {
+      const rut = this.rutNumerico(rutCompleto[1]);
+      const dv = rutCompleto[2].toUpperCase();
+      this.pagador.rut = rut ? String(rut) : this.pagador.rut;
+      this.pagador.dv = dv;
+      return { rut, dv };
+    }
+
+    return { rut: this.rutNumerico(rutIngresado), dv: dvIngresado };
+  }
+
+  private async buscarTerceroPorRut(headers: { Authorization: string }, rut: number, dv: string) {
+    const endpoints = ['/api/clientes', '/api/terceros'];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await lastValueFrom(this.http.get(`${bffApiUrl}${endpoint}`, { headers }));
+        const tercero = this.extractPayload<any>(response).find(item => this.esMismoRut(item, rut, dv));
+        if (tercero) return tercero;
+      } catch (err: any) {
+        if (endpoint === '/api/clientes') {
+          throw err;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private esMismoRut(item: any, rut: number, dv: string) {
+    return this.rutNumerico(String(item.rut ?? item.ruc ?? '')) === rut
+      && String(item.dv ?? '').trim().toUpperCase() === dv;
   }
 
   private async loadCatalogos() {
@@ -471,6 +544,50 @@ export class CotizacionComponent implements OnInit {
       fechaNacimiento: '',
       comunaUuid: ''
     };
+  }
+
+  private autocompletarPagador(cliente: any) {
+    const tipoPersona = cliente.tipoPersona ?? cliente.tipo_persona;
+    const isEmpresa = tipoPersona === 'J' || tipoPersona === 'empresa';
+    const nombreCompleto = String(cliente.nombreCompleto ?? cliente.nombre_completo ?? '').trim();
+    const nombres = String(cliente.nombres ?? '').trim();
+    const apellidoPaterno = String(cliente.apellidoPaterno ?? cliente.apellido_paterno ?? '').trim();
+    const apellidoMaterno = String(cliente.apellidoMaterno ?? cliente.apellido_materno ?? '').trim();
+
+    this.pagador.tipoPersona = isEmpresa ? 'J' : 'N';
+    this.pagador.rut = String(cliente.rut ?? cliente.ruc ?? this.pagador.rut);
+    this.pagador.dv = String(cliente.dv ?? this.pagador.dv).trim().toUpperCase();
+    this.pagador.nombres = isEmpresa ? '' : nombres || this.extractNombres(nombreCompleto);
+    this.pagador.apellidoPaterno = isEmpresa ? '' : apellidoPaterno || this.extractApellidoPaterno(nombreCompleto);
+    this.pagador.apellidoMaterno = isEmpresa ? '' : apellidoMaterno || this.extractApellidoMaterno(nombreCompleto);
+    this.pagador.razonSocial = isEmpresa
+      ? String(cliente.razonSocial ?? cliente.razon_social ?? nombreCompleto).trim()
+      : '';
+    this.pagador.email = String(cliente.email ?? '').trim();
+    this.pagador.telefono = String(cliente.telefono ?? '').trim();
+    this.pagador.fechaNacimiento = String(cliente.fechaNacimiento ?? cliente.fecha_nacimiento ?? '');
+    this.pagador.comunaUuid = String(
+      cliente.comunaUuid
+      ?? cliente.comuna_uuid
+      ?? cliente.comuna?.uuid
+      ?? this.pagador.comunaUuid
+    );
+  }
+
+  private extractNombres(fullName: string) {
+    const parts = fullName.trim().split(' ').filter(Boolean);
+    if (parts.length <= 2) return parts[0] || '';
+    return parts.slice(0, -2).join(' ');
+  }
+
+  private extractApellidoPaterno(fullName: string) {
+    const parts = fullName.trim().split(' ').filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 2] : '';
+  }
+
+  private extractApellidoMaterno(fullName: string) {
+    const parts = fullName.trim().split(' ').filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 1] : '';
   }
 
   private fromApiSucursal(item: any, index: number): Sucursal {

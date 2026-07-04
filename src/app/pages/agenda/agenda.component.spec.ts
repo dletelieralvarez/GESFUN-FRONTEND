@@ -104,6 +104,29 @@ describe('AgendaComponent', () => {
     expect(component.formatEventDates(component.visibleAgenda[0])).toBe('24-06-2026 al 26-06-2026');
   });
 
+  it('should show backend validation errors when agenda reservation fails', fakeAsync(() => {
+    component.selectedSucursalUuid = 'sucursal-1';
+    component.sucursales = [{ uuid: 'sucursal-1', codigo: 'S1', nombre: 'Central', activo: true }];
+    component.tiposRecurso = [{ uuid: 'tipo-velatorio', codigo: 'VEL', nombre: 'Sala de velatorio', activo: true }];
+    component.openReserva();
+    component.form.fechaInicio = '2026-06-25';
+    component.form.fechaTermino = '2026-06-25';
+    component.form.horaInicio = '18:00';
+    component.form.horaFin = '21:00';
+
+    component.registrarAgenda();
+    tick();
+
+    const post = httpMock.expectOne(`${bffApiUrl}/api/agendas`);
+    post.flush({
+      message: 'Error al procesar la petición en el servicio de backend. { "status": 409, "message": "El recurso ya se encuentra reservado." }'
+    }, { status: 409, statusText: 'Conflict' });
+    tick();
+
+    expect(component.error).toBe('El recurso ya se encuentra reservado.');
+    expect(component.saving).toBeFalse();
+  }));
+
   afterEach(() => {
     httpMock.verify();
   });

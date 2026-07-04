@@ -1,15 +1,21 @@
 <div class="content-wrap">
   <app-page-head title="Nueva cotización" sub="Arma una propuesta de servicio para la familia"></app-page-head>
 
-  <div class="status-stack mb-4" *ngIf="loading || error || success || prestacionesNoDisponibles.length">
+  <div class="status-stack mb-4" *ngIf="loading || loadingPagador || error || success || pagadorExistenteMessage || prestacionesNoDisponibles.length">
     <div class="status-message status-loading" *ngIf="loading">
       <i class="bi bi-arrow-repeat"></i><span>Cargando datos para la cotización...</span>
+    </div>
+    <div class="status-message status-loading" *ngIf="loadingPagador">
+      <i class="bi bi-arrow-repeat"></i><span>Verificando cliente...</span>
     </div>
     <div class="status-message status-error" *ngIf="error">
       <i class="bi bi-exclamation-circle"></i><span>{{ error }}</span>
     </div>
     <div class="status-message status-success" *ngIf="success">
       <i class="bi bi-check-circle"></i><span>{{ success }}</span>
+    </div>
+    <div class="status-message status-warning" *ngIf="pagadorExistenteMessage">
+      <i class="bi bi-info-circle"></i><span>{{ pagadorExistenteMessage }}</span>
     </div>
     <div class="status-message status-warning" *ngIf="prestacionesNoDisponibles.length">
       <i class="bi bi-exclamation-triangle"></i>
@@ -35,11 +41,13 @@
               </div>
               <div class="col-md-5">
                 <label class="form-label fw-semibold small">RUT</label>
-                <input class="form-control" [(ngModel)]="pagador.rut" placeholder="12345678" inputmode="numeric" />
+                <input class="form-control" [(ngModel)]="pagador.rut" placeholder="12345678 o 12.345.678-9" inputmode="numeric"
+                  (ngModelChange)="onPagadorRutChange()" (blur)="buscarPagadorExistente()" />
               </div>
               <div class="col-md-3">
                 <label class="form-label fw-semibold small">DV</label>
-                <input class="form-control text-uppercase" [(ngModel)]="pagador.dv" maxlength="1" placeholder="9" />
+                <input class="form-control text-uppercase" [(ngModel)]="pagador.dv" maxlength="1" placeholder="9"
+                  (ngModelChange)="onPagadorRutChange()" (blur)="buscarPagadorExistente()" />
               </div>
 
               <ng-container *ngIf="pagador.tipoPersona === 'N'; else empresaPagadora">

@@ -1,5 +1,5 @@
-import { firstValueFrom, of } from 'rxjs';
-import { HttpHandler, HttpRequest, HttpResponse } from '@angular/common/http';
+import { firstValueFrom, of, throwError } from 'rxjs';
+import { HttpErrorResponse, HttpHandler, HttpRequest, HttpResponse } from '@angular/common/http';
 import { AuthInterceptor } from './auth.interceptor';
 
 describe('AuthInterceptor', () => {
@@ -45,5 +45,23 @@ describe('AuthInterceptor', () => {
     ).toBeRejectedWithError('boom');
 
     expect(wrapped.handledRequest).toBeNull();
+  });
+
+  it('should mark session as expired when the BFF returns 401', async () => {
+    const auth: any = {
+      BFF_URL: 'http://localhost:8081',
+      getAccessToken: () => Promise.resolve('token-123'),
+      handleSessionExpired: jasmine.createSpy('handleSessionExpired').and.resolveTo(undefined)
+    };
+    const interceptor = new AuthInterceptor(auth);
+    const handler: HttpHandler = {
+      handle: () => throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }))
+    };
+
+    await expectAsync(
+      firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), handler))
+    ).toBeRejected();
+
+    expect(auth.handleSessionExpired).toHaveBeenCalled();
   });
 });

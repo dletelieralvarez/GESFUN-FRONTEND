@@ -372,6 +372,9 @@ export class FacturacionComponent implements OnInit {
       observacion: this.pagoForm.observacionDte || this.pagoForm.observacion || null
     };
     const response = await lastValueFrom(this.http.post(`${bffApiUrl}/api/documentos-tributarios/emitir`, payload, { headers }));
+    if ((response as any)?.success === false) {
+      throw { error: response };
+    }
     return this.fromDocumento(this.unwrapPayload(response));
   }
 
@@ -513,6 +516,10 @@ export class FacturacionComponent implements OnInit {
       || err?.error?.message
       || err?.message;
 
+    if (this.isStockError(detail)) {
+      return 'No se pudo emitir la factura porque no hay stock suficiente para uno o más productos físicos de la cotización.';
+    }
+
     const generic = 'Error al procesar la petición en el servicio de backend.';
     if (detail && detail !== generic) return detail;
 
@@ -536,5 +543,15 @@ export class FacturacionComponent implements OnInit {
       const match = jsonText.match(/"message"\s*:\s*"([^"]+)"/);
       return match?.[1] || text.slice(0, jsonStart).trim() || text;
     }
+  }
+
+  private isStockError(value: any) {
+    const text = String(value || '').toLocaleLowerCase('es-CL');
+    return text.includes('stock') && (
+      text.includes('insuficiente')
+      || text.includes('no hay')
+      || text.includes('sin stock')
+      || text.includes('no disponible')
+    );
   }
 }

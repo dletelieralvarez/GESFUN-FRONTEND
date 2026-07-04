@@ -76,6 +76,7 @@ describe('SucursalesComponent', () => {
     await Promise.resolve();
 
     httpMock.expectOne(`${bffApiUrl}/api/comunas`).flush({ payload: [{ id: 10, uuid: 'comuna-uuid', codigo: 'COM', nombre: 'Ñuñoa', regionId: 1 }] });
+    httpMock.expectOne(`${bffApiUrl}/api/regiones`).flush({ payload: [{ id: 1, uuid: 'region-uuid', codigo: 'RM', nombre: 'Metropolitana' }] });
     httpMock.expectOne(`${bffApiUrl}/api/empresas`).flush({ payload: [{ id: 20, uuid: 'empresa-uuid', rut: '1', dv: '9', razonSocial: 'Empresa Test' }] });
     await flushAsync();
     httpMock.expectOne(`${bffApiUrl}/api/sucursales`).flush({ payload: [{ ...sucursal, comunaUuid: 'comuna-uuid', empresaUuid: 'empresa-uuid' }] });
@@ -134,6 +135,7 @@ describe('SucursalesComponent', () => {
     await Promise.resolve();
 
     httpMock.expectOne(`${bffApiUrl}/api/comunas`).flush({ payload: [] });
+    httpMock.expectOne(`${bffApiUrl}/api/regiones`).flush({ payload: [] });
     httpMock.expectOne(`${bffApiUrl}/api/empresas`).flush({ payload: [] });
     await flushAsync();
     httpMock.expectOne(`${bffApiUrl}/api/sucursales`).error(new ProgressEvent('error'), { status: 0 });
