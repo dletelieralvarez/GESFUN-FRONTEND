@@ -15,6 +15,7 @@ import {
 import { CLP } from '../../data/ui-data';
 
 interface PersonaCotizacionForm {
+  uuid: string;
   tipoPersona: 'N' | 'J';
   rut: string;
   dv: string;
@@ -231,6 +232,7 @@ export class CotizacionComponent implements OnInit {
   onPagadorRutChange() {
     this.pagadorExistenteMessage = null;
     this.lastPagadorLookupKey = '';
+    this.pagador.uuid = '';
   }
 
   async buscarPagadorExistente() {
@@ -272,7 +274,15 @@ export class CotizacionComponent implements OnInit {
       return { rut, dv };
     }
 
-    return { rut: this.rutNumerico(rutIngresado), dv: dvIngresado };
+    const rut = this.rutNumerico(rutIngresado);
+    if (!dvIngresado && rut) {
+      const dv = this.calcularDvRut(rut);
+      this.pagador.rut = String(rut);
+      this.pagador.dv = dv;
+      return { rut, dv };
+    }
+
+    return { rut, dv: dvIngresado };
   }
 
   private async buscarTerceroPorRut(headers: { Authorization: string }, rut: number, dv: string) {
@@ -435,7 +445,7 @@ export class CotizacionComponent implements OnInit {
       fechaFallecimiento: this.fechaFallecimiento || undefined,
       horaFallecimiento: this.horaFallecimiento ? `${this.horaFallecimiento}:00` : undefined,
       lugarFallecimiento: this.lugarFallecimiento || undefined,
-      pagador: this.toApiPersona(this.pagador),
+      pagador: this.toApiPersona(this.pagador, 'CLIENTE'),
       fallecido: this.toApiPersona(this.fallecido),
       detalles: Array.from(detalles.values())
     };
@@ -511,11 +521,14 @@ export class CotizacionComponent implements OnInit {
     };
   }
 
-  private toApiPersona(persona: PersonaCotizacionForm) {
+  private toApiPersona(persona: PersonaCotizacionForm, rol?: string) {
     return {
       tipoPersona: persona.tipoPersona,
+      uuid: persona.uuid || undefined,
+      terceroUuid: persona.uuid || undefined,
       rut: this.rutNumerico(persona.rut),
       dv: persona.dv.trim().toUpperCase(),
+      rol,
       nombreCompleto: persona.tipoPersona === 'N'
         ? [persona.nombres, persona.apellidoPaterno, persona.apellidoMaterno].filter(Boolean).join(' ')
         : persona.razonSocial,
@@ -532,6 +545,7 @@ export class CotizacionComponent implements OnInit {
 
   private createPersona(): PersonaCotizacionForm {
     return {
+      uuid: '',
       tipoPersona: 'N',
       rut: '',
       dv: '',
@@ -555,6 +569,7 @@ export class CotizacionComponent implements OnInit {
     const apellidoMaterno = String(cliente.apellidoMaterno ?? cliente.apellido_materno ?? '').trim();
 
     this.pagador.tipoPersona = isEmpresa ? 'J' : 'N';
+    this.pagador.uuid = String(cliente.uuid ?? cliente.terceroUuid ?? cliente.tercero_uuid ?? this.pagador.uuid ?? '');
     this.pagador.rut = String(cliente.rut ?? cliente.ruc ?? this.pagador.rut);
     this.pagador.dv = String(cliente.dv ?? this.pagador.dv).trim().toUpperCase();
     this.pagador.nombres = isEmpresa ? '' : nombres || this.extractNombres(nombreCompleto);
@@ -666,6 +681,21 @@ export class CotizacionComponent implements OnInit {
 
   private rutNumerico(rut: string) {
     return Number(String(rut || '').replace(/\D/g, ''));
+  }
+
+  private calcularDvRut(rut: number) {
+    let suma = 0;
+    let multiplicador = 2;
+
+    for (const digit of String(rut).split('').reverse()) {
+      suma += Number(digit) * multiplicador;
+      multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+    }
+
+    const resultado = 11 - (suma % 11);
+    if (resultado === 11) return '0';
+    if (resultado === 10) return 'K';
+    return String(resultado);
   }
 
   private async refreshProductosDisponibles() {

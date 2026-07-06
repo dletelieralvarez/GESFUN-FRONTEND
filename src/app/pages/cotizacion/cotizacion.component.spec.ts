@@ -298,6 +298,35 @@ describe('CotizacionComponent', () => {
     expect(component.pagador.apellidoPaterno).toBe('Vega');
   }));
 
+  it('should calculate payer DV and search when only numeric RUT is entered', fakeAsync(() => {
+    component.pagador.rut = '16415933';
+    component.pagador.dv = '';
+
+    component.buscarPagadorExistente();
+    tick();
+
+    httpMock.expectOne(`${bffApiUrl}/api/clientes`).flush({ payload: [
+      {
+        uuid: 'cliente-16415933',
+        tipoPersona: 'N',
+        rut: 16415933,
+        dv: '7',
+        nombreCompleto: 'Cliente Prueba Rut',
+        email: 'cliente@example.cl',
+        telefono: '912345678',
+        comunaUuid: 'comuna-1'
+      }
+    ] });
+    tick();
+
+    expect(component.pagador.rut).toBe('16415933');
+    expect(component.pagador.dv).toBe('7');
+    expect(component.pagador.nombres).toBe('Cliente');
+    expect(component.pagador.apellidoPaterno).toBe('Prueba');
+    expect(component.pagador.email).toBe('cliente@example.cl');
+    expect(component.pagadorExistenteMessage).toContain('El cliente ya existe');
+  }));
+
   it('should show BFF connection errors when quotation catalogs cannot be loaded', fakeAsync(() => {
     fixture.detectChanges();
     tick();

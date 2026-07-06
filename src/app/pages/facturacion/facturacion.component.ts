@@ -49,6 +49,8 @@ interface CotizacionOption {
   uuid: string;
   numero: string;
   cliente: string;
+  terceroUuid: string;
+  terceroRol: string;
   total: number;
 }
 
@@ -128,8 +130,24 @@ export class FacturacionComponent implements OnInit {
     return this.pagosRegistrados.filter(pago => !this.documentoPorPago(pago.uuid));
   }
 
-  get cotizacionesPendientes() {
+  get cotizacionesConSaldo() {
     return this.cotizaciones.filter(cotizacion => this.saldoCotizacion(cotizacion) > 0);
+  }
+
+  get cotizacionesPendientes() {
+    return this.cotizacionesConSaldo;
+  }
+
+  get cotizacionesFacturables() {
+    return this.cotizacionesConSaldo.filter(cotizacion => this.cotizacionPuedeIntentarFacturar(cotizacion));
+  }
+
+  get cotizacionesConClienteInvalido() {
+    return this.cotizacionesConSaldo.filter(cotizacion => this.cotizacionTieneClienteInvalidoConocido(cotizacion));
+  }
+
+  get cotizacionSeleccionada() {
+    return this.cotizaciones.find(item => item.uuid === this.pagoForm.cotizacionUuid) || null;
   }
 
   async cargarFacturacion() {
@@ -165,6 +183,12 @@ export class FacturacionComponent implements OnInit {
   async registrarPago() {
     if (!this.pagoForm.cotizacionUuid || !this.pagoForm.formaPagoUuid || !this.pagoForm.monto || this.pagoForm.monto <= 0 || !this.pagoForm.tipoDocumentoCodigo) {
       this.error = 'Selecciona cotización, forma de pago, documento y un monto mayor a cero.';
+      return;
+    }
+
+    const cotizacion = this.cotizacionSeleccionada;
+    if (!cotizacion || this.cotizacionTieneClienteInvalidoConocido(cotizacion)) {
+      this.error = 'La cotización seleccionada no tiene un cliente responsable válido con rol CLIENTE.';
       return;
     }
 
@@ -340,10 +364,14 @@ export class FacturacionComponent implements OnInit {
 
   private fromCotizacion(item: any, index: number): CotizacionOption {
     const pagador = item.pagador ?? item.cliente ?? item.terceroPagador ?? item.tercero_pagador;
+    const terceroUuid = this.terceroUuidCotizacion(item, pagador);
+    const terceroRol = this.rolTerceroCotizacion(item, pagador);
     return {
       uuid: String(item.uuid ?? item.id ?? ''),
       numero: String(item.numero ?? item.folio ?? item.codigo ?? index + 1),
       cliente: this.nombrePersona(pagador) || item.pagadorNombre || item.clienteNombre || 'No informado',
+      terceroUuid,
+      terceroRol,
       total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0)
     };
   }
@@ -446,8 +474,8 @@ export class FacturacionComponent implements OnInit {
   }
 
   private applyFormDefaults() {
-    if (!this.cotizacionesPendientes.some(item => item.uuid === this.pagoForm.cotizacionUuid)) {
-      this.pagoForm.cotizacionUuid = this.cotizacionesPendientes[0]?.uuid || '';
+    if (!this.cotizacionesFacturables.some(item => item.uuid === this.pagoForm.cotizacionUuid)) {
+      this.pagoForm.cotizacionUuid = this.cotizacionesFacturables[0]?.uuid || '';
     }
     if (!this.pagoForm.formaPagoUuid) this.pagoForm.formaPagoUuid = this.formasPago[0]?.uuid || '';
   }
@@ -492,6 +520,58 @@ export class FacturacionComponent implements OnInit {
       ?? item.razon_social
       ?? [item.nombres, item.apellidoPaterno ?? item.apellido_paterno, item.apellidoMaterno ?? item.apellido_materno]
         .filter(Boolean).join(' ');
+  }
+
+  cotizacionTieneClienteValido(cotizacion: CotizacionOption) {
+    return !!cotizacion.uuid
+      && !!cotizacion.terceroUuid
+      && this.tieneRolCliente(cotizacion.terceroRol);
+  }
+
+  cotizacionPuedeIntentarFacturar(cotizacion: CotizacionOption) {
+    return !this.cotizacionTieneClienteInvalidoConocido(cotizacion);
+  }
+
+  cotizacionTieneClienteInvalidoConocido(cotizacion: CotizacionOption) {
+    return !!cotizacion.terceroRol && !this.tieneRolCliente(cotizacion.terceroRol);
+  }
+
+  private terceroUuidCotizacion(item: any, pagador: any) {
+    return String(
+      item.terceroUuid
+      ?? item.tercero_uuid
+      ?? item.clienteUuid
+      ?? item.cliente_uuid
+      ?? item.pagadorUuid
+      ?? item.pagador_uuid
+      ?? item.terceroPagadorUuid
+      ?? item.tercero_pagador_uuid
+      ?? pagador?.uuid
+      ?? pagador?.terceroUuid
+      ?? pagador?.tercero_uuid
+      ?? ''
+    );
+  }
+
+  private rolTerceroCotizacion(item: any, pagador: any) {
+    const roles = pagador?.roles ?? item.terceroRoles ?? item.tercero_roles ?? item.clienteRoles ?? item.cliente_roles;
+    const rol = pagador?.rol ?? pagador?.tipoRol ?? pagador?.tipo_rol ?? item.terceroRol ?? item.tercero_rol ?? item.clienteRol ?? item.cliente_rol;
+    const tipoPersona = pagador?.tipoUsuario ?? pagador?.tipo_usuario ?? item.tipoUsuario ?? item.tipo_usuario;
+    const value = rol ?? roles ?? tipoPersona ?? '';
+    return Array.isArray(value)
+      ? value.map(itemRol => this.rolValue(itemRol)).join(',')
+      : this.rolValue(value);
+  }
+
+  private tieneRolCliente(value: string) {
+    return String(value || '')
+      .split(/[,\s;|]+/)
+      .map(item => item.trim().toLocaleUpperCase('es-CL'))
+      .includes('CLIENTE');
+  }
+
+  private rolValue(value: any) {
+    return String((value?.codigo ?? value?.nombre ?? value?.rol ?? value) || '').trim().toLocaleUpperCase('es-CL');
   }
 
   private isActivo(value: any) {

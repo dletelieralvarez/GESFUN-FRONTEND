@@ -28,6 +28,17 @@ describe('FacturacionComponent', () => {
     component = fixture.componentInstance;
   });
 
+  function setCotizacionFacturable() {
+    component.cotizaciones = [{
+      uuid: 'cot-1',
+      numero: '15',
+      cliente: 'Cliente responsable',
+      terceroUuid: 'tercero-1',
+      terceroRol: 'CLIENTE',
+      total: 150000
+    }];
+  }
+
   afterEach(() => {
     httpMock.verify();
   });
@@ -89,6 +100,7 @@ describe('FacturacionComponent', () => {
   });
 
   it('should register payment and emit dte in one action', async () => {
+    setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
       formaPagoUuid: 'fp-1',
@@ -154,6 +166,7 @@ describe('FacturacionComponent', () => {
   });
 
   it('should emit invoice through BFF without sending inventory items or calling inventory service', async () => {
+    setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
       formaPagoUuid: 'fp-1',
@@ -224,6 +237,7 @@ describe('FacturacionComponent', () => {
   });
 
   it('should keep payment registered but report DTE errors when document emission fails', async () => {
+    setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
       formaPagoUuid: 'fp-1',
@@ -267,6 +281,7 @@ describe('FacturacionComponent', () => {
   });
 
   it('should show the recommended stock message when BFF rejects DTE emission after inventory output fails', async () => {
+    setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
       formaPagoUuid: 'fp-1',
@@ -310,6 +325,7 @@ describe('FacturacionComponent', () => {
   });
 
   it('should treat success false DTE responses as emission errors', async () => {
+    setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
       formaPagoUuid: 'fp-1',
@@ -353,8 +369,8 @@ describe('FacturacionComponent', () => {
 
   it('should hide fully paid cotizaciones from payment selector', () => {
     component.cotizaciones = [
-      { uuid: 'cot-pagada', numero: '1', cliente: 'Cliente pagado', total: 100000 },
-      { uuid: 'cot-pendiente', numero: '2', cliente: 'Cliente pendiente', total: 150000 }
+      { uuid: 'cot-pagada', numero: '1', cliente: 'Cliente pagado', terceroUuid: 'ter-1', terceroRol: 'CLIENTE', total: 100000 },
+      { uuid: 'cot-pendiente', numero: '2', cliente: 'Cliente pendiente', terceroUuid: 'ter-2', terceroRol: 'CLIENTE', total: 150000 }
     ];
     component.pagos = [
       {
@@ -383,6 +399,93 @@ describe('FacturacionComponent', () => {
 
     expect(component.cotizacionesPendientes.map(item => item.uuid)).toEqual(['cot-pendiente']);
     expect(component.saldoCotizacion(component.cotizaciones[1])).toBe(100000);
+  });
+
+  it('should show pending quotations even when they are not billable', () => {
+    component.cotizaciones = [
+      { uuid: 'cot-invalida', numero: '1', cliente: 'Cliente sin rol', terceroUuid: 'ter-1', terceroRol: 'PROVEEDOR', total: 100000 },
+      { uuid: 'cot-valida', numero: '2', cliente: 'Cliente válido', terceroUuid: 'ter-2', terceroRol: 'CLIENTE', total: 150000 }
+    ];
+
+    expect(component.cotizacionesPendientes.map(item => item.uuid)).toEqual(['cot-invalida', 'cot-valida']);
+    expect(component.cotizacionesFacturables.map(item => item.uuid)).toEqual(['cot-valida']);
+    expect(component.cotizacionLabel(component.cotizaciones[0])).not.toContain('Cliente no válido para facturar');
+  });
+
+  it('should allow attempting billing when quotation list does not include third party role data', async () => {
+    component.cotizaciones = [{
+      uuid: 'cot-1',
+      numero: '15',
+      cliente: 'Cliente pendiente de confirmar',
+      terceroUuid: '',
+      terceroRol: '',
+      total: 150000
+    }];
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'BOLETA',
+      observacion: 'Abono inicial',
+      observacionDte: 'Emision por pago de servicio funerario'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    const action = component.registrarPago();
+    await Promise.resolve();
+
+    expect(component.cotizacionesFacturables.map(item => item.uuid)).toEqual(['cot-1']);
+    expect(component.cotizacionLabel(component.cotizaciones[0])).not.toContain('Cliente pendiente de confirmar por BFF');
+    httpMock.expectOne(`${bffApiUrl}/api/pagos`).flush({
+      success: true,
+      payload: {
+        uuid: 'pago-1',
+        cotizacionUuid: 'cot-1',
+        cotizacionNumero: 15,
+        formaPagoUuid: 'fp-1',
+        formaPagoNombre: 'Efectivo',
+        monto: 150000,
+        fechaPago: '2026-06-27T10:30:00',
+        estado: 'REGISTRADO'
+      }
+    });
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    httpMock.expectOne(`${bffApiUrl}/api/documentos-tributarios/emitir`).flush({
+      success: false,
+      message: 'El tercero responsable de una salida por facturacion debe tener rol CLIENTE.'
+    });
+
+    await action;
+
+    expect(component.error).toBe('El tercero responsable de una salida por facturacion debe tener rol CLIENTE.');
+  });
+
+  it('should block payment registration when quotation has no CLIENTE third party', async () => {
+    component.cotizaciones = [{
+      uuid: 'cot-1',
+      numero: '15',
+      cliente: 'Responsable sin rol cliente',
+      terceroUuid: 'tercero-1',
+      terceroRol: 'PROVEEDOR',
+      total: 150000
+    }];
+    component.pagoForm = {
+      cotizacionUuid: 'cot-1',
+      formaPagoUuid: 'fp-1',
+      monto: 150000,
+      fechaPago: '2026-06-27T10:30',
+      tipoDocumentoCodigo: 'BOLETA',
+      observacion: 'Abono inicial',
+      observacionDte: 'Emision por pago de servicio funerario'
+    };
+    spyOn<any>(component, 'authHeaders').and.resolveTo({ Authorization: 'Bearer test-token' });
+
+    await component.registrarPago();
+
+    expect(component.error).toBe('La cotización seleccionada no tiene un cliente responsable válido con rol CLIENTE.');
+    expect((component as any).authHeaders).not.toHaveBeenCalled();
   });
 
 });

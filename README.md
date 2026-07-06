@@ -447,6 +447,8 @@ Funcionalidad:
 - Registra los datos del cliente pagador, tanto persona natural como empresa.
 - Al ingresar el RUT del pagador, verifica si ya existe como cliente o tercero y autocompleta sus datos.
 - Acepta el RUT del pagador separado en RUT/DV o en formato completo, por ejemplo `12.345.678-9`.
+- Si el RUT del pagador se ingresa sin DV, calcula el DV y busca el cliente existente al salir del campo.
+- Cuando el pagador existe, conserva su `uuid`/`terceroUuid`; cuando es nuevo, envia sus datos con `rol: CLIENTE`.
 - Registra los datos personales y antecedentes del fallecido.
 - Permite seleccionar una sucursal y uno de sus planes activos.
 - Carga automaticamente los productos y servicios incluidos en el kit del plan.
@@ -477,6 +479,14 @@ POST /api/cotizaciones
 ```
 
 El backend asigna el numero, el estado inicial y los totales definitivos de la cotizacion.
+
+Contrato funcional con el BFF:
+
+- El usuario autenticado por Microsoft Entra ID es un usuario interno del sistema y se crea con rol `USER`.
+- El cliente pagador de una cotizacion es un tercero, no un usuario del sistema.
+- El pagador enviado en `POST /api/cotizaciones` debe crearse o resolverse en backend como tercero con rol `CLIENTE`.
+- El fallecido debe mantenerse separado del pagador y registrarse con el rol/modelo que corresponda a fallecidos.
+- Si el BFF graba el pagador como `PAGADOR` en vez de `CLIENTE`, la facturacion puede fallar durante la salida de inventario porque inventario valida el rol del tercero responsable de la cotizacion.
 
 ### 6.7 Cotizaciones creadas
 
@@ -785,6 +795,9 @@ Funcionalidad:
 - No consume `/api/tipos-documento` para DTE, porque esos tipos corresponden a documentos operacionales funerarios.
 - Evita emitir DTE para pagos anulados o pagos que ya tienen un DTE activo.
 - Permite anular documentos tributarios.
+- Para emitir DTE llama solamente a `POST /api/documentos-tributarios/emitir`; no llama directamente a `/api/inventario/salidas/facturacion`.
+- El BFF es responsable de emitir el documento tributario y luego disparar internamente la salida de inventario por facturacion.
+- Si inventario rechaza por stock insuficiente, la pantalla muestra un mensaje de stock y el pago queda registrado sin DTE emitido.
 - Genera PDF fisico de Boleta o Factura con `jsPDF`.
 - El PDF incluye folio, receptor, RUT, cotizacion asociada, montos, IVA, track ID, proveedor `DTEEMITE_SIMULADO` y datos de trazabilidad.
 - El PDF desglosa los productos o servicios de la cotizacion mediante `GET /api/cotizaciones/{cotizacionUuid}`.
@@ -802,6 +815,24 @@ Endpoints usados:
 - `GET /api/cotizaciones`
 - `GET /api/cotizaciones/{uuid}`
 - `GET /api/formas-pago`
+
+Contrato de emision DTE esperado por el BFF:
+
+```json
+{
+  "pagoUuid": "uuid-pago",
+  "tipoDocumentoCodigo": "BOLETA",
+  "observacion": "Emision por pago de servicio funerario"
+}
+```
+
+Reglas de dominio relevantes:
+
+- El pago debe estar asociado a una cotizacion valida.
+- La cotizacion debe tener un tercero pagador/responsable asociado.
+- Ese tercero debe tener rol `CLIENTE`.
+- No se debe resolver esta validacion cambiando el rol del usuario logueado; el usuario logueado debe existir como usuario activo del backend con el mismo email del JWT y rol de sistema, por ejemplo `USER`.
+- La rebaja de inventario por facturacion la ejecuta el BFF/backend despues de emitir el DTE.
 
 ## 7. Componentes reutilizables de UI
 

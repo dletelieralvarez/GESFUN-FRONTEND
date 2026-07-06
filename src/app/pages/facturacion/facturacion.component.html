@@ -39,11 +39,10 @@
           <span>Cotización</span>
           <select class="form-select" [(ngModel)]="pagoForm.cotizacionUuid">
             <option value="">Seleccionar cotización</option>
-            <option *ngFor="let cotizacion of cotizacionesPendientes" [value]="cotizacion.uuid">
+            <option *ngFor="let cotizacion of cotizacionesPendientes" [value]="cotizacion.uuid" [disabled]="cotizacionTieneClienteInvalidoConocido(cotizacion)">
               {{ cotizacionLabel(cotizacion) }}
             </option>
           </select>
-          <small class="text-secondary d-block mt-1">Solo aparecen cotizaciones con saldo pendiente de pago.</small>
         </label>
         <label>
           <span>Forma de pago</span>
@@ -78,8 +77,12 @@
         </label>
       </div>
       <div class="billing-panel__actions">
-        <div class="status-message status-warning me-auto" *ngIf="!loading && cotizaciones.length && !cotizacionesPendientes.length">
-          <i class="bi bi-info-circle"></i><span>Todas las cotizaciones cargadas figuran sin saldo pendiente.</span>
+        <div class="status-message status-warning me-auto" *ngIf="!loading && cotizaciones.length && !cotizacionesFacturables.length">
+          <i class="bi bi-info-circle"></i><span>No hay cotizaciones facturables con saldo pendiente y cliente responsable válido.</span>
+        </div>
+        <div class="status-message status-warning me-auto" *ngIf="!loading && cotizacionesConClienteInvalido.length">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ cotizacionesConClienteInvalido.length }} cotización(es) con saldo no aparecen porque no tienen tercero responsable con rol CLIENTE.</span>
         </div>
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button"
           (click)="registrarPago()" [disabled]="savingPago || loading">

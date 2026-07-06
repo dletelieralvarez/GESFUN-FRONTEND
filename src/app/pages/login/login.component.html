@@ -7,22 +7,46 @@
     </div>
 
     <div class="d-grid mb-3">
-      <button class="btn btn-ms btn-lg" type="button" (click)="login()" [disabled]="loading">
+      <button class="btn btn-ms btn-lg" type="button" (click)="login()" [disabled]="initializing || loading || showMissingUserModal">
         <i class="bi bi-person-check"></i>
         Iniciar sesion con Microsoft
       </button>
     </div>
 
     <div class="d-grid gap-2 mb-3" *ngIf="account">
-      <button class="btn btn-outline-secondary" type="button" (click)="logout()" [disabled]="loading">
+      <button class="btn btn-outline-secondary" type="button" (click)="logout()" [disabled]="initializing || loading">
         Cerrar sesion
       </button>
     </div>
 
-    <div *ngIf="loading" class="alert alert-info py-2 mb-3">Cargando...</div>
+    <div *ngIf="initializing || loading" class="alert alert-info py-2 mb-3">Cargando...</div>
     <div *ngIf="error" class="alert alert-danger py-2 mb-3">{{ error }}</div>
     <div *ngIf="info" class="alert alert-warning py-2 mb-3">
       <i class="bi bi-exclamation-triangle me-2"></i>{{ info }}
+    </div>
+  </div>
+
+  <div class="modal-backdrop fade show" *ngIf="showMissingUserModal"></div>
+  <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" *ngIf="showMissingUserModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Usuario no registrado</h5>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">El usuario ingresado no se encuentra ingresado en el sistema, desea ingresarlo?</p>
+          <div class="small text-secondary" *ngIf="pendingAccount?.username">{{ pendingAccount?.username }}</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" (click)="rejectCreateUser()" [disabled]="registeringUser">
+            No
+          </button>
+          <button class="btn btn-primary" type="button" (click)="confirmCreateUser()" [disabled]="registeringUser">
+            <i class="bi" [ngClass]="registeringUser ? 'bi-arrow-repeat' : 'bi-person-plus'"></i>
+            {{ registeringUser ? 'Ingresando...' : 'Si, ingresarlo' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
