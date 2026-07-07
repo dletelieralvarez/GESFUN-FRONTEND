@@ -205,6 +205,7 @@ En `src/app/app-routing.module.ts` se configuraron las rutas principales:
 | `/proveedores` | `ProveedoresComponent` | Administracion de proveedores |
 | `/productos-servicios` | `ProductosServiciosComponent` | Administracion de productos y servicios |
 | `/planes` | `PlanesComponent` | Administracion de planes armables |
+| `/documentacion` | `DocumentacionComponent` | Administracion de tipos de documento |
 | `/recursos` | `RecursosComponent` | Administracion de tipos de recurso |
 | `/sucursales` | `SucursalesComponent` | Administracion de sucursales |
 | `/inventario` | `InventarioComponent` | Inventario, stock por sucursal y registro de entradas |
@@ -508,6 +509,12 @@ Funcionalidad:
 - Actualiza el estado mediante `PATCH /api/cotizaciones/{uuid}/estado`.
 - Muestra el estado real entregado por el backend, incluido el estado inicial `BORRADOR`.
 - Al cambiar a `GEN_CONTR` genera un PDF titulado `Contrato de prestacion de servicios`.
+- Permite administrar documentos de servicio asociados a cada cotizacion desde un panel expandible.
+- Lista documentos por cotizacion mediante `GET /api/documentos-servicio/cotizacion/{cotizacionUuid}`.
+- Crea documentos enviando `cotizacionUuid`, `usuarioUuid`, `tipoDocumentoUuid`, `estadoDocumento` y `observacion`.
+- Permite actualizar parcialmente documentos con estado `PENDIENTE` o `REALIZADO`.
+- Permite eliminar documentos asociados a la cotizacion.
+- Carga tipos de documento desde `GET /api/tipos-documento` y resuelve el `usuarioUuid` interno desde `GET /api/usuarios` usando el email del usuario autenticado.
 - El contrato incluye prestaciones, precio, condiciones y espacios para firma del cliente y del representante.
 - `GEN_CONTR` es un estado terminal: la interfaz bloquea nuevos cambios y el backend aplica la misma regla.
 - Una firma electronica avanzada verificable requiere integrar posteriormente un proveedor de firma y certificados.
@@ -519,6 +526,12 @@ GET   /api/cotizaciones
 GET   /api/cotizaciones/{uuid}
 GET   /api/estados-cotizacion
 PATCH /api/cotizaciones/{uuid}/estado
+GET   /api/tipos-documento
+GET   /api/usuarios
+GET   /api/documentos-servicio/cotizacion/{cotizacionUuid}
+POST  /api/documentos-servicio
+PUT   /api/documentos-servicio/{uuid}
+DELETE /api/documentos-servicio/{uuid}
 ```
 
 ### 6.8 Clientes
@@ -690,6 +703,30 @@ Funcionalidad:
   - `productoServicioUuid`
   - `planUuid`
 - Muestra los planes desactivados y bloquea su edicion.
+
+### 6.12.1 Documentacion
+
+Ubicacion:
+
+```text
+src/app/pages/documentacion/
+```
+
+Funcionalidad:
+
+- Mantiene los tipos de documento que luego se asocian a una cotizacion desde `CotizacionesComponent`.
+- Lista tipos de documento desde el BFF.
+- Permite crear, editar y eliminar tipos de documento.
+- Maneja codigo, nombre y estado activo.
+- Se conecta al BFF por endpoints especificos de tipos de documento:
+  - `GET /api/tipos-documento`
+  - `POST /api/tipos-documento`
+  - `PUT /api/tipos-documento/{uuid}`
+  - `DELETE /api/tipos-documento/{uuid}`
+- Envia al BFF el contrato esperado:
+  - `codigo`
+  - `nombre`
+  - `activo`
 
 ### 6.13 Usuarios
 
@@ -1029,6 +1066,11 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `POST /api/plan-kit`
   - `PUT /api/plan-kit/{uuid}`
   - `DELETE /api/plan-kit/{uuid}`
+- `DocumentacionComponent`
+  - `GET /api/tipos-documento`
+  - `POST /api/tipos-documento`
+  - `PUT /api/tipos-documento/{uuid}`
+  - `DELETE /api/tipos-documento/{uuid}`
 - `CotizacionComponent`
   - `GET /api/sucursales`
   - `GET /api/planes`
@@ -1045,6 +1087,12 @@ Los siguientes modulos ya cuentan con eventos reales contra el BFF:
   - `GET /api/cotizaciones/{uuid}`
   - `GET /api/estados-cotizacion`
   - `PATCH /api/cotizaciones/{uuid}/estado`
+  - `GET /api/tipos-documento`
+  - `GET /api/usuarios`
+  - `GET /api/documentos-servicio/cotizacion/{cotizacionUuid}`
+  - `POST /api/documentos-servicio`
+  - `PUT /api/documentos-servicio/{uuid}`
+  - `DELETE /api/documentos-servicio/{uuid}`
 - `AgendaComponent`
   - `GET /api/sucursales`
   - `GET /api/tipos-recurso`

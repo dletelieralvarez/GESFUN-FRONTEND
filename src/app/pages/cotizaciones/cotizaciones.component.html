@@ -48,48 +48,150 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let cotizacion of cotizacionesFiltradas; trackBy: trackByUuid">
-            <td class="ps-4" data-label="Cotización">
-              <div class="fw-bold">{{ cotizacion.numero }}</div>
-              <div class="small text-secondary">{{ formatFecha(cotizacion.fecha) }}</div>
-            </td>
-            <td data-label="Cliente">
-              <div class="fw-semibold">{{ cotizacion.cliente }}</div>
-            </td>
-            <td class="text-body-secondary" data-label="Fallecido">{{ cotizacion.fallecido }}</td>
-            <td class="text-body-secondary" data-label="Plan">{{ cotizacion.plan }}</td>
-            <td class="text-body-secondary tnum" data-label="Vigencia">{{ formatFecha(cotizacion.fechaValidez) }}</td>
-            <td data-label="Estado" class="quote-state-cell">
-              <app-badge [cls]="badgeEstado(cotizacion.estado)">{{ cotizacion.estado }}</app-badge>
-              <div class="d-flex gap-2 mt-2">
-                <select class="form-select form-select-sm" [(ngModel)]="estadosSeleccionados[cotizacion.uuid]"
-                  [disabled]="changingUuid === cotizacion.uuid || esEstadoFinal(cotizacion)">
-                  <option *ngFor="let estado of estados" [value]="estado.uuid">{{ estado.nombre }}</option>
-                </select>
-                <button class="btn btn-sm btn-outline-secondary" type="button"
-                  (click)="cambiarEstado(cotizacion)"
-                  [disabled]="changingUuid === cotizacion.uuid
-                    || esEstadoFinal(cotizacion)
-                    || estadosSeleccionados[cotizacion.uuid] === cotizacion.estadoUuid">
-                  {{ changingUuid === cotizacion.uuid ? 'Guardando...' : 'Cambiar' }}
-                </button>
-              </div>
-              <div class="small text-secondary mt-1" *ngIf="esEstadoFinal(cotizacion)">
-                Estado final · no admite modificaciones
-              </div>
-            </td>
-            <td class="text-end fw-bold tnum" data-label="Total">{{ clp(cotizacion.total) }}</td>
-            <td class="text-end pe-4" data-label="Acciones">
-              <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
-                type="button" (click)="reimprimir(cotizacion)"
-                [disabled]="!!printingUuid || !cotizacion.uuid">
-                <i class="bi" [ngClass]="printingUuid === cotizacion.uuid ? 'bi-arrow-repeat' : 'bi-file-earmark-pdf'"></i>
-                {{ printingUuid === cotizacion.uuid
-                  ? 'Generando...'
-                  : (cotizacion.estadoCodigo === 'GEN_CONTR' ? 'Reimprimir contrato' : 'Reimprimir PDF') }}
-              </button>
-            </td>
-          </tr>
+          <ng-container *ngFor="let cotizacion of cotizacionesFiltradas; trackBy: trackByUuid">
+            <tr>
+              <td class="ps-4" data-label="Cotización">
+                <div class="fw-bold">{{ cotizacion.numero }}</div>
+                <div class="small text-secondary">{{ formatFecha(cotizacion.fecha) }}</div>
+              </td>
+              <td data-label="Cliente">
+                <div class="fw-semibold">{{ cotizacion.cliente }}</div>
+              </td>
+              <td class="text-body-secondary" data-label="Fallecido">{{ cotizacion.fallecido }}</td>
+              <td class="text-body-secondary" data-label="Plan">{{ cotizacion.plan }}</td>
+              <td class="text-body-secondary tnum" data-label="Vigencia">{{ formatFecha(cotizacion.fechaValidez) }}</td>
+              <td data-label="Estado" class="quote-state-cell">
+                <app-badge [cls]="badgeEstado(cotizacion.estado)">{{ cotizacion.estado }}</app-badge>
+                <div class="d-flex gap-2 mt-2">
+                  <select class="form-select form-select-sm" [(ngModel)]="estadosSeleccionados[cotizacion.uuid]"
+                    [disabled]="changingUuid === cotizacion.uuid || esEstadoFinal(cotizacion)">
+                    <option *ngFor="let estado of estados" [value]="estado.uuid">{{ estado.nombre }}</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-secondary" type="button"
+                    (click)="cambiarEstado(cotizacion)"
+                    [disabled]="changingUuid === cotizacion.uuid
+                      || esEstadoFinal(cotizacion)
+                      || estadosSeleccionados[cotizacion.uuid] === cotizacion.estadoUuid">
+                    {{ changingUuid === cotizacion.uuid ? 'Guardando...' : 'Cambiar' }}
+                  </button>
+                </div>
+                <div class="small text-secondary mt-1" *ngIf="esEstadoFinal(cotizacion)">
+                  Estado final · no admite modificaciones
+                </div>
+              </td>
+              <td class="text-end fw-bold tnum" data-label="Total">{{ clp(cotizacion.total) }}</td>
+              <td class="text-end pe-4" data-label="Acciones">
+                <div class="d-inline-flex gap-2 flex-wrap justify-content-end">
+                  <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2"
+                    type="button" (click)="toggleDocumentos(cotizacion)"
+                    [disabled]="!cotizacion.uuid">
+                    <i class="bi bi-folder2-open"></i>
+                    Documentos
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
+                    type="button" (click)="reimprimir(cotizacion)"
+                    [disabled]="!!printingUuid || !cotizacion.uuid">
+                    <i class="bi" [ngClass]="printingUuid === cotizacion.uuid ? 'bi-arrow-repeat' : 'bi-file-earmark-pdf'"></i>
+                    {{ printingUuid === cotizacion.uuid
+                      ? 'Generando...'
+                      : (cotizacion.estadoCodigo === 'GEN_CONTR' ? 'Reimprimir contrato' : 'Reimprimir PDF') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="quote-documents-row" *ngIf="documentosOpen[cotizacion.uuid]">
+              <td colspan="8">
+                <div class="quote-documents-panel">
+                  <div class="quote-documents-head">
+                    <div>
+                      <strong>Documentos de {{ cotizacion.numero }}</strong>
+                      <div class="text-secondary small">{{ cotizacion.cliente }}</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                      (click)="cargarDocumentosCotizacion(cotizacion.uuid)"
+                      [disabled]="loadingDocumentos[cotizacion.uuid]">
+                      {{ loadingDocumentos[cotizacion.uuid] ? 'Cargando...' : 'Actualizar' }}
+                    </button>
+                  </div>
+
+                  <div class="quote-documents-form row g-2 align-items-end" *ngIf="documentoForms[cotizacion.uuid] as documentoForm">
+                    <div class="col-md-4">
+                      <label class="form-label small fw-semibold">Tipo de documento</label>
+                      <select class="form-select form-select-sm" [(ngModel)]="documentoForm.tipoDocumentoUuid">
+                        <option value="">Seleccionar tipo</option>
+                        <option *ngFor="let tipo of tiposDocumento" [value]="tipo.uuid">{{ tipo.nombre }}</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Estado</label>
+                      <select class="form-select form-select-sm" [(ngModel)]="documentoForm.estadoDocumento">
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="REALIZADO">Realizado</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-semibold">Observación</label>
+                      <input class="form-control form-control-sm" [(ngModel)]="documentoForm.observacion"
+                        placeholder="Documento solicitado al cliente" />
+                    </div>
+                    <div class="col-md-2 d-flex gap-2">
+                      <button class="btn btn-sm btn-primary w-100" type="button"
+                        (click)="guardarDocumento(cotizacion)"
+                        [disabled]="savingDocumentoUuid === cotizacion.uuid || savingDocumentoUuid === documentoForm.uuid">
+                        {{ documentoForm.uuid ? 'Guardar' : 'Agregar' }}
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" type="button"
+                        *ngIf="documentoForm.uuid"
+                        (click)="cancelarEdicionDocumento(cotizacion.uuid)"
+                        [disabled]="!!savingDocumentoUuid">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="empty-state quote-documents-empty" *ngIf="loadingDocumentos[cotizacion.uuid]">
+                    Cargando documentos...
+                  </div>
+                  <div class="quote-documents-list table-responsive" *ngIf="!loadingDocumentos[cotizacion.uuid] && documentosPorCotizacion[cotizacion.uuid]?.length">
+                    <table class="table table-sm align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>Tipo</th>
+                          <th>Estado</th>
+                          <th>Observación</th>
+                          <th>Fecha</th>
+                          <th class="text-end">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let documento of documentosPorCotizacion[cotizacion.uuid]">
+                          <td>{{ documento.tipoDocumentoNombre }}</td>
+                          <td><app-badge [cls]="badgeDocumento(documento.estadoDocumento)">{{ documento.estadoDocumento }}</app-badge></td>
+                          <td class="text-body-secondary">{{ documento.observacion || 'Sin observación' }}</td>
+                          <td class="text-body-secondary tnum">{{ formatFecha(documento.fechaCrea) }}</td>
+                          <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-2" type="button"
+                              (click)="editarDocumento(cotizacion.uuid, documento)"
+                              [disabled]="!!savingDocumentoUuid || deletingDocumentoUuid === documento.uuid">
+                              Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" type="button"
+                              (click)="eliminarDocumento(cotizacion.uuid, documento)"
+                              [disabled]="!!savingDocumentoUuid || deletingDocumentoUuid === documento.uuid">
+                              {{ deletingDocumentoUuid === documento.uuid ? 'Eliminando...' : 'Eliminar' }}
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="empty-state quote-documents-empty" *ngIf="!loadingDocumentos[cotizacion.uuid] && !documentosPorCotizacion[cotizacion.uuid]?.length">
+                    No hay documentos asociados a esta cotización.
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>

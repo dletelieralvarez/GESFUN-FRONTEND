@@ -33,6 +33,7 @@ export const NAV_BS = [
     { id: "proveedores", label: "Proveedores", icon: "truck" },
     { id: "productos-servicios", label: "Productos y servicios", icon: "boxes" },
     { id: "planes", label: "Planes", icon: "clipboard2-check" },
+    { id: "documentacion", label: "Documentación", icon: "file-earmark-text" },
     { id: "recursos", label: "Recursos", icon: "tools" },
     { id: "sucursales", label: "Sucursales", icon: "geo-alt-fill" }
   ]},

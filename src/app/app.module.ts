@@ -18,6 +18,7 @@ import { EmpleadosComponent } from './pages/empleados/empleados.component';
 import { ProveedoresComponent } from './pages/proveedores/proveedores.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
+import { DocumentacionComponent } from './pages/documentacion/documentacion.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
 import { PlanesComponent } from './pages/planes/planes.component';
 import { ProductosServiciosComponent } from './pages/productos-servicios/productos-servicios.component';
@@ -46,6 +47,7 @@ import { loginRequest, msalConfig } from './auth-config';
     InventarioComponent,
     PlanesComponent,
     ProductosServiciosComponent,
+    DocumentacionComponent,
     FacturacionComponent,
     UsuariosComponent,
     RecursosComponent,

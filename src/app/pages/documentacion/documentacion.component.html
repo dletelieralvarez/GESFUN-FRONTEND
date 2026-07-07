@@ -1,0 +1,139 @@
+<div class="content-wrap">
+  <app-page-head title="Documentación" sub="{{ titleCount }} tipos de documento registrados">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" (click)="openNew()" [disabled]="loading || saving">
+      <i class="bi bi-plus-lg"></i>Nuevo tipo
+    </button>
+  </app-page-head>
+
+  <div class="status-stack" *ngIf="loading || error || success || documentoPendingDelete">
+    <div class="status-message status-loading" *ngIf="loading">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Procesando documentación...</span>
+    </div>
+
+    <div class="status-message status-error" *ngIf="error">
+      <i class="bi bi-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="status-message status-success" *ngIf="success">
+      <i class="bi bi-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+
+    <div class="delete-confirm" *ngIf="documentoPendingDelete">
+      <div>
+        <strong>Eliminar tipo de documento</strong>
+        <span>{{ documentoPendingDelete.codigo }} - {{ documentoPendingDelete.nombre }}</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" type="button" (click)="confirmDeleteDocumento()" [disabled]="loading">Eliminar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelDelete()" [disabled]="loading">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row gy-3">
+    <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
+      <div class="mobile-crud-list d-sm-none">
+        <div class="mobile-crud-card" *ngFor="let documento of documentos; trackBy: trackById">
+          <div class="mobile-crud-card-head">
+            <div class="icon-tile" style="width: 38px; height: 38px; background: var(--brand-tint); color: var(--brand); font-size: 1rem">
+              <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate">{{ documento.nombre }}</div>
+              <div class="text-secondary text-truncate" style="font-size: .76rem">{{ documento.codigo }}</div>
+            </div>
+            <app-badge [cls]="documento.activo ? 'b-ok' : 'b-neutral'">{{ documento.activo ? 'Activo' : 'Inactivo' }}</app-badge>
+          </div>
+
+          <div class="mobile-crud-card-grid">
+            <div>
+              <span>Código</span>
+              <strong>{{ documento.codigo }}</strong>
+            </div>
+            <div>
+              <span>Estado</span>
+              <strong>{{ documento.activo ? 'Activo' : 'Inactivo' }}</strong>
+            </div>
+          </div>
+
+          <div class="mobile-crud-card-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(documento)" [disabled]="loading || saving || !documento.activo">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(documento)" [disabled]="loading || saving">
+              <i class="bi bi-trash"></i> Eliminar
+            </button>
+          </div>
+        </div>
+
+        <div class="card p-4 text-center text-secondary" *ngIf="!loading && documentos.length === 0">
+          No hay tipos de documento registrados.
+        </div>
+      </div>
+
+      <div class="card d-none d-sm-block">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 admin-crud-table responsive-card-table">
+            <thead>
+              <tr>
+                <th class="ps-4">Tipo de documento</th>
+                <th>Código</th>
+                <th>Estado</th>
+                <th class="pe-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let documento of documentos; trackBy: trackById">
+                <td class="ps-4" data-label="Tipo de documento">
+                  <div class="fw-bold">{{ documento.nombre }}</div>
+                </td>
+                <td class="tnum text-body-secondary" data-label="Código">{{ documento.codigo }}</td>
+                <td data-label="Estado">
+                  <app-badge [cls]="documento.activo ? 'b-ok' : 'b-neutral'">{{ documento.activo ? 'Activo' : 'Inactivo' }}</app-badge>
+                </td>
+                <td class="pe-4" data-label="Acciones">
+                  <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-primary" type="button" (click)="edit(documento)" [disabled]="loading || saving || !documento.activo">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" (click)="delete(documento)" [disabled]="loading || saving">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="!loading && documentos.length === 0">
+                <td colspan="4" class="text-center py-4 empty-row">No hay tipos de documento registrados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4" *ngIf="formVisible">
+      <div class="card p-4">
+        <h5 class="mb-3">{{ isEditing ? 'Editar tipo de documento' : 'Nuevo tipo de documento' }}</h5>
+
+        <div class="mb-3">
+          <label class="form-label">Código</label>
+          <input class="form-control text-uppercase" type="text" [(ngModel)]="form.codigo" placeholder="CERT_DEF" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Nombre</label>
+          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Certificado de defunción" />
+        </div>
+
+        <div class="form-check mb-4">
+          <input class="form-check-input" type="checkbox" id="activoDocumento" [(ngModel)]="form.activo" />
+          <label class="form-check-label" for="activoDocumento">Activo</label>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
+          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

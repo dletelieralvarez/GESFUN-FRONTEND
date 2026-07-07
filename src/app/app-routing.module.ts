@@ -9,6 +9,7 @@ import { ProveedoresComponent } from './pages/proveedores/proveedores.component'
 import { CotizacionComponent } from './pages/cotizacion/cotizacion.component';
 import { CotizacionesComponent } from './pages/cotizaciones/cotizaciones.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { DocumentacionComponent } from './pages/documentacion/documentacion.component';
 import { FacturacionComponent } from './pages/facturacion/facturacion.component';
 import { InventarioComponent } from './pages/inventario/inventario.component';
 import { PlanesComponent } from './pages/planes/planes.component';
@@ -35,6 +36,7 @@ const routes: Routes = [
   { path: 'proveedores', component: ProveedoresComponent, data: { title: 'Administración de proveedores', crumb: 'Administración / Proveedores' } },
   { path: 'productos-servicios', component: ProductosServiciosComponent, data: { title: 'Productos y servicios', crumb: 'Administración / Productos y servicios' } },
   { path: 'planes', component: PlanesComponent, data: { title: 'Planes', crumb: 'Administración / Planes' } },
+  { path: 'documentacion', component: DocumentacionComponent, data: { title: 'Documentación', crumb: 'Administración / Documentación' } },
   { path: 'recursos', component: RecursosComponent, data: { title: 'Recursos', crumb: 'Administración / Recursos' } },
   { path: 'sucursales', component: SucursalesComponent, data: { title: 'Administración de sucursales', crumb: 'Administración / Sucursales' } },
   { path: 'inventario', component: InventarioComponent, data: { title: 'Inventario', crumb: 'Recursos / Inventario' } },

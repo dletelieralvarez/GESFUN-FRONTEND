@@ -147,4 +147,117 @@ describe('CotizacionesComponent', () => {
     expect(pdf.generar).not.toHaveBeenCalled();
     expect(component.success).toContain('Contrato asociado');
   });
+
+  it('should load document catalogs users and quotation documents', async () => {
+    const pendingTipos = (component as any).cargarTiposDocumento();
+    const pendingUsuarios = (component as any).cargarUsuarios();
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/tipos-documento`).flush({ payload: [
+      { uuid: 'tipo-1', codigo: 'CERT', nombre: 'Certificado', activo: 1 }
+    ] });
+    httpMock.expectOne(`${bffApiUrl}/api/usuarios`).flush({ payload: [
+      { uuid: 'usuario-1', email: 'test@gesfun.cl', nombre: 'Usuario', activo: 1 }
+    ] });
+
+    await Promise.all([pendingTipos, pendingUsuarios]);
+
+    expect(component.tiposDocumento[0].uuid).toBe('tipo-1');
+    expect(component.currentUsuarioUuid).toBe('usuario-1');
+
+    const pendingDocs = component.cargarDocumentosCotizacion('cot-1');
+    await Promise.resolve();
+
+    httpMock.expectOne(`${bffApiUrl}/api/documentos-servicio/cotizacion/cot-1`).flush({ payload: [
+      {
+        uuid: 'doc-1',
+        cotizacionUuid: 'cot-1',
+        usuarioUuid: 'usuario-1',
+        tipoDocumentoUuid: 'tipo-1',
+        tipoDocumento: { nombre: 'Certificado' },
+        estadoDocumento: 'PENDIENTE',
+        observacion: 'Solicitado'
+      }
+    ] });
+
+    await pendingDocs;
+
+    expect(component.documentosPorCotizacion['cot-1'].length).toBe(1);
+    expect(component.documentosPorCotizacion['cot-1'][0].tipoDocumentoNombre).toBe('Certificado');
+  });
+
+  it('should create update and delete quotation service documents', async () => {
+    const cotizacion: any = { uuid: 'cot-1', numero: 'COT-1' };
+    component.tiposDocumento = [{ uuid: 'tipo-1', codigo: 'CERT', nombre: 'Certificado', activo: true }];
+    component.currentUsuarioUuid = 'usuario-1';
+    component.documentoForms['cot-1'] = {
+      uuid: '',
+      tipoDocumentoUuid: 'tipo-1',
+      estadoDocumento: 'PENDIENTE',
+      observacion: 'Documento solicitado'
+    };
+
+    const createAction = component.guardarDocumento(cotizacion);
+    await Promise.resolve();
+
+    const post = httpMock.expectOne(`${bffApiUrl}/api/documentos-servicio`);
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({
+      cotizacionUuid: 'cot-1',
+      usuarioUuid: 'usuario-1',
+      tipoDocumentoUuid: 'tipo-1',
+      estadoDocumento: 'PENDIENTE',
+      observacion: 'Documento solicitado'
+    });
+    post.flush({ payload: {
+      uuid: 'doc-1',
+      cotizacionUuid: 'cot-1',
+      usuarioUuid: 'usuario-1',
+      tipoDocumentoUuid: 'tipo-1',
+      tipoDocumentoNombre: 'Certificado',
+      estadoDocumento: 'PENDIENTE',
+      observacion: 'Documento solicitado'
+    } });
+    await createAction;
+
+    expect(component.documentosPorCotizacion['cot-1'].length).toBe(1);
+
+    component.editarDocumento('cot-1', component.documentosPorCotizacion['cot-1'][0]);
+    component.documentoForms['cot-1'].estadoDocumento = 'REALIZADO';
+    component.documentoForms['cot-1'].observacion = 'Documento recibido';
+
+    const updateAction = component.guardarDocumento(cotizacion);
+    await Promise.resolve();
+
+    const put = httpMock.expectOne(`${bffApiUrl}/api/documentos-servicio/doc-1`);
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({
+      usuarioUuid: 'usuario-1',
+      tipoDocumentoUuid: 'tipo-1',
+      estadoDocumento: 'REALIZADO',
+      observacion: 'Documento recibido'
+    });
+    put.flush({ payload: {
+      uuid: 'doc-1',
+      cotizacionUuid: 'cot-1',
+      usuarioUuid: 'usuario-1',
+      tipoDocumentoUuid: 'tipo-1',
+      tipoDocumentoNombre: 'Certificado',
+      estadoDocumento: 'REALIZADO',
+      observacion: 'Documento recibido'
+    } });
+    await updateAction;
+
+    expect(component.documentosPorCotizacion['cot-1'][0].estadoDocumento).toBe('REALIZADO');
+
+    const deleteAction = component.eliminarDocumento('cot-1', component.documentosPorCotizacion['cot-1'][0]);
+    await Promise.resolve();
+
+    const del = httpMock.expectOne(`${bffApiUrl}/api/documentos-servicio/doc-1`);
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null, { status: 204, statusText: 'No Content' });
+    await deleteAction;
+
+    expect(component.documentosPorCotizacion['cot-1'].length).toBe(0);
+  });
 });

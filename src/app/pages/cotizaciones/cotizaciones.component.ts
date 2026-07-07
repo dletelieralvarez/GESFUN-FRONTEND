@@ -36,6 +36,38 @@ interface EstadoCotizacionOption {
   nombre: string;
 }
 
+interface TipoDocumentoOption {
+  uuid: string;
+  codigo: string;
+  nombre: string;
+  activo: boolean;
+}
+
+interface UsuarioOption {
+  uuid: string;
+  email: string;
+  nombre: string;
+  activo: boolean;
+}
+
+interface DocumentoServicio {
+  uuid: string;
+  cotizacionUuid: string;
+  usuarioUuid: string;
+  tipoDocumentoUuid: string;
+  tipoDocumentoNombre: string;
+  estadoDocumento: 'PENDIENTE' | 'REALIZADO' | string;
+  observacion: string;
+  fechaCrea: string;
+}
+
+interface DocumentoServicioForm {
+  uuid: string;
+  tipoDocumentoUuid: string;
+  estadoDocumento: 'PENDIENTE' | 'REALIZADO';
+  observacion: string;
+}
+
 @Component({
   selector: 'app-cotizaciones',
   standalone: true,
@@ -46,11 +78,21 @@ interface EstadoCotizacionOption {
 export class CotizacionesComponent implements OnInit, OnDestroy {
   cotizaciones: CotizacionGuardada[] = [];
   estados: EstadoCotizacionOption[] = [];
+  tiposDocumento: TipoDocumentoOption[] = [];
+  usuarios: UsuarioOption[] = [];
+  currentUsuarioUuid = '';
+  documentosPorCotizacion: Record<string, DocumentoServicio[]> = {};
+  documentosOpen: Record<string, boolean> = {};
+  loadingDocumentos: Record<string, boolean> = {};
+  documentoForms: Record<string, DocumentoServicioForm> = {};
+  editingDocumentoUuid: Record<string, string> = {};
   estadosSeleccionados: Record<string, string> = {};
   filtro = '';
   loading = false;
   printingUuid: string | null = null;
   changingUuid: string | null = null;
+  savingDocumentoUuid: string | null = null;
+  deletingDocumentoUuid: string | null = null;
   error: string | null = null;
   success: string | null = null;
   clp = CLP;
@@ -70,7 +112,7 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
         this.filtro = params.get('q') || '';
       })
     );
-    await Promise.all([this.cargarEstados(), this.cargarCotizaciones()]);
+    await Promise.all([this.cargarEstados(), this.cargarTiposDocumento(), this.cargarUsuarios(), this.cargarCotizaciones()]);
   }
 
   ngOnDestroy() {
@@ -176,6 +218,114 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
     }
   }
 
+  async toggleDocumentos(cotizacion: CotizacionGuardada) {
+    this.documentosOpen[cotizacion.uuid] = !this.documentosOpen[cotizacion.uuid];
+    if (this.documentosOpen[cotizacion.uuid]) {
+      this.ensureDocumentoForm(cotizacion.uuid);
+      await this.cargarDocumentosCotizacion(cotizacion.uuid);
+    }
+  }
+
+  async cargarDocumentosCotizacion(cotizacionUuid: string) {
+    if (!cotizacionUuid) return;
+    this.loadingDocumentos[cotizacionUuid] = true;
+    this.error = null;
+    try {
+      const token = await this.auth.getAccessToken();
+      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/documentos-servicio/cotizacion/${cotizacionUuid}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }));
+      this.documentosPorCotizacion[cotizacionUuid] = this.extractPayload(response).map(item => this.fromApiDocumentoServicio(item));
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudieron cargar los documentos de la cotización.');
+    } finally {
+      this.loadingDocumentos[cotizacionUuid] = false;
+    }
+  }
+
+  async guardarDocumento(cotizacion: CotizacionGuardada) {
+    const form = this.ensureDocumentoForm(cotizacion.uuid);
+    if (!form.tipoDocumentoUuid) {
+      this.error = 'Selecciona el tipo de documento.';
+      return;
+    }
+    if (!this.currentUsuarioUuid) {
+      this.error = 'No se pudo resolver el usuario interno para registrar documentos.';
+      return;
+    }
+
+    this.savingDocumentoUuid = form.uuid || cotizacion.uuid;
+    this.error = null;
+    this.success = null;
+    try {
+      const token = await this.auth.getAccessToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      const payload: any = {
+        usuarioUuid: this.currentUsuarioUuid,
+        tipoDocumentoUuid: form.tipoDocumentoUuid,
+        estadoDocumento: form.estadoDocumento,
+        observacion: form.observacion || undefined
+      };
+
+      if (form.uuid) {
+        const response = await lastValueFrom(this.http.put(`${bffApiUrl}/api/documentos-servicio/${form.uuid}`, payload, { headers }));
+        this.replaceDocumento(cotizacion.uuid, this.fromApiDocumentoServicio(this.unwrapPayload(response)));
+        this.success = 'Documento actualizado correctamente.';
+      } else {
+        const response = await lastValueFrom(this.http.post(`${bffApiUrl}/api/documentos-servicio`, {
+          cotizacionUuid: cotizacion.uuid,
+          ...payload
+        }, { headers }));
+        const created = this.fromApiDocumentoServicio(this.unwrapPayload(response));
+        this.documentosPorCotizacion[cotizacion.uuid] = [created, ...(this.documentosPorCotizacion[cotizacion.uuid] || [])];
+        this.success = 'Documento agregado correctamente.';
+      }
+
+      this.cancelarEdicionDocumento(cotizacion.uuid);
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo guardar el documento.');
+    } finally {
+      this.savingDocumentoUuid = null;
+    }
+  }
+
+  editarDocumento(cotizacionUuid: string, documento: DocumentoServicio) {
+    this.editingDocumentoUuid[cotizacionUuid] = documento.uuid;
+    this.documentoForms[cotizacionUuid] = {
+      uuid: documento.uuid,
+      tipoDocumentoUuid: documento.tipoDocumentoUuid,
+      estadoDocumento: this.normalizeEstadoDocumento(documento.estadoDocumento),
+      observacion: documento.observacion
+    };
+  }
+
+  cancelarEdicionDocumento(cotizacionUuid: string) {
+    this.editingDocumentoUuid[cotizacionUuid] = '';
+    this.documentoForms[cotizacionUuid] = this.createDocumentoForm();
+  }
+
+  async eliminarDocumento(cotizacionUuid: string, documento: DocumentoServicio) {
+    this.deletingDocumentoUuid = documento.uuid;
+    this.error = null;
+    this.success = null;
+    try {
+      const token = await this.auth.getAccessToken();
+      await lastValueFrom(this.http.delete(`${bffApiUrl}/api/documentos-servicio/${documento.uuid}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }));
+      this.documentosPorCotizacion[cotizacionUuid] = (this.documentosPorCotizacion[cotizacionUuid] || [])
+        .filter(item => item.uuid !== documento.uuid);
+      if (this.editingDocumentoUuid[cotizacionUuid] === documento.uuid) {
+        this.cancelarEdicionDocumento(cotizacionUuid);
+      }
+      this.success = 'Documento eliminado correctamente.';
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo eliminar el documento.');
+    } finally {
+      this.deletingDocumentoUuid = null;
+    }
+  }
+
   trackByUuid(index: number, item: CotizacionGuardada) {
     return item.uuid || index;
   }
@@ -191,6 +341,10 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
 
   esEstadoFinal(cotizacion: CotizacionGuardada) {
     return cotizacion.estadoCodigo === 'GEN_CONTR';
+  }
+
+  badgeDocumento(estado: string) {
+    return estado === 'REALIZADO' ? 'b-ok' : 'b-warn';
   }
 
   formatFecha(value: string) {
@@ -215,6 +369,27 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
       estadoCodigo: String(item.estado?.codigo ?? item.estadoCodigo ?? item.estado_codigo ?? 'BORRADOR'),
       total: Number(item.total ?? item.montoTotal ?? item.monto_total ?? 0),
       raw: item
+    };
+  }
+
+  private fromApiDocumentoServicio(item: any): DocumentoServicio {
+    const tipoDocumento = item.tipoDocumento ?? item.tipo_documento ?? {};
+    const usuario = item.usuario ?? {};
+    return {
+      uuid: String(item.uuid ?? ''),
+      cotizacionUuid: String(item.cotizacionUuid ?? item.cotizacion_uuid ?? item.cotizacion?.uuid ?? ''),
+      usuarioUuid: String(item.usuarioUuid ?? item.usuario_uuid ?? usuario.uuid ?? ''),
+      tipoDocumentoUuid: String(item.tipoDocumentoUuid ?? item.tipo_documento_uuid ?? tipoDocumento.uuid ?? ''),
+      tipoDocumentoNombre: String(
+        item.tipoDocumentoNombre
+        ?? item.tipo_documento_nombre
+        ?? tipoDocumento.nombre
+        ?? tipoDocumento.codigo
+        ?? 'Documento'
+      ),
+      estadoDocumento: String(item.estadoDocumento ?? item.estado_documento ?? 'PENDIENTE').toUpperCase(),
+      observacion: String(item.observacion ?? ''),
+      fechaCrea: String(item.fechaCrea ?? item.fecha_crea ?? item.creado ?? item.createdAt ?? '')
     };
   }
 
@@ -325,6 +500,77 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async cargarTiposDocumento() {
+    try {
+      const token = await this.auth.getAccessToken();
+      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/tipos-documento`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }));
+      this.tiposDocumento = this.extractPayload(response)
+        .map(item => ({
+          uuid: String(item.uuid ?? ''),
+          codigo: String(item.codigo ?? ''),
+          nombre: String(item.nombre ?? item.codigo ?? 'Documento'),
+          activo: this.isActivo(item.activo)
+        }))
+        .filter(item => item.uuid && item.activo);
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudieron cargar los tipos de documento.');
+    }
+  }
+
+  private async cargarUsuarios() {
+    try {
+      const token = await this.auth.getAccessToken();
+      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/usuarios`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }));
+      this.usuarios = this.extractPayload(response)
+        .map(item => ({
+          uuid: String(item.uuid ?? ''),
+          email: String(item.email ?? ''),
+          nombre: [item.nombre, item.paterno, item.materno].filter(Boolean).join(' ') || item.email || 'Usuario',
+          activo: this.isActivo(item.activo)
+        }))
+        .filter(item => item.uuid && item.activo);
+      this.currentUsuarioUuid = this.getCurrentUserUuid();
+    } catch (err: any) {
+      this.error = this.getErrorMessage(err, 'No se pudo resolver el usuario interno.');
+    }
+  }
+
+  private ensureDocumentoForm(cotizacionUuid: string) {
+    if (!this.documentoForms[cotizacionUuid]) {
+      this.documentoForms[cotizacionUuid] = this.createDocumentoForm();
+    }
+    return this.documentoForms[cotizacionUuid];
+  }
+
+  private createDocumentoForm(): DocumentoServicioForm {
+    return {
+      uuid: '',
+      tipoDocumentoUuid: this.tiposDocumento[0]?.uuid || '',
+      estadoDocumento: 'PENDIENTE',
+      observacion: ''
+    };
+  }
+
+  private replaceDocumento(cotizacionUuid: string, documento: DocumentoServicio) {
+    this.documentosPorCotizacion[cotizacionUuid] = (this.documentosPorCotizacion[cotizacionUuid] || [])
+      .map(item => item.uuid === documento.uuid ? documento : item);
+  }
+
+  private normalizeEstadoDocumento(value: any): 'PENDIENTE' | 'REALIZADO' {
+    return String(value ?? '').toUpperCase() === 'REALIZADO' ? 'REALIZADO' : 'PENDIENTE';
+  }
+
+  private getCurrentUserUuid() {
+    const email = this.auth.getActiveAccount()?.username?.toLocaleLowerCase('es-CL');
+    return this.usuarios.find(item => item.email.toLocaleLowerCase('es-CL') === email)?.uuid
+      || this.usuarios[0]?.uuid
+      || '';
+  }
+
   private hora(value: any) {
     return value ? String(value).slice(0, 5) : undefined;
   }
@@ -342,6 +588,15 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
   private sortDate(value: string) {
     const timestamp = value ? new Date(value).getTime() : 0;
     return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+
+  private isActivo(value: any) {
+    return value === undefined
+      || value === null
+      || value === true
+      || value === 1
+      || value === '1'
+      || String(value).toLocaleLowerCase('es-CL') === 'true';
   }
 
   private getErrorMessage(err: any, fallback: string) {
