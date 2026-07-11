@@ -17,8 +17,33 @@
   padding: .8rem .95rem;
 }
 
+.status-message span {
+  flex: 1;
+}
+
 .status-message i {
   font-size: 1rem;
+}
+
+.status-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  height: 1.75rem;
+  justify-content: center;
+  opacity: .75;
+  padding: 0;
+  width: 1.75rem;
+}
+
+.status-close:hover {
+  opacity: 1;
+}
+
+.status-close i {
+  font-size: .85rem;
 }
 
 .status-loading {
@@ -69,24 +94,21 @@
   margin-top: .15rem;
 }
 
-.admin-crud-layout {
-  align-items: flex-start;
+.modal-subtitle {
+  color: #6c7a72;
+  font-size: .85rem;
 }
 
-.admin-side-panel {
-  position: sticky;
-  top: 1rem;
+.modal-status {
+  margin-bottom: 1rem;
 }
 
-.side-panel-icon {
-  align-items: center;
-  background: #eaf3ee;
-  border-radius: 8px;
-  color: #34714f;
-  display: inline-flex;
-  height: 34px;
-  justify-content: center;
-  width: 34px;
+.modal-backdrop.show {
+  z-index: 6000;
+}
+
+.modal.d-block {
+  z-index: 6010;
 }
 
 .form-label {
@@ -124,10 +146,8 @@
     align-items: flex-start;
     flex-direction: column;
   }
-}
 
-@media (max-width: 991.98px) {
-  .admin-side-panel {
-    position: static;
+  .modal-footer .btn {
+    width: 100%;
   }
 }

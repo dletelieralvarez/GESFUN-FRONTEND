@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { Comuna, Empresa, Region, Sucursal } from '../../data/models';
@@ -16,7 +16,14 @@ type SucursalView = Sucursal & {
   templateUrl: './sucursales.component.html',
   styleUrls: ['./sucursales.component.css']
 })
-export class SucursalesComponent implements OnInit {
+export class SucursalesComponent implements OnInit, OnDestroy {
+  private readonly fieldMaxLengths = {
+    codigo: 30,
+    nombre: 120,
+    direccion: 160,
+    telefono: 15
+  };
+
   sucursales: SucursalView[] = [];
   regiones: Region[] = [];
   comunas: Comuna[] = [];
@@ -30,6 +37,7 @@ export class SucursalesComponent implements OnInit {
   selectedSucursal: SucursalView | null = null;
   sucursalPendingDeactivate: SucursalView | null = null;
   form: Partial<SucursalView> = this.createEmptyForm();
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -38,12 +46,17 @@ export class SucursalesComponent implements OnInit {
     await this.loadSucursales();
   }
 
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
+  }
+
   get titleCount() {
     return this.sucursales.length;
   }
 
   get comunasFiltradas() {
-    return this.comunas.filter(c => !this.form.region_id || c.region_id === Number(this.form.region_id));
+    const regionId = Number(this.form.region_id || 0);
+    return regionId ? this.comunas.filter(c => c.region_id === regionId) : [];
   }
 
   trackById(index: number, item: SucursalView) {
@@ -69,9 +82,13 @@ export class SucursalesComponent implements OnInit {
 
     this.isEditing = true;
     this.selectedSucursal = sucursal;
+    const regionId = Number(sucursal.region_id || this.getRegionIdByComuna(sucursal.comuna_id) || 0);
+    const comunaId = Number(sucursal.comuna_id || 0);
     this.form = {
       ...sucursal,
-      region_id: this.getRegionIdByComuna(sucursal.comuna_id)
+      region_id: regionId,
+      comuna_id: this.comunas.length && !this.isComunaInRegion(comunaId, regionId) ? 0 : comunaId,
+      empresa_id: Number(sucursal.empresa_id || 0)
     };
     this.formVisible = true;
   }
@@ -101,7 +118,7 @@ export class SucursalesComponent implements OnInit {
     try {
       await this.patchSucursalDesactivar(sucursal);
       await this.loadSucursales();
-      this.success = 'Sucursal desactivada correctamente.';
+      this.showSuccess('Sucursal desactivada correctamente.');
       if (this.selectedSucursal?.uuid === sucursal.uuid) {
         this.cancel();
       }
@@ -125,8 +142,9 @@ export class SucursalesComponent implements OnInit {
       return;
     }
 
-    if (!this.form.comuna_id || !this.form.empresa_id) {
-      this.error = 'Selecciona comuna y empresa.';
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.error = validationError;
       return;
     }
 
@@ -138,11 +156,11 @@ export class SucursalesComponent implements OnInit {
         const updated = { ...this.selectedSucursal, ...result };
         await this.putSucursal(updated);
         await this.loadSucursales();
-        this.success = 'Sucursal actualizada correctamente.';
+        this.showSuccess('Sucursal actualizada correctamente.');
       } else {
         await this.postSucursal(result);
         await this.loadSucursales();
-        this.success = 'Sucursal creada correctamente.';
+        this.showSuccess('Sucursal creada correctamente.');
       }
 
       this.cancel();
@@ -154,6 +172,7 @@ export class SucursalesComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedSucursal = null;
@@ -162,10 +181,27 @@ export class SucursalesComponent implements OnInit {
   }
 
   onRegionChange() {
+    this.form.region_id = Number(this.form.region_id || 0);
     const comunas = this.comunasFiltradas;
     if (!comunas.some(c => c.id === Number(this.form.comuna_id))) {
-      this.form.comuna_id = comunas[0]?.id;
+      this.form.comuna_id = 0;
     }
+  }
+
+  onCodigoChange(value: string) {
+    this.form.codigo = String(value || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, '')
+      .slice(0, this.fieldMaxLengths.codigo);
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   isSucursalActiva(sucursal: SucursalView) {
@@ -192,9 +228,9 @@ export class SucursalesComponent implements OnInit {
       direccion: '',
       telefono: '',
       activo: true,
-      region_id: this.comunas[0]?.region_id || 1,
-      comuna_id: this.comunas[0]?.id || 1,
-      empresa_id: this.empresas[0]?.id || 1
+      region_id: 0,
+      comuna_id: 0,
+      empresa_id: 0
     };
   }
 
@@ -203,13 +239,13 @@ export class SucursalesComponent implements OnInit {
       ...this.form,
       id: Number(this.form.id || 0),
       uuid: this.form.uuid || '',
-      codigo: this.form.codigo || '',
-      nombre: this.form.nombre || '',
-      direccion: this.form.direccion || '',
-      telefono: this.form.telefono || '',
+      codigo: String(this.form.codigo || '').trim().toUpperCase(),
+      nombre: String(this.form.nombre || '').trim(),
+      direccion: String(this.form.direccion || '').trim(),
+      telefono: String(this.form.telefono || '').trim(),
       activo: this.form.activo !== false,
-      empresa_id: Number(this.form.empresa_id || this.empresas[0]?.id || 1),
-      comuna_id: Number(this.form.comuna_id || this.comunas[0]?.id || 1),
+      empresa_id: Number(this.form.empresa_id || 0),
+      comuna_id: Number(this.form.comuna_id || 0),
       comuna_uuid: this.form.comuna_uuid,
       empresa_uuid: this.form.empresa_uuid
     } as SucursalView;
@@ -249,13 +285,10 @@ export class SucursalesComponent implements OnInit {
       if (comunas.length) {
         this.comunas = comunas.map((comuna, index) => this.fromApiComuna(comuna, index));
         if (!this.regiones.length) this.regiones = this.buildRegionesFromComunas();
-        this.form.comuna_id = this.comunas[0].id;
-        this.form.region_id = this.comunas[0].region_id;
       }
 
       if (empresas.length) {
         this.empresas = empresas.map((empresa, index) => this.fromApiEmpresa(empresa, index));
-        this.form.empresa_id = this.empresas[0].id;
       }
     } catch (error) {
       console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
@@ -284,8 +317,8 @@ export class SucursalesComponent implements OnInit {
   }
 
   private toApiPayload(sucursal: SucursalView) {
-    const comuna = this.comunas.find(item => item.id === Number(sucursal.comuna_id)) ?? this.comunas[0];
-    const empresa = this.empresas.find(item => item.id === Number(sucursal.empresa_id)) ?? this.empresas[0];
+    const comuna = this.comunas.find(item => item.id === Number(sucursal.comuna_id));
+    const empresa = this.empresas.find(item => item.id === Number(sucursal.empresa_id));
     const comunaUuid = this.getValidRelationUuid(comuna?.uuid) || this.getValidRelationUuid(sucursal.comuna_uuid);
     const empresaUuid = this.getValidRelationUuid(empresa?.uuid) || this.getValidRelationUuid(sucursal.empresa_uuid);
 
@@ -314,11 +347,11 @@ export class SucursalesComponent implements OnInit {
       direccion: item.direccion ?? '',
       telefono: item.telefono ?? '',
       activo: item.activo === undefined || item.activo === true || item.activo === 1,
-      empresa_id: empresa?.id || Number(item.empresa_id ?? item.empresaId ?? this.empresas[0]?.id ?? 1),
-      comuna_id: comuna?.id || Number(item.comuna_id ?? item.comunaId ?? this.comunas[0]?.id ?? 1),
+      empresa_id: empresa?.id || Number(item.empresa_id ?? item.empresaId ?? 0),
+      comuna_id: comuna?.id || Number(item.comuna_id ?? item.comunaId ?? 0),
       comuna_uuid: comunaUuid,
       empresa_uuid: empresaUuid,
-      region_id: comuna?.region_id || this.getRegionIdByComuna(Number(item.comuna_id ?? item.comunaId))
+      region_id: comuna?.region_id || this.resolveRegionId(item.comuna)
     };
   }
 
@@ -329,7 +362,7 @@ export class SucursalesComponent implements OnInit {
       uuid: item.uuid,
       codigo: String(item.codigo ?? item.code ?? index + 1),
       nombre,
-      region_id: Number(item.region_id ?? item.regionId ?? item.region?.id ?? this.regiones[0]?.id ?? 0)
+      region_id: this.resolveRegionId(item)
     };
   }
 
@@ -369,13 +402,30 @@ export class SucursalesComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
   }
 
   private getValidRelationUuid(uuid?: string) {
@@ -387,5 +437,69 @@ export class SucursalesComponent implements OnInit {
 
   private getRegionIdByComuna(comunaId?: number) {
     return this.comunas.find(comuna => comuna.id === Number(comunaId))?.region_id || this.regiones[0]?.id || 0;
+  }
+
+  private validateForm() {
+    const fields = [
+      { label: 'código', value: this.form.codigo, max: this.fieldMaxLengths.codigo },
+      { label: 'nombre', value: this.form.nombre, max: this.fieldMaxLengths.nombre },
+      { label: 'dirección', value: this.form.direccion, max: this.fieldMaxLengths.direccion },
+      { label: 'teléfono', value: this.form.telefono, max: this.fieldMaxLengths.telefono }
+    ];
+    const invalid = fields.find(field => String(field.value || '').trim().length > field.max);
+
+    if (invalid) {
+      return `El campo ${invalid.label} no puede superar ${invalid.max} caracteres.`;
+    }
+
+    if (!/^[A-Z0-9_-]+$/i.test(String(this.form.codigo || '').trim())) {
+      return 'El código solo puede contener letras, números, guion y guion bajo.';
+    }
+
+    if (!this.form.region_id || !this.form.comuna_id || !this.form.empresa_id) {
+      return 'Selecciona región, comuna y empresa.';
+    }
+
+    if (this.comunas.length && !this.isComunaInRegion(Number(this.form.comuna_id), Number(this.form.region_id))) {
+      return 'Selecciona una comuna válida para la región.';
+    }
+
+    if (this.empresas.length && !this.empresas.some(empresa => empresa.id === Number(this.form.empresa_id))) {
+      return 'Selecciona una empresa válida.';
+    }
+
+    return null;
+  }
+
+  private isComunaInRegion(comunaId: number, regionId: number) {
+    return this.comunas.some(comuna => comuna.id === comunaId && comuna.region_id === regionId);
+  }
+
+  private resolveRegionId(item: any) {
+    const regionUuid = item?.regionUuid ?? item?.region_uuid ?? item?.region?.uuid;
+    const region = this.regiones.find(row => row.uuid === regionUuid);
+    return Number(
+      item?.region_id
+      ?? item?.regionId
+      ?? item?.region?.id
+      ?? region?.id
+      ?? 0
+    );
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 }

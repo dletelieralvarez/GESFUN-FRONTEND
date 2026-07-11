@@ -91,7 +91,7 @@ describe('SucursalesComponent', () => {
   it('should create a sucursal with POST and reload list', async () => {
     component.comunas = [{ id: 1, uuid: 'comuna-uuid', codigo: 'COM', nombre: 'Ñuñoa', region_id: 1 }];
     component.empresas = [{ id: 1, uuid: 'empresa-uuid', rut: '1', dv: '9', razon_social: 'Empresa', activo: true, usuario_id: 1, comuna_id: 1, direccion: '' }];
-    component.form = { codigo: 'SUC-002', nombre: 'Sucursal norte', direccion: 'Norte 123', telefono: '999', comuna_id: 1, empresa_id: 1, activo: true };
+    component.form = { codigo: 'SUC-002', nombre: 'Sucursal norte', direccion: 'Norte 123', telefono: '999', region_id: 1, comuna_id: 1, empresa_id: 1, activo: true };
 
     const pending = component.save();
     await Promise.resolve();
@@ -143,5 +143,66 @@ describe('SucursalesComponent', () => {
     await pending;
 
     expect(component.error).toBe('No se pudo conectar con el servidor. Verifica que el BFF esté disponible.');
+  });
+
+  it('should require region comuna and empresa before saving', async () => {
+    component.form = {
+      codigo: 'SUC-002',
+      nombre: 'Sucursal norte',
+      direccion: 'Norte 123',
+      telefono: '999',
+      region_id: 1,
+      comuna_id: 0,
+      empresa_id: 1
+    };
+
+    await component.save();
+
+    expect(component.error).toBe('Selecciona región, comuna y empresa.');
+  });
+
+  it('should reject comuna from another region before saving', async () => {
+    component.comunas = [
+      { id: 1, uuid: 'comuna-1', codigo: 'C1', nombre: 'Comuna 1', region_id: 1 },
+      { id: 2, uuid: 'comuna-2', codigo: 'C2', nombre: 'Comuna 2', region_id: 2 }
+    ];
+    component.form = {
+      codigo: 'SUC-002',
+      nombre: 'Sucursal norte',
+      direccion: 'Norte 123',
+      telefono: '999',
+      region_id: 2,
+      comuna_id: 1,
+      empresa_id: 1
+    };
+
+    await component.save();
+
+    expect(component.error).toBe('Selecciona una comuna válida para la región.');
+  });
+
+  it('should filter comunas when region changes without auto selecting one', () => {
+    component.comunas = [
+      { id: 1, uuid: 'comuna-1', codigo: 'C1', nombre: 'Comuna 1', region_id: 1 },
+      { id: 2, uuid: 'comuna-2', codigo: 'C2', nombre: 'Comuna 2', region_id: 2 }
+    ];
+    component.form = { region_id: 2, comuna_id: 1 };
+
+    component.onRegionChange();
+
+    expect(component.comunasFiltradas.map(comuna => comuna.nombre)).toEqual(['Comuna 2']);
+    expect(component.form.comuna_id).toBe(0);
+  });
+
+  it('should sanitize backend messages with embedded JSON', () => {
+    const error = {
+      error: {
+        message: 'Error al procesar la petición en el servicio de backend. { "status" : 400, "message" : "Ya existe una sucursal con el codigo indicado." }'
+      }
+    };
+
+    const message = (component as any).getErrorMessage(error, 'No se pudo guardar la sucursal.');
+
+    expect(message).toBe('Ya existe una sucursal con el codigo indicado.');
   });
 });

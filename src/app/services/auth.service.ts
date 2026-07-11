@@ -4,7 +4,7 @@ import { MsalService } from '@azure/msal-angular';
 import { AccountInfo, InteractionRequiredAuthError } from '@azure/msal-browser';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
-import { bffApiScope, bffApiUrl, loginRequest, redirectUri } from '../auth-config';
+import { bffApiScope, bffApiUrl, loginRequest, redirectUri, tenantId } from '../auth-config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -57,6 +57,11 @@ export class AuthService {
   }
 
   getActiveAccount(): AccountInfo | null {
+    const e2eAccount = this.getE2eAccount();
+    if (e2eAccount) {
+      return e2eAccount;
+    }
+
     if (!this.initialized || this.hasSessionExpired()) {
       return null;
     }
@@ -74,6 +79,11 @@ export class AuthService {
   }
 
   async getAccessToken(): Promise<string> {
+    const e2eToken = this.getE2eAccessToken();
+    if (e2eToken) {
+      return e2eToken;
+    }
+
     await this.ensureInitialized();
     const account = this.getActiveAccount();
     if (!account) {
@@ -140,5 +150,28 @@ export class AuthService {
       || errorCode === 'consent_required'
       || errorCode === 'interaction_required'
       || message.includes('monitor_window_timeout');
+  }
+
+  private getE2eAccessToken() {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return window.localStorage.getItem('gesfun.e2eAccessToken');
+  }
+
+  private getE2eAccount(): AccountInfo | null {
+    if (!this.getE2eAccessToken()) {
+      return null;
+    }
+
+    return {
+      homeAccountId: 'e2e-account',
+      environment: 'localhost',
+      tenantId,
+      username: 'playwright@gesfun.local',
+      localAccountId: 'e2e-account',
+      name: 'Playwright',
+    } as AccountInfo;
   }
 }

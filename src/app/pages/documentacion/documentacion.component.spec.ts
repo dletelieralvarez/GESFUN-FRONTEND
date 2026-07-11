@@ -74,6 +74,50 @@ describe('DocumentacionComponent', () => {
     expect(component.formVisible).toBeFalse();
   });
 
+  it('should validate required fields before saving', async () => {
+    component.form = { codigo: '', nombre: '' };
+
+    await component.save();
+
+    expect(component.error).toBe('Completa código y nombre.');
+  });
+
+  it('should reject oversized code before saving', async () => {
+    component.form = {
+      codigo: 'A'.repeat(31),
+      nombre: 'Certificado',
+      activo: true
+    };
+
+    await component.save();
+
+    expect(component.error).toBe('El campo código no puede superar 30 caracteres.');
+  });
+
+  it('should reject oversized name before saving', async () => {
+    component.form = {
+      codigo: 'CERT_DEF',
+      nombre: 'A'.repeat(121),
+      activo: true
+    };
+
+    await component.save();
+
+    expect(component.error).toBe('El campo nombre no puede superar 120 caracteres.');
+  });
+
+  it('should reject invalid code characters before saving', async () => {
+    component.form = {
+      codigo: 'CERT DEF',
+      nombre: 'Certificado',
+      activo: true
+    };
+
+    await component.save();
+
+    expect(component.error).toBe('El código solo puede contener letras, números, guion y guion bajo.');
+  });
+
   it('should update a document type', async () => {
     const documento = { id: 1, uuid: 'tipo-1', codigo: 'CERT_DEF', nombre: 'Certificado', activo: true };
     component.documentos = [documento];
@@ -120,5 +164,17 @@ describe('DocumentacionComponent', () => {
 
     expect(component.success).toBe('Tipo de documento eliminado correctamente.');
     expect(component.documentoPendingDelete).toBeNull();
+  });
+
+  it('should sanitize backend messages with embedded JSON', () => {
+    const error = {
+      error: {
+        message: 'Error al procesar la petición en el servicio de backend. { "status" : 400, "message" : "Ya existe un tipo de documento con el codigo indicado." }'
+      }
+    };
+
+    const message = (component as any).getErrorMessage(error, 'No se pudo guardar el tipo de documento.');
+
+    expect(message).toBe('Ya existe un tipo de documento con el codigo indicado.');
   });
 });

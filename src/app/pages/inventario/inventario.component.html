@@ -101,12 +101,15 @@
       </div>
     </div>
 
-    <div class="modal d-block" tabindex="-1" *ngIf="formVisible" (click)="saving ? null : cancelEntrada()">
-      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-backdrop show" *ngIf="formVisible" (click)="!saving && cancelEntrada()"></div>
+    <div class="modal d-block" tabindex="-1" *ngIf="formVisible" role="dialog" aria-modal="true"
+      aria-labelledby="inventoryEntryTitle">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content inventory-entry-modal">
         <div class="modal-header card-header d-flex align-items-center justify-content-between">
-          <span><i class="bi bi-clipboard2-check me-2"></i>Registrar entrada de productos</span>
-          <button class="btn btn-sm btn-soft" type="button" (click)="cancelEntrada()" [disabled]="saving">
+          <span id="inventoryEntryTitle"><i class="bi bi-clipboard2-check me-2"></i>Registrar entrada de productos</span>
+          <button class="btn btn-sm btn-soft" type="button" (click)="cancelEntrada()" [disabled]="saving"
+            aria-label="Cerrar">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>

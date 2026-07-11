@@ -61,14 +61,16 @@
   min-width: min(100%, 340px);
 }
 
-.modal.d-block {
-  background: rgba(21, 32, 28, .48);
-}
+.modal.d-block,
+.modal-backdrop.show { margin-top: 0 !important; }
+
+.modal.d-block { z-index: 6010 }
+
+.modal-backdrop.show { z-index: 6000; }
 
 .inventory-entry-modal .card-header {
   background: var(--brand);
   color: #fff;
-  font-weight: 800;
 }
 
 .entry-section-title {
@@ -82,7 +84,6 @@
 
 .entry-section-title small {
   color: var(--ink-soft);
-  display: block;
 }
 
 .inventory-detail {
@@ -99,7 +100,6 @@
   border-radius: .75rem;
   color: var(--brand-strong);
   display: flex;
-  font-size: 1rem;
   justify-content: space-between;
   padding: .8rem 1rem;
 }

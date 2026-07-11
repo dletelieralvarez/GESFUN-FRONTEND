@@ -5,20 +5,26 @@
     </button>
   </app-page-head>
 
-  <div class="status-stack" *ngIf="loading || error || success || sucursalPendingDeactivate">
+  <div class="status-stack" *ngIf="loading || (!formVisible && error) || success || sucursalPendingDeactivate">
     <div class="status-message status-loading" *ngIf="loading">
       <i class="bi bi-arrow-repeat"></i>
       <span>Procesando sucursales...</span>
     </div>
 
-    <div class="status-message status-error" *ngIf="error">
+    <div class="status-message status-error" *ngIf="error && !formVisible">
       <i class="bi bi-exclamation-circle"></i>
       <span>{{ error }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="status-message status-success" *ngIf="success">
       <i class="bi bi-check-circle"></i>
       <span>{{ success }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissSuccess()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="delete-confirm" *ngIf="sucursalPendingDeactivate">
@@ -34,7 +40,7 @@
   </div>
 
   <div class="row gy-3 admin-crud-layout">
-    <div [ngClass]="formVisible ? 'col-lg-8' : 'col-12'">
+    <div class="col-12">
       <div class="mobile-crud-list d-sm-none">
         <div class="mobile-crud-card" *ngFor="let sucursal of sucursales; trackBy: trackById">
           <div class="mobile-crud-card-head">
@@ -144,58 +150,79 @@
       </div>
     </div>
 
-    <div class="col-lg-4" *ngIf="formVisible">
-      <div class="card p-4 admin-side-panel">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <span class="side-panel-icon"><i class="bi bi-building"></i></span>
-          <h5 class="mb-0">{{ isEditing ? 'Editar sucursal' : 'Nueva sucursal' }}</h5>
-        </div>
+  </div>
 
-        <div class="mb-3">
-          <label class="form-label">Codigo</label>
-          <input class="form-control" type="text" [(ngModel)]="form.codigo" placeholder="SUC-001" />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Nombre</label>
-          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Sucursal Centro" />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Direccion</label>
-          <input class="form-control" type="text" [(ngModel)]="form.direccion" placeholder="Av. Principal 123" />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Telefono</label>
-          <input class="form-control" type="text" [(ngModel)]="form.telefono" placeholder="+56 2 2345 6789" />
-        </div>
-
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label class="form-label">Region</label>
-            <select class="form-select" [(ngModel)]="form.region_id" (ngModelChange)="onRegionChange()">
-              <option *ngFor="let region of regiones" [value]="region.id">{{ region.nombre }}</option>
-            </select>
+  <div class="modal-backdrop show" *ngIf="formVisible" (click)="!saving && cancel()"></div>
+  <div class="modal d-block" *ngIf="formVisible" role="dialog" aria-modal="true" aria-labelledby="sucursalFormTitle">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="sucursalFormTitle" class="modal-title">{{ isEditing ? 'Editar sucursal' : 'Nueva sucursal' }}</h5>
+            <span class="modal-subtitle">{{ isEditing ? 'Actualiza los datos de la sucursal' : 'Registra una nueva sucursal' }}</span>
           </div>
-          <div class="col-6">
-            <label class="form-label">Comuna</label>
-            <select class="form-select" [(ngModel)]="form.comuna_id">
-              <option *ngFor="let comuna of comunasFiltradas" [value]="comuna.id">{{ comuna.nombre }}</option>
-            </select>
+          <button class="btn-close" type="button" aria-label="Cerrar formulario" (click)="cancel()" [disabled]="saving"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="status-message status-error modal-status" *ngIf="error">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>{{ error }}</span>
+            <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-5">
+              <label class="form-label">Codigo</label>
+              <input class="form-control text-uppercase" type="text" [ngModel]="form.codigo" (ngModelChange)="onCodigoChange($event)" maxlength="30" placeholder="SUC-001" />
+            </div>
+
+            <div class="col-md-7">
+              <label class="form-label">Nombre</label>
+              <input class="form-control" type="text" [(ngModel)]="form.nombre" maxlength="120" placeholder="Sucursal Centro" />
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label">Direccion</label>
+              <input class="form-control" type="text" [(ngModel)]="form.direccion" maxlength="160" placeholder="Av. Principal 123" />
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Telefono</label>
+              <input class="form-control" type="text" [(ngModel)]="form.telefono" maxlength="15" inputmode="tel" placeholder="+56 2 2345 6789" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Region</label>
+              <select class="form-select" [(ngModel)]="form.region_id" (ngModelChange)="onRegionChange()">
+                <option [ngValue]="0">Selecciona region</option>
+                <option *ngFor="let region of regiones" [ngValue]="region.id">{{ region.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Comuna</label>
+              <select class="form-select" [(ngModel)]="form.comuna_id" [disabled]="!form.region_id">
+                <option [ngValue]="0">Selecciona comuna</option>
+                <option *ngFor="let comuna of comunasFiltradas" [ngValue]="comuna.id">{{ comuna.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Empresa</label>
+              <select class="form-select" [(ngModel)]="form.empresa_id">
+                <option [ngValue]="0">Selecciona empresa</option>
+                <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.razon_social }}</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="mb-4">
-          <label class="form-label">Empresa</label>
-          <select class="form-select" [(ngModel)]="form.empresa_id">
-            <option *ngFor="let empresa of empresas" [value]="empresa.id">{{ empresa.razon_social }}</option>
-          </select>
-        </div>
-
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
-          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+          <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
         </div>
       </div>
     </div>
