@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
@@ -20,7 +20,12 @@ type TipoRecursoView = {
   templateUrl: './recursos.component.html',
   styleUrls: ['./recursos.component.css']
 })
-export class RecursosComponent implements OnInit {
+export class RecursosComponent implements OnInit, OnDestroy {
+  private readonly fieldMaxLengths = {
+    codigo: 30,
+    nombre: 120
+  };
+
   recursos: TipoRecursoView[] = [];
   sucursales: Sucursal[] = [];
   loading = false;
@@ -32,12 +37,17 @@ export class RecursosComponent implements OnInit {
   selectedRecurso: TipoRecursoView | null = null;
   recursoPendingDelete: TipoRecursoView | null = null;
   form: Partial<TipoRecursoView> = this.createEmptyForm();
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   async ngOnInit() {
     await this.loadCatalogos();
     await this.loadRecursos();
+  }
+
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
   }
 
   get titleCount() {
@@ -96,7 +106,7 @@ export class RecursosComponent implements OnInit {
     try {
       await this.putRecurso({ ...recurso, activo: false });
       await this.loadRecursos();
-      this.success = 'Recurso desactivado correctamente.';
+      this.showSuccess('Recurso desactivado correctamente.');
       if (this.selectedRecurso?.uuid === recurso.uuid) {
         this.cancel();
       }
@@ -125,6 +135,12 @@ export class RecursosComponent implements OnInit {
       return;
     }
 
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.error = validationError;
+      return;
+    }
+
     this.saving = true;
     const recurso = this.getFullRecursoFromForm();
 
@@ -133,11 +149,11 @@ export class RecursosComponent implements OnInit {
         const updated = { ...this.selectedRecurso, ...recurso };
         await this.putRecurso(updated);
         await this.loadRecursos();
-        this.success = 'Recurso actualizado correctamente.';
+        this.showSuccess('Recurso actualizado correctamente.');
       } else {
         await this.postRecurso(recurso);
         await this.loadRecursos();
-        this.success = 'Recurso creado correctamente.';
+        this.showSuccess('Recurso creado correctamente.');
       }
 
       this.cancel();
@@ -149,6 +165,7 @@ export class RecursosComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedRecurso = null;
@@ -156,8 +173,24 @@ export class RecursosComponent implements OnInit {
     this.form = this.createEmptyForm();
   }
 
+  onCodigoChange(value: string) {
+    this.form.codigo = String(value || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, '')
+      .slice(0, this.fieldMaxLengths.codigo);
+  }
+
   getSucursalName(uuid?: string) {
     return this.sucursales.find(sucursal => sucursal.uuid === uuid)?.nombre || 'Sin sucursal';
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   private createEmptyForm(): Partial<TipoRecursoView> {
@@ -173,8 +206,8 @@ export class RecursosComponent implements OnInit {
     return {
       id: Number(this.form.id || 0),
       uuid: this.form.uuid || '',
-      codigo: this.form.codigo || '',
-      nombre: this.form.nombre || '',
+      codigo: String(this.form.codigo || '').trim().toUpperCase(),
+      nombre: String(this.form.nombre || '').trim(),
       activo: this.form.activo !== false,
       sucursalUuid: this.form.sucursalUuid,
       sucursalNombre: this.getSucursalName(this.form.sucursalUuid)
@@ -272,12 +305,64 @@ export class RecursosComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private validateForm() {
+    const codigo = String(this.form.codigo || '').trim();
+    const nombre = String(this.form.nombre || '').trim();
+
+    if (codigo.length > this.fieldMaxLengths.codigo) {
+      return `El campo código no puede superar ${this.fieldMaxLengths.codigo} caracteres.`;
+    }
+
+    if (nombre.length > this.fieldMaxLengths.nombre) {
+      return `El campo nombre no puede superar ${this.fieldMaxLengths.nombre} caracteres.`;
+    }
+
+    if (!/^[A-Z0-9_-]+$/i.test(codigo)) {
+      return 'El código solo puede contener letras, números, guion y guion bajo.';
+    }
+
+    return null;
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 }

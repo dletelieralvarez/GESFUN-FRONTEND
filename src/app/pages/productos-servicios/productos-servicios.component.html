@@ -3,20 +3,26 @@
     <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()" [disabled]="loading || saving"><i class="bi bi-plus-lg"></i>Nuevo item</button>
   </app-page-head>
 
-  <div class="status-stack" *ngIf="loading || error || success || itemPendingDeactivate">
+  <div class="status-stack" *ngIf="loading || (!formVisible && error) || success || itemPendingDeactivate">
     <div class="status-message status-loading" *ngIf="loading">
       <i class="bi bi-arrow-repeat"></i>
       <span>Procesando productos y servicios...</span>
     </div>
 
-    <div class="status-message status-error" *ngIf="error">
+    <div class="status-message status-error" *ngIf="error && !formVisible">
       <i class="bi bi-exclamation-circle"></i>
       <span>{{ error }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="status-message status-success" *ngIf="success">
       <i class="bi bi-check-circle"></i>
       <span>{{ success }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissSuccess()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="delete-confirm" *ngIf="itemPendingDeactivate">
@@ -32,7 +38,7 @@
   </div>
 
   <div class="row gy-3">
-    <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
+    <div class="col-12">
       <div class="mobile-crud-list d-sm-none">
         <div class="mobile-crud-card" *ngFor="let item of items; trackBy: trackById">
           <div class="mobile-crud-card-head">
@@ -126,73 +132,95 @@
       </div>
     </div>
 
-    <div class="col-xl-4" *ngIf="formVisible">
-      <div class="card p-4">
-        <h5 class="mb-3">{{ isEditing ? 'Editar item' : 'Nuevo item' }}</h5>
+  </div>
 
-        <div class="mb-3">
-          <label class="form-label">Tipo</label>
-          <select class="form-select" [(ngModel)]="form.tipo_item">
-            <option value="producto">Producto</option>
-            <option value="servicio">Servicio</option>
-          </select>
-        </div>
-
-        <div class="row g-2 mb-3">
-          <div class="col-5">
-            <label class="form-label">Código</label>
-            <input class="form-control" type="text" [(ngModel)]="form.codigo" placeholder="ATA-001" />
+  <div class="modal-backdrop show" *ngIf="formVisible" (click)="!saving && cancel()"></div>
+  <div class="modal d-block" *ngIf="formVisible" role="dialog" aria-modal="true" aria-labelledby="itemFormTitle">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="itemFormTitle" class="modal-title">{{ isEditing ? 'Editar item' : 'Nuevo item' }}</h5>
+            <span class="modal-subtitle">{{ isEditing ? 'Actualiza el producto o servicio' : 'Registra un producto o servicio' }}</span>
           </div>
-          <div class="col-7">
-            <label class="form-label">Categoría</label>
-            <input class="form-control" type="text" [(ngModel)]="form.categoria" placeholder="Ataúdes" />
+          <button class="btn-close" type="button" aria-label="Cerrar formulario" (click)="cancel()" [disabled]="saving"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="status-message status-error modal-status" *ngIf="error">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>{{ error }}</span>
+            <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo</label>
+              <select class="form-select" [(ngModel)]="form.tipo_item">
+                <option value="producto">Producto</option>
+                <option value="servicio">Servicio</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Empresa</label>
+              <select class="form-select" [(ngModel)]="form.empresa_id">
+                <option *ngFor="let empresa of empresas" [value]="empresa.id">{{ empresa.razon_social }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-5">
+              <label class="form-label">Código</label>
+              <input class="form-control" type="text" [(ngModel)]="form.codigo" placeholder="ATA-001" />
+            </div>
+
+            <div class="col-md-7">
+              <label class="form-label">Categoría</label>
+              <input class="form-control" type="text" [(ngModel)]="form.categoria" placeholder="Ataúdes" />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Nombre</label>
+              <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Ataúd, cirios, cafetería..." />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Descripción</label>
+              <textarea class="form-control" rows="3" [(ngModel)]="form.descripcion" placeholder="Detalle del producto o servicio"></textarea>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Precio</label>
+              <input class="form-control" type="number" [(ngModel)]="form.precio" min="0" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Unidad medida</label>
+              <select class="form-select" [(ngModel)]="form.unidad_medida_id">
+                <option *ngFor="let unidad of unidadesMedida" [value]="unidad.id">{{ unidad.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="activoItem" [(ngModel)]="form.activo" />
+                  <label class="form-check-label" for="activoItem">Activo</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="afectoItem" [(ngModel)]="form.afecto" />
+                  <label class="form-check-label" for="afectoItem">Afecto</label>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Nombre</label>
-          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Ataúd, cirios, cafetería..." />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Descripción</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="form.descripcion" placeholder="Detalle del producto o servicio"></textarea>
-        </div>
-
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label class="form-label">Precio</label>
-            <input class="form-control" type="number" [(ngModel)]="form.precio" min="0" />
-          </div>
-          <div class="col-6">
-            <label class="form-label">Unidad medida</label>
-            <select class="form-select" [(ngModel)]="form.unidad_medida_id">
-              <option *ngFor="let unidad of unidadesMedida" [value]="unidad.id">{{ unidad.nombre }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Empresa</label>
-          <select class="form-select" [(ngModel)]="form.empresa_id">
-            <option *ngFor="let empresa of empresas" [value]="empresa.id">{{ empresa.razon_social }}</option>
-          </select>
-        </div>
-
-        <div class="d-flex gap-3 mb-4">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="activoItem" [(ngModel)]="form.activo" />
-            <label class="form-check-label" for="activoItem">Activo</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="afectoItem" [(ngModel)]="form.afecto" />
-            <label class="form-check-label" for="afectoItem">Afecto</label>
-          </div>
-        </div>
-
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
-          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+          <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
         </div>
       </div>
     </div>

@@ -152,4 +152,16 @@ describe('ProductosServiciosComponent', () => {
     expect(component.items[0].tipo_item).toBe('servicio');
     expect(component.items[0].categoria).toBe('Cafeteria');
   });
+
+  it('should sanitize backend messages with embedded JSON', () => {
+    const error = {
+      error: {
+        message: 'Error al procesar la petición en el servicio de backend. { "status" : 400, "error" : "Bad Request", "message" : "La empresa ya tiene un producto o servicio con el codigo indicado.", "path" : "/api/productos-servicios" }'
+      }
+    };
+
+    const message = (component as any).getErrorMessage(error, 'No se pudo guardar el producto o servicio.');
+
+    expect(message).toBe('La empresa ya tiene un producto o servicio con el codigo indicado.');
+  });
 });

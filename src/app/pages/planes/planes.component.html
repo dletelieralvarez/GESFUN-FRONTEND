@@ -3,20 +3,26 @@
     <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()" [disabled]="loading || saving"><i class="bi bi-plus-lg"></i>Nuevo plan</button>
   </app-page-head>
 
-  <div class="status-stack" *ngIf="loading || error || success || planPendingDeactivate">
+  <div class="status-stack" *ngIf="loading || (!formVisible && error) || success || planPendingDeactivate">
     <div class="status-message status-loading" *ngIf="loading">
       <i class="bi bi-arrow-repeat"></i>
       <span>Procesando planes...</span>
     </div>
 
-    <div class="status-message status-error" *ngIf="error">
+    <div class="status-message status-error" *ngIf="error && !formVisible">
       <i class="bi bi-exclamation-circle"></i>
       <span>{{ error }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="status-message status-success" *ngIf="success">
       <i class="bi bi-check-circle"></i>
       <span>{{ success }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissSuccess()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="delete-confirm" *ngIf="planPendingDeactivate">
@@ -32,7 +38,7 @@
   </div>
 
   <div class="row gy-3">
-    <div [ngClass]="formVisible ? 'col-xl-7' : 'col-12'">
+    <div class="col-12">
       <div class="mobile-crud-list d-sm-none">
         <div class="mobile-crud-card" *ngFor="let plan of planes; trackBy: trackById">
           <div class="mobile-crud-card-head">
@@ -112,100 +118,131 @@
       </div>
     </div>
 
-    <div class="col-xl-5" *ngIf="formVisible">
-      <div class="card p-4">
-        <h5 class="mb-3">{{ isEditing ? 'Editar plan' : 'Nuevo plan' }}</h5>
+  </div>
 
-        <div class="mb-3">
-          <label class="form-label">Sucursal</label>
-          <select class="form-select" [(ngModel)]="form.sucursal_id">
-            <option *ngFor="let sucursal of sucursales" [value]="sucursal.id">{{ sucursal.nombre }}</option>
-          </select>
+  <div class="modal-backdrop show" *ngIf="formVisible" (click)="!saving && cancel()"></div>
+  <div class="modal d-block" *ngIf="formVisible" role="dialog" aria-modal="true" aria-labelledby="planFormTitle">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="planFormTitle" class="modal-title">{{ isEditing ? 'Editar plan' : 'Nuevo plan' }}</h5>
+            <span class="modal-subtitle">{{ isEditing ? 'Actualiza el plan y sus productos o servicios' : 'Crea un plan con productos y servicios' }}</span>
+          </div>
+          <button class="btn-close" type="button" aria-label="Cerrar formulario" (click)="cancel()" [disabled]="saving"></button>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Nombre</label>
-          <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Plan personalizado" />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Descripcion</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="form.descripcion" placeholder="Alcance del plan que arma el cliente"></textarea>
-        </div>
-
-        <div class="border rounded p-3 mb-3">
-          <div class="fw-bold mb-3">Productos y servicios del plan</div>
-
-          <div class="mb-2">
-            <label class="form-label">Producto o servicio</label>
-            <select class="form-select" [(ngModel)]="selectedProductoServicioId">
-              <option *ngFor="let item of productosServicios" [value]="item.id">
-                {{ item.codigo }} - {{ item.nombre }} ({{ clp(item.precio) }})
-              </option>
-            </select>
+        <div class="modal-body">
+          <div class="status-message status-error modal-status" *ngIf="error">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>{{ error }}</span>
+            <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
 
-          <div class="row g-2 mb-2">
-            <div class="col-4">
-              <label class="form-label">Cantidad</label>
-              <input class="form-control" type="number" [(ngModel)]="selectedCantidad" min="1" />
+          <div class="row g-3">
+            <div class="col-lg-5">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Sucursal</label>
+                  <select class="form-select" [(ngModel)]="form.sucursal_id">
+                    <option *ngFor="let sucursal of sucursales" [value]="sucursal.id">{{ sucursal.nombre }}</option>
+                  </select>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Nombre</label>
+                  <input class="form-control" type="text" [(ngModel)]="form.nombre" placeholder="Plan personalizado" />
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Descripcion</label>
+                  <textarea class="form-control" rows="4" [(ngModel)]="form.descripcion" placeholder="Alcance del plan que arma el cliente"></textarea>
+                </div>
+
+                <div class="col-12">
+                  <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2">
+                    <span class="fw-semibold">Total del plan</span>
+                    <span class="tnum fw-800">{{ clp(kitTotal) }}</span>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="activoPlan" [(ngModel)]="form.activo" />
+                    <label class="form-check-label" for="activoPlan">Activo</label>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="col-8">
-              <label class="form-label">Observacion</label>
-              <input class="form-control" type="text" [(ngModel)]="selectedObservacion" placeholder="Opcional" />
+
+            <div class="col-lg-7">
+              <div class="border rounded p-3 h-100">
+                <div class="fw-bold mb-3">Productos y servicios del plan</div>
+
+                <div class="row g-2 mb-2">
+                  <div class="col-md-7">
+                    <label class="form-label">Producto o servicio</label>
+                    <select class="form-select" [(ngModel)]="selectedProductoServicioId">
+                      <option *ngFor="let item of productosServicios" [value]="item.id">
+                        {{ item.codigo }} - {{ item.nombre }} ({{ clp(item.precio) }})
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Cantidad</label>
+                    <input class="form-control" type="number" [(ngModel)]="selectedCantidad" min="1" />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Observacion</label>
+                    <input class="form-control" type="text" [(ngModel)]="selectedObservacion" placeholder="Opcional" />
+                  </div>
+                </div>
+
+                <button class="btn btn-outline-primary w-100 mb-3" type="button" (click)="addKitItem()" [disabled]="saving">
+                  <i class="bi bi-plus-lg"></i> Agregar al plan
+                </button>
+
+                <div class="table-responsive" *ngIf="form.kit?.length">
+                  <table class="table table-sm align-middle responsive-card-table">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th style="width: 86px">Cant.</th>
+                        <th class="text-end">Total</th>
+                        <th style="width: 42px"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of form.kit; trackBy: trackByProductoServicio">
+                        <td data-label="Item">
+                          <div class="fw-semibold">{{ item.nombre }}</div>
+                          <div class="text-secondary" style="font-size: .72rem">{{ item.codigo }} · {{ item.tipo_item }}</div>
+                        </td>
+                        <td data-label="Cantidad">
+                          <input class="form-control form-control-sm" type="number" min="1" [(ngModel)]="item.cantidad" (ngModelChange)="updateKitItem(item)" />
+                        </td>
+                        <td class="text-end tnum fw-semibold" data-label="Total">{{ clp(item.total) }}</td>
+                        <td class="text-end" data-label="Quitar">
+                          <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar" [disabled]="saving">
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="text-secondary small" *ngIf="!form.kit?.length">Agrega al menos un producto o servicio.</div>
+              </div>
             </div>
           </div>
-
-          <button class="btn btn-outline-primary w-100 mb-3" type="button" (click)="addKitItem()" [disabled]="saving">
-            <i class="bi bi-plus-lg"></i> Agregar al plan
-          </button>
-
-          <div class="table-responsive" *ngIf="form.kit?.length">
-            <table class="table table-sm align-middle responsive-card-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th style="width: 86px">Cant.</th>
-                  <th class="text-end">Total</th>
-                  <th style="width: 42px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of form.kit; trackBy: trackByProductoServicio">
-                  <td data-label="Item">
-                    <div class="fw-semibold">{{ item.nombre }}</div>
-                    <div class="text-secondary" style="font-size: .72rem">{{ item.codigo }} · {{ item.tipo_item }}</div>
-                  </td>
-                  <td data-label="Cantidad">
-                    <input class="form-control form-control-sm" type="number" min="1" [(ngModel)]="item.cantidad" (ngModelChange)="updateKitItem(item)" />
-                  </td>
-                  <td class="text-end tnum fw-semibold" data-label="Total">{{ clp(item.total) }}</td>
-                  <td class="text-end" data-label="Quitar">
-                    <button class="btn btn-sm btn-soft" type="button" (click)="removeKitItem(item.producto_servicio_id)" title="Quitar" [disabled]="saving">
-                      <i class="bi bi-x-lg"></i>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="text-secondary small" *ngIf="!form.kit?.length">Agrega al menos un producto o servicio.</div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2 mb-3">
-          <span class="fw-semibold">Total del plan</span>
-          <span class="tnum fw-800">{{ clp(kitTotal) }}</span>
-        </div>
-
-        <div class="form-check mb-4">
-          <input class="form-check-input" type="checkbox" id="activoPlan" [(ngModel)]="form.activo" />
-          <label class="form-check-label" for="activoPlan">Activo</label>
-        </div>
-
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
-          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+          <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
         </div>
       </div>
     </div>

@@ -1248,3 +1248,123 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 GESFUN Frontend ya cuenta con una base funcional de aplicacion administrativa: navegacion, layout, estilos, pantallas principales, componentes reutilizables, autenticacion MSAL con aviso de sesion expirada, dashboard operativo conectado al BFF, mantenedores conectados al BFF, servicios funerarios conectados al BFF, agenda de servicios conectada al BFF, inventario conectado al BFF, facturacion conectada al BFF para registrar pagos y emitir DTE en una sola accion, notificaciones operativas en la barra superior y un flujo comercial de cotizaciones que permite crear, listar, buscar desde la barra superior, cambiar estados, reimprimir PDFs y generar contratos.
 
 La siguiente etapa natural es proteger las rutas internas con autenticacion obligatoria, consolidar servicios HTTP por dominio y ampliar pruebas automatizadas sobre los flujos integrados con el BFF.
+
+## 18. Pruebas E2E con Playwright
+
+El proyecto usa Playwright para ejecutar pruebas end-to-end sobre la aplicacion Angular. Estas pruebas abren el frontend en un navegador real, navegan por las pantallas y validan flujos completos de usuario.
+
+### Objetivo
+
+El objetivo de Playwright en GESFUN es validar que los mantenedores y catalogos principales funcionen correctamente desde la interfaz:
+
+- Carga de pantallas.
+- Listado de datos.
+- Creacion de registros.
+- Edicion de registros.
+- Desactivacion o eliminacion segun corresponda.
+- Navegacion entre acciones principales.
+- Manejo de errores controlados del BFF.
+
+Estas pruebas complementan las pruebas unitarias de Karma/Jasmine. Las unitarias validan logica de componentes y servicios; Playwright valida que el flujo completo funcione en el navegador.
+
+### Pruebas disponibles
+
+Los archivos principales son:
+
+```text
+tests/catalogo.spec.ts
+tests/mantenedores.spec.ts
+tests/login.spec.ts
+tests/helpers/bff.ts
+```
+
+`tests/catalogo.spec.ts` valida catalogo y planes con respuestas simuladas del BFF.
+
+`tests/mantenedores.spec.ts` valida los mantenedores principales:
+
+- Productos y servicios.
+- Planes.
+- Clientes.
+- Proveedores.
+- Empleados.
+- Sucursales.
+- Usuarios.
+- Tipos de documento.
+
+`tests/helpers/bff.ts` contiene un BFF simulado para las pruebas. Intercepta las llamadas HTTP a `http://localhost:8081` y responde con datos de prueba. Gracias a esto, los mantenedores se pueden probar sin levantar el backend real y sin iniciar sesion en Microsoft.
+
+`tests/login.spec.ts` es la prueba de login real con Microsoft. Esta prueba solo se ejecuta si existen credenciales configuradas en variables de entorno.
+
+### Login en pruebas
+
+Las pruebas de catalogo y mantenedores no requieren login real. Playwright configura un token de prueba en el navegador mediante `localStorage`:
+
+```text
+gesfun.e2eAccessToken
+```
+
+El frontend detecta ese token solo durante las pruebas E2E y permite ejecutar los flujos sin pasar por Microsoft Entra ID.
+
+La aplicacion normal sigue usando MSAL y Microsoft como antes.
+
+### Comandos
+
+Ejecutar todas las pruebas E2E:
+
+```bash
+npm run e2e
+```
+
+Ejecutar Playwright en modo visual/interactivo:
+
+```bash
+npm run e2e:ui
+```
+
+Ejecutar solo catalogo:
+
+```bash
+npx playwright test tests/catalogo.spec.ts --project=chromium
+```
+
+Ejecutar solo mantenedores:
+
+```bash
+npx playwright test tests/mantenedores.spec.ts --project=chromium
+```
+
+Listar todas las pruebas disponibles:
+
+```bash
+npx playwright test --list
+```
+
+Abrir el ultimo reporte HTML:
+
+```bash
+npx playwright show-report
+```
+
+### Login real con Microsoft
+
+Para ejecutar la prueba real de login se deben configurar credenciales:
+
+```bash
+export PW_EMAIL="correo@dominio.cl"
+export PW_PASSWORD="password"
+npx playwright test tests/login.spec.ts --project=chromium
+```
+
+Si `PW_EMAIL` o `PW_PASSWORD` no existen, la prueba de login se omite automaticamente y no rompe la suite.
+
+### Consideraciones
+
+- Playwright levanta Angular automaticamente usando la configuracion de `playwright.config.ts`.
+- La URL base de pruebas es `http://127.0.0.1:4200`.
+- El BFF real no es necesario para `catalogo.spec.ts` ni `mantenedores.spec.ts`.
+- La prueba `login.spec.ts` si depende del flujo real de Microsoft y puede requerir MFA, permisos o ajustes de la cuenta.
+- Para desarrollo local se recomienda partir ejecutando con Chromium:
+
+```bash
+npx playwright test --project=chromium
+```

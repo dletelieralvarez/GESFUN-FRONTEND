@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { Comuna, Empresa, Region, Tercero } from '../../data/models';
@@ -10,7 +10,15 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './empleados.component.html',
   styleUrls: ['./empleados.component.css']
 })
-export class EmpleadosComponent implements OnInit {
+export class EmpleadosComponent implements OnInit, OnDestroy {
+  private readonly fieldMaxLengths = {
+    nombre_completo: 200,
+    ruc: 12,
+    dv: 1,
+    email: 75,
+    telefono: 15
+  };
+
   empleados: Tercero[] = [];
   regiones: Region[] = [];
   comunas: Comuna[] = [];
@@ -24,6 +32,7 @@ export class EmpleadosComponent implements OnInit {
   selectedEmpleado: Tercero | null = null;
   empleadoPendingDelete: Tercero | null = null;
   form: Partial<Tercero> = this.createEmptyForm();
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -32,12 +41,17 @@ export class EmpleadosComponent implements OnInit {
     await this.loadEmpleados();
   }
 
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
+  }
+
   get titleCount() {
     return this.empleados.length;
   }
 
   get comunasFiltradas() {
-    return this.comunas.filter(c => !this.form.region_id || c.region_id === Number(this.form.region_id));
+    const regionId = Number(this.form.region_id || 0);
+    return regionId ? this.comunas.filter(c => c.region_id === regionId) : [];
   }
 
   trackById(index: number, item: Tercero) {
@@ -62,7 +76,15 @@ export class EmpleadosComponent implements OnInit {
     }
     this.isEditing = true;
     this.selectedEmpleado = empleado;
-    this.form = { ...empleado, rol: 'EMPLEADO', region_id: empleado.region_id || this.getRegionIdByComuna(empleado.comuna_id) };
+    const regionId = Number(empleado.region_id || this.getRegionIdByComuna(empleado.comuna_id) || 0);
+    const comunaId = Number(empleado.comuna_id || 0);
+    this.form = {
+      ...empleado,
+      rol: 'EMPLEADO',
+      region_id: regionId,
+      comuna_id: this.comunas.length && !this.isComunaInRegion(comunaId, regionId) ? 0 : comunaId,
+      empresa_id: Number(empleado.empresa_id || 0)
+    };
     this.formVisible = true;
   }
 
@@ -90,7 +112,7 @@ export class EmpleadosComponent implements OnInit {
     try {
       await this.patchEmpleadoDesactivar(empleado);
       await this.loadEmpleados();
-      this.success = 'Empleado desactivado correctamente.';
+      this.showSuccess('Empleado desactivado correctamente.');
       if (this.selectedEmpleado?.uuid === empleado.uuid) {
         this.cancel();
       }
@@ -113,8 +135,22 @@ export class EmpleadosComponent implements OnInit {
       this.error = 'Completa nombre, RUT, email y telefono.';
       return;
     }
-    if (!this.form.comuna_id || !this.form.empresa_id) {
-      this.error = 'Selecciona comuna y empresa.';
+
+    const lengthError = this.validateFieldLengths();
+    if (lengthError) {
+      this.error = lengthError;
+      return;
+    }
+
+    const formatError = this.validateFieldFormats();
+    if (formatError) {
+      this.error = formatError;
+      return;
+    }
+
+    const selectionError = this.validateSelections();
+    if (selectionError) {
+      this.error = selectionError;
       return;
     }
 
@@ -126,11 +162,11 @@ export class EmpleadosComponent implements OnInit {
         const updated: Tercero = { ...this.selectedEmpleado, ...result, rol: 'EMPLEADO' };
         await this.putEmpleado(updated);
         await this.loadEmpleados();
-        this.success = 'Empleado actualizado correctamente.';
+        this.showSuccess('Empleado actualizado correctamente.');
       } else {
         await this.postEmpleado(result);
         await this.loadEmpleados();
-        this.success = 'Empleado creado correctamente.';
+        this.showSuccess('Empleado creado correctamente.');
       }
 
       this.cancel();
@@ -142,6 +178,7 @@ export class EmpleadosComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedEmpleado = null;
@@ -168,10 +205,24 @@ export class EmpleadosComponent implements OnInit {
   }
 
   onRegionChange() {
+    this.form.region_id = Number(this.form.region_id || 0);
     const comunas = this.comunasFiltradas;
     if (!comunas.some(c => c.id === Number(this.form.comuna_id))) {
-      this.form.comuna_id = comunas[0]?.id;
+      this.form.comuna_id = 0;
     }
+  }
+
+  onRutChange(value: string) {
+    this.form.ruc = String(value || '').replace(/\D/g, '').slice(0, this.fieldMaxLengths.ruc);
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   private createEmptyForm(): Partial<Tercero> {
@@ -187,9 +238,9 @@ export class EmpleadosComponent implements OnInit {
       email: '',
       telefono: '',
       activo: true,
-      region_id: this.regiones[0]?.id || this.comunas[0]?.region_id || 0,
-      comuna_id: this.comunas[0]?.id || 0,
-      empresa_id: this.empresas[0]?.id || 1
+      region_id: 0,
+      comuna_id: 0,
+      empresa_id: 0
     };
   }
 
@@ -205,6 +256,51 @@ export class EmpleadosComponent implements OnInit {
       apellido_paterno: this.extractApellidoPaterno(this.form.nombre_completo || ''),
       apellido_materno: this.extractApellidoMaterno(this.form.nombre_completo || '')
     } as Tercero;
+  }
+
+  private validateFieldLengths() {
+    const fields = [
+      { label: 'nombre completo', value: this.form.nombre_completo, max: this.fieldMaxLengths.nombre_completo },
+      { label: 'RUT', value: this.form.ruc, max: this.fieldMaxLengths.ruc },
+      { label: 'DV', value: this.form.dv, max: this.fieldMaxLengths.dv },
+      { label: 'email', value: this.form.email, max: this.fieldMaxLengths.email },
+      { label: 'telefono', value: this.form.telefono, max: this.fieldMaxLengths.telefono }
+    ];
+    const invalid = fields.find(field => String(field.value || '').trim().length > field.max);
+
+    return invalid ? `El campo ${invalid.label} no puede superar ${invalid.max} caracteres.` : null;
+  }
+
+  private validateFieldFormats() {
+    if (!/^\d+$/.test(String(this.form.ruc || ''))) {
+      return 'El RUT / RUC debe contener solo numeros.';
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(this.form.email || '').trim())) {
+      return 'Ingresa un email valido con arroba.';
+    }
+
+    return null;
+  }
+
+  private validateSelections() {
+    if (!this.form.region_id || !this.form.comuna_id || !this.form.empresa_id) {
+      return 'Selecciona region, comuna y empresa.';
+    }
+
+    if (this.comunas.length && !this.isComunaInRegion(Number(this.form.comuna_id), Number(this.form.region_id))) {
+      return 'Selecciona una comuna valida para la region.';
+    }
+
+    if (this.empresas.length && !this.empresas.some(empresa => empresa.id === Number(this.form.empresa_id))) {
+      return 'Selecciona una empresa valida.';
+    }
+
+    return null;
+  }
+
+  private isComunaInRegion(comunaId: number, regionId: number) {
+    return this.comunas.some(comuna => comuna.id === comunaId && comuna.region_id === regionId);
   }
 
   private async postEmpleado(tercero: Tercero) {
@@ -347,7 +443,7 @@ export class EmpleadosComponent implements OnInit {
       uuid: item.uuid,
       codigo: String(item.codigo ?? item.code ?? index + 1),
       nombre,
-      region_id: Number(item.region_id ?? item.regionId ?? item.region?.id ?? this.regiones[0]?.id ?? 0)
+      region_id: this.resolveRegionId(item)
     };
   }
 
@@ -382,13 +478,46 @@ export class EmpleadosComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 
   private extractNombres(fullName: string) {
@@ -411,6 +540,18 @@ export class EmpleadosComponent implements OnInit {
   }
 
   private getRegionIdFromApiComuna(comuna: any) {
-    return Number(comuna?.region_id ?? comuna?.regionId ?? comuna?.region?.id ?? this.regiones[0]?.id ?? 0);
+    return this.resolveRegionId(comuna);
+  }
+
+  private resolveRegionId(item: any) {
+    const regionUuid = item?.regionUuid ?? item?.region_uuid ?? item?.region?.uuid;
+    const region = this.regiones.find(row => row.uuid === regionUuid);
+    return Number(
+      item?.region_id
+      ?? item?.regionId
+      ?? item?.region?.id
+      ?? region?.id
+      ?? 0
+    );
   }
 }

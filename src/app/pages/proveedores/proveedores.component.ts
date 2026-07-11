@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { Comuna, Empresa, Region, Tercero } from '../../data/models';
@@ -10,7 +10,15 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './proveedores.component.html',
   styleUrls: ['./proveedores.component.css']
 })
-export class ProveedoresComponent implements OnInit {
+export class ProveedoresComponent implements OnInit, OnDestroy {
+  private readonly fieldMaxLengths = {
+    nombre_completo: 200,
+    ruc: 12,
+    dv: 1,
+    email: 75,
+    telefono: 15
+  };
+
   proveedores: Tercero[] = [];
   regiones: Region[] = [];
   comunas: Comuna[] = [];
@@ -24,6 +32,7 @@ export class ProveedoresComponent implements OnInit {
   selectedProveedor: Tercero | null = null;
   proveedorPendingDeactivate: Tercero | null = null;
   form: Partial<Tercero> = this.createEmptyForm();
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -32,12 +41,17 @@ export class ProveedoresComponent implements OnInit {
     await this.loadProveedores();
   }
 
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
+  }
+
   get titleCount() {
     return this.proveedores.length;
   }
 
   get comunasFiltradas() {
-    return this.comunas.filter(c => !this.form.region_id || c.region_id === Number(this.form.region_id));
+    const regionId = Number(this.form.region_id || 0);
+    return regionId ? this.comunas.filter(c => c.region_id === regionId) : [];
   }
 
   trackById(index: number, item: Tercero) {
@@ -62,7 +76,15 @@ export class ProveedoresComponent implements OnInit {
     }
     this.isEditing = true;
     this.selectedProveedor = proveedor;
-    this.form = { ...proveedor, rol: 'PROVEEDOR', region_id: proveedor.region_id || this.getRegionIdByComuna(proveedor.comuna_id) };
+    const regionId = Number(proveedor.region_id || this.getRegionIdByComuna(proveedor.comuna_id) || 0);
+    const comunaId = Number(proveedor.comuna_id || 0);
+    this.form = {
+      ...proveedor,
+      rol: 'PROVEEDOR',
+      region_id: regionId,
+      comuna_id: this.comunas.length && !this.isComunaInRegion(comunaId, regionId) ? 0 : comunaId,
+      empresa_id: Number(proveedor.empresa_id || 0)
+    };
     this.formVisible = true;
   }
 
@@ -91,7 +113,7 @@ export class ProveedoresComponent implements OnInit {
     try {
       await this.patchProveedorDesactivar(proveedor);
       await this.loadProveedores();
-      this.success = 'Proveedor desactivado correctamente.';
+      this.showSuccess('Proveedor desactivado correctamente.');
       if (this.selectedProveedor?.uuid === proveedor.uuid) {
         this.cancel();
       }
@@ -114,8 +136,22 @@ export class ProveedoresComponent implements OnInit {
       this.error = 'Completa nombre, RUT, email y telefono.';
       return;
     }
-    if (!this.form.comuna_id || !this.form.empresa_id) {
-      this.error = 'Selecciona comuna y empresa.';
+
+    const lengthError = this.validateFieldLengths();
+    if (lengthError) {
+      this.error = lengthError;
+      return;
+    }
+
+    const formatError = this.validateFieldFormats();
+    if (formatError) {
+      this.error = formatError;
+      return;
+    }
+
+    const selectionError = this.validateSelections();
+    if (selectionError) {
+      this.error = selectionError;
       return;
     }
 
@@ -127,11 +163,11 @@ export class ProveedoresComponent implements OnInit {
         const updated: Tercero = { ...this.selectedProveedor, ...result, rol: 'PROVEEDOR' };
         await this.putProveedor(updated);
         await this.loadProveedores();
-        this.success = 'Proveedor actualizado correctamente.';
+        this.showSuccess('Proveedor actualizado correctamente.');
       } else {
         await this.postProveedor(result);
         await this.loadProveedores();
-        this.success = 'Proveedor creado correctamente.';
+        this.showSuccess('Proveedor creado correctamente.');
       }
 
       this.cancel();
@@ -143,6 +179,7 @@ export class ProveedoresComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedProveedor = null;
@@ -169,10 +206,24 @@ export class ProveedoresComponent implements OnInit {
   }
 
   onRegionChange() {
+    this.form.region_id = Number(this.form.region_id || 0);
     const comunas = this.comunasFiltradas;
     if (!comunas.some(c => c.id === Number(this.form.comuna_id))) {
-      this.form.comuna_id = comunas[0]?.id;
+      this.form.comuna_id = 0;
     }
+  }
+
+  onRutChange(value: string) {
+    this.form.ruc = String(value || '').replace(/\D/g, '').slice(0, this.fieldMaxLengths.ruc);
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   private createEmptyForm(): Partial<Tercero> {
@@ -188,9 +239,9 @@ export class ProveedoresComponent implements OnInit {
       email: '',
       telefono: '',
       activo: true,
-      region_id: this.regiones[0]?.id || this.comunas[0]?.region_id || 0,
-      comuna_id: this.comunas[0]?.id || 0,
-      empresa_id: this.empresas[0]?.id || 1
+      region_id: 0,
+      comuna_id: 0,
+      empresa_id: 0
     };
   }
 
@@ -248,12 +299,9 @@ export class ProveedoresComponent implements OnInit {
       if (comunas.length) {
         this.comunas = comunas.map((comuna, index) => this.fromApiComuna(comuna, index));
         if (!this.regiones.length) this.regiones = this.buildRegionesFromComunas();
-        this.form.comuna_id = this.comunas[0]?.id || 1;
-        this.form.region_id = this.comunas[0]?.region_id || 1;
       }
       if (empresas.length) {
         this.empresas = empresas.map((empresa, index) => this.fromApiEmpresa(empresa, index));
-        this.form.empresa_id = this.empresas[0].id;
       }
     } catch (error) {
       console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
@@ -327,8 +375,8 @@ export class ProveedoresComponent implements OnInit {
       tipo_persona: tipoPersona === 'N' || tipoPersona === 'persona_natural' ? 'persona_natural' : 'empresa',
       activo: item.activo === undefined || item.activo === true || item.activo === 1,
       region_id: comuna?.region_id || this.getRegionIdFromApiComuna(item.comuna),
-      comuna_id: comuna?.id || Number(item.comuna_id ?? 1),
-      empresa_id: empresa?.id || Number(item.empresa_id ?? this.empresas[0]?.id ?? 1)
+      comuna_id: comuna?.id || Number(item.comuna_id ?? 0),
+      empresa_id: empresa?.id || Number(item.empresa_id ?? 0)
     };
   }
 
@@ -339,7 +387,7 @@ export class ProveedoresComponent implements OnInit {
       uuid: item.uuid,
       codigo: String(item.codigo ?? item.code ?? index + 1),
       nombre,
-      region_id: Number(item.region_id ?? item.regionId ?? item.region?.id ?? this.regiones[0]?.id ?? 0)
+      region_id: this.resolveRegionId(item)
     };
   }
 
@@ -374,13 +422,46 @@ export class ProveedoresComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 
   private extractNombres(fullName: string) {
@@ -403,6 +484,63 @@ export class ProveedoresComponent implements OnInit {
   }
 
   private getRegionIdFromApiComuna(comuna: any) {
-    return Number(comuna?.region_id ?? comuna?.regionId ?? comuna?.region?.id ?? this.regiones[0]?.id ?? 0);
+    return this.resolveRegionId(comuna);
+  }
+
+  private validateFieldLengths() {
+    const fields = [
+      { label: 'nombre completo / razon social', value: this.form.nombre_completo, max: this.fieldMaxLengths.nombre_completo },
+      { label: 'RUT', value: this.form.ruc, max: this.fieldMaxLengths.ruc },
+      { label: 'DV', value: this.form.dv, max: this.fieldMaxLengths.dv },
+      { label: 'email', value: this.form.email, max: this.fieldMaxLengths.email },
+      { label: 'telefono', value: this.form.telefono, max: this.fieldMaxLengths.telefono }
+    ];
+    const invalid = fields.find(field => String(field.value || '').trim().length > field.max);
+
+    return invalid ? `El campo ${invalid.label} no puede superar ${invalid.max} caracteres.` : null;
+  }
+
+  private validateFieldFormats() {
+    if (!/^\d+$/.test(String(this.form.ruc || ''))) {
+      return 'El RUT / RUC debe contener solo numeros.';
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(this.form.email || '').trim())) {
+      return 'Ingresa un email valido con arroba.';
+    }
+
+    return null;
+  }
+
+  private validateSelections() {
+    if (!this.form.region_id || !this.form.comuna_id || !this.form.empresa_id) {
+      return 'Selecciona region, comuna y empresa.';
+    }
+
+    if (this.comunas.length && !this.isComunaInRegion(Number(this.form.comuna_id), Number(this.form.region_id))) {
+      return 'Selecciona una comuna valida para la region.';
+    }
+
+    if (this.empresas.length && !this.empresas.some(empresa => empresa.id === Number(this.form.empresa_id))) {
+      return 'Selecciona una empresa valida.';
+    }
+
+    return null;
+  }
+
+  private isComunaInRegion(comunaId: number, regionId: number) {
+    return this.comunas.some(comuna => comuna.id === comunaId && comuna.region_id === regionId);
+  }
+
+  private resolveRegionId(item: any) {
+    const regionUuid = item?.regionUuid ?? item?.region_uuid ?? item?.region?.uuid;
+    const region = this.regiones.find(row => row.uuid === regionUuid);
+    return Number(
+      item?.region_id
+      ?? item?.regionId
+      ?? item?.region?.id
+      ?? region?.id
+      ?? 0
+    );
   }
 }

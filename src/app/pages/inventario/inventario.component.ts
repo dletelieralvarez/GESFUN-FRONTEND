@@ -402,13 +402,10 @@ export class InventarioComponent implements OnInit {
   }
 
   private createDetalle(): EntradaDetalleForm {
-    const firstAvailable = this.productos.find(producto =>
-      !this.form.detalles.some(item => item.productoUuid === producto.uuid)
-    );
     return {
-      productoUuid: firstAvailable?.uuid || '',
+      productoUuid: '',
       cantidad: 1,
-      costoUnitario: firstAvailable?.precio || 0,
+      costoUnitario: 0,
       descuento: 0,
       observacion: ''
     };

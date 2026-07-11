@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { CLP } from '../../data/ui-data';
@@ -28,7 +28,7 @@ type PlanConKit = SuscripcionPlan & { kit: PlanKitItem[] };
   templateUrl: './planes.component.html',
   styleUrls: ['./planes.component.css']
 })
-export class PlanesComponent implements OnInit {
+export class PlanesComponent implements OnInit, OnDestroy {
   productosServicios: ProductoServicio[] = [];
   planes: PlanConKit[] = [];
   sucursales: Sucursal[] = [];
@@ -45,12 +45,17 @@ export class PlanesComponent implements OnInit {
   selectedCantidad = 1;
   selectedObservacion = '';
   clp = CLP;
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   async ngOnInit() {
     await this.loadCatalogos();
     await this.loadPlanes();
+  }
+
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
   }
 
   get titleCount() {
@@ -116,7 +121,7 @@ export class PlanesComponent implements OnInit {
     try {
       await this.patchPlanDesactivar(plan);
       await this.loadPlanes();
-      this.success = 'Plan desactivado correctamente.';
+      this.showSuccess('Plan desactivado correctamente.');
       this.planPendingDeactivate = null;
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudo desactivar el plan.');
@@ -146,7 +151,7 @@ export class PlanesComponent implements OnInit {
         await this.putPlan(updated);
         await this.syncPlanKit(this.selectedPlan.uuid, result.kit, this.selectedPlan.kit);
         await this.loadPlanes();
-        this.success = 'Plan actualizado correctamente.';
+        this.showSuccess('Plan actualizado correctamente.');
       } else {
         const created = await this.postPlan(result);
         const planUuid = this.extractCreatedUuid(created);
@@ -154,7 +159,7 @@ export class PlanesComponent implements OnInit {
           await this.syncPlanKit(planUuid, result.kit, []);
         }
         await this.loadPlanes();
-        this.success = 'Plan creado correctamente.';
+        this.showSuccess('Plan creado correctamente.');
       }
 
       this.cancel();
@@ -166,6 +171,7 @@ export class PlanesComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedPlan = null;
@@ -181,6 +187,15 @@ export class PlanesComponent implements OnInit {
 
   isPlanActivo(plan: PlanConKit) {
     return plan.activo !== false;
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   addKitItem() {
@@ -471,12 +486,45 @@ export class PlanesComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 }

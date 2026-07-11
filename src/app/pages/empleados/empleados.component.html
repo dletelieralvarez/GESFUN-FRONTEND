@@ -3,20 +3,26 @@
     <button class="btn btn-primary d-inline-flex align-items-center gap-2" (click)="openNew()" [disabled]="loading || saving"><i class="bi bi-plus-lg"></i>Nuevo empleado</button>
   </app-page-head>
 
-  <div class="status-stack" *ngIf="loading || error || success || empleadoPendingDelete">
+  <div class="status-stack" *ngIf="loading || (!formVisible && error) || success || empleadoPendingDelete">
     <div class="status-message status-loading" *ngIf="loading">
       <i class="bi bi-arrow-repeat"></i>
       <span>Procesando empleados...</span>
     </div>
 
-    <div class="status-message status-error" *ngIf="error">
+    <div class="status-message status-error" *ngIf="error && !formVisible">
       <i class="bi bi-exclamation-circle"></i>
       <span>{{ error }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="status-message status-success" *ngIf="success">
       <i class="bi bi-check-circle"></i>
       <span>{{ success }}</span>
+      <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissSuccess()">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="delete-confirm" *ngIf="empleadoPendingDelete">
@@ -32,7 +38,7 @@
   </div>
 
   <div class="row gy-3">
-    <div [ngClass]="formVisible ? 'col-xl-8' : 'col-12'">
+    <div class="col-12">
       <div class="mobile-crud-list d-sm-none">
         <div class="mobile-crud-card" *ngFor="let empleado of empleados; trackBy: trackById">
           <div class="mobile-crud-card-head">
@@ -139,71 +145,94 @@
       </div>
     </div>
 
-    <div class="col-xl-4" *ngIf="formVisible">
-      <div class="card p-4">
-        <h5 class="mb-3">{{ isEditing ? 'Editar empleado' : 'Nuevo empleado' }}</h5>
+  </div>
 
-        <div class="mb-3">
-          <label class="form-label">Tipo de persona</label>
-          <input class="form-control" type="text" value="Persona natural" disabled />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Rol</label>
-          <input class="form-control" type="text" value="Empleado" disabled />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Nombre completo / Razon social</label>
-          <input class="form-control" type="text" [(ngModel)]="form.nombre_completo" placeholder="Ej: Maria Perez" />
-        </div>
-
-        <div class="row g-2 mb-3">
-          <div class="col-8">
-            <label class="form-label">RUT / RUC</label>
-            <input class="form-control" type="text" [(ngModel)]="form.ruc" placeholder="12345678" />
+  <div class="modal-backdrop show" *ngIf="formVisible" (click)="!saving && cancel()"></div>
+  <div class="modal d-block" *ngIf="formVisible" role="dialog" aria-modal="true" aria-labelledby="employeeFormTitle">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 id="employeeFormTitle" class="modal-title">{{ isEditing ? 'Editar empleado' : 'Nuevo empleado' }}</h5>
+            <span class="modal-subtitle">{{ isEditing ? 'Actualiza los datos del empleado' : 'Registra un nuevo empleado' }}</span>
           </div>
-          <div class="col-4">
-            <label class="form-label">DV</label>
-            <input class="form-control" type="text" [(ngModel)]="form.dv" placeholder="K" />
+          <button class="btn-close" type="button" aria-label="Cerrar formulario" (click)="cancel()" [disabled]="saving"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="status-message status-error modal-status" *ngIf="error">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>{{ error }}</span>
+            <button class="status-close" type="button" aria-label="Cerrar mensaje" (click)="dismissError()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de persona</label>
+              <input class="form-control" type="text" value="Persona natural" disabled />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Rol</label>
+              <input class="form-control" type="text" value="Empleado" disabled />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Nombre completo / Razon social</label>
+              <input class="form-control" type="text" [(ngModel)]="form.nombre_completo" maxlength="200" placeholder="Ej: Maria Perez" />
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label">RUT / RUC</label>
+              <input class="form-control" type="text" [ngModel]="form.ruc" (ngModelChange)="onRutChange($event)" maxlength="12" inputmode="numeric" pattern="[0-9]*" placeholder="12345678" />
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">DV</label>
+              <input class="form-control" type="text" [(ngModel)]="form.dv" maxlength="1" placeholder="K" />
+            </div>
+
+            <div class="col-md-7">
+              <label class="form-label">Email</label>
+              <input class="form-control" type="email" [(ngModel)]="form.email" maxlength="75" placeholder="empleado@correo.cl" />
+            </div>
+
+            <div class="col-md-5">
+              <label class="form-label">Telefono</label>
+              <input class="form-control" type="text" [(ngModel)]="form.telefono" maxlength="15" inputmode="tel" placeholder="+56 9 1234 5678" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Region</label>
+              <select class="form-select" [(ngModel)]="form.region_id" (ngModelChange)="onRegionChange()">
+                <option [ngValue]="0">Selecciona region</option>
+                <option *ngFor="let r of regiones" [ngValue]="r.id">{{ r.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Comuna</label>
+              <select class="form-select" [(ngModel)]="form.comuna_id" [disabled]="!form.region_id">
+                <option [ngValue]="0">Selecciona comuna</option>
+                <option *ngFor="let c of comunasFiltradas" [ngValue]="c.id">{{ c.nombre }}</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Empresa</label>
+              <select class="form-select" [(ngModel)]="form.empresa_id">
+                <option [ngValue]="0">Selecciona empresa</option>
+                <option *ngFor="let empresa of empresas" [ngValue]="empresa.id">{{ empresa.razon_social }}</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Email</label>
-          <input class="form-control" type="email" [(ngModel)]="form.email" placeholder="empleado@correo.cl" />
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Telefono</label>
-          <input class="form-control" type="text" [(ngModel)]="form.telefono" placeholder="+56 9 1234 5678" />
-        </div>
-
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label class="form-label">Region</label>
-            <select class="form-select" [(ngModel)]="form.region_id" (ngModelChange)="onRegionChange()">
-              <option *ngFor="let r of regiones" [value]="r.id">{{ r.nombre }}</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">Comuna</label>
-            <select class="form-select" [(ngModel)]="form.comuna_id">
-              <option *ngFor="let c of comunasFiltradas" [value]="c.id">{{ c.nombre }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <label class="form-label">Empresa</label>
-          <select class="form-select" [(ngModel)]="form.empresa_id">
-            <option *ngFor="let empresa of empresas" [value]="empresa.id">{{ empresa.razon_social }}</option>
-          </select>
-        </div>
-
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary w-100" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
-          <button class="btn btn-outline-secondary w-100" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="saving">Cancelar</button>
+          <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
         </div>
       </div>
     </div>

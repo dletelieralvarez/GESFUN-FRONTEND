@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { CLP } from '../../data/ui-data';
@@ -13,7 +13,7 @@ type ProductoServicioForm = ProductoServicio & { categoria: string };
   templateUrl: './productos-servicios.component.html',
   styleUrls: ['./productos-servicios.component.css']
 })
-export class ProductosServiciosComponent implements OnInit {
+export class ProductosServiciosComponent implements OnInit, OnDestroy {
   items: ProductoServicioForm[] = [];
   unidadesMedida: UnidadMedida[] = [];
   empresas: Empresa[] = [];
@@ -27,12 +27,17 @@ export class ProductosServiciosComponent implements OnInit {
   itemPendingDeactivate: ProductoServicioForm | null = null;
   form: Partial<ProductoServicioForm> = this.createEmptyForm();
   clp = CLP;
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   async ngOnInit() {
     await this.loadCatalogos();
     await this.loadProductosServicios();
+  }
+
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
   }
 
   get titleCount() {
@@ -90,7 +95,7 @@ export class ProductosServiciosComponent implements OnInit {
     try {
       await this.patchProductoServicioDesactivar(item);
       await this.loadProductosServicios();
-      this.success = 'Producto o servicio desactivado correctamente.';
+      this.showSuccess('Producto o servicio desactivado correctamente.');
       if (this.selectedItem?.uuid === item.uuid) {
         this.cancel();
       }
@@ -122,11 +127,11 @@ export class ProductosServiciosComponent implements OnInit {
         const updated = { ...this.selectedItem, ...result };
         await this.putProductoServicio(updated);
         await this.loadProductosServicios();
-        this.success = 'Producto o servicio actualizado correctamente.';
+        this.showSuccess('Producto o servicio actualizado correctamente.');
       } else {
         await this.postProductoServicio(result);
         await this.loadProductosServicios();
-        this.success = 'Producto o servicio creado correctamente.';
+        this.showSuccess('Producto o servicio creado correctamente.');
       }
 
       this.cancel();
@@ -138,6 +143,7 @@ export class ProductosServiciosComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedItem = null;
@@ -155,6 +161,15 @@ export class ProductosServiciosComponent implements OnInit {
 
   getEmpresaNombre(id?: number) {
     return this.empresas.find(empresa => empresa.id === Number(id))?.razon_social || '';
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   private createEmptyForm(): Partial<ProductoServicioForm> {
@@ -329,12 +344,45 @@ export class ProductosServiciosComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 }

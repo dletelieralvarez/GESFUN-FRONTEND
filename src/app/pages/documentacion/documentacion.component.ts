@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
@@ -17,7 +17,12 @@ interface TipoDocumentoView {
   templateUrl: './documentacion.component.html',
   styleUrls: ['./documentacion.component.css']
 })
-export class DocumentacionComponent implements OnInit {
+export class DocumentacionComponent implements OnInit, OnDestroy {
+  private readonly fieldMaxLengths = {
+    codigo: 30,
+    nombre: 120
+  };
+
   documentos: TipoDocumentoView[] = [];
   loading = false;
   saving = false;
@@ -28,11 +33,16 @@ export class DocumentacionComponent implements OnInit {
   selectedDocumento: TipoDocumentoView | null = null;
   documentoPendingDelete: TipoDocumentoView | null = null;
   form: Partial<TipoDocumentoView> = this.createEmptyForm();
+  private successMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   async ngOnInit() {
     await this.loadDocumentos();
+  }
+
+  ngOnDestroy() {
+    this.clearSuccessMessageTimeout();
   }
 
   get titleCount() {
@@ -87,7 +97,7 @@ export class DocumentacionComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` }
       }));
       await this.loadDocumentos();
-      this.success = 'Tipo de documento eliminado correctamente.';
+      this.showSuccess('Tipo de documento eliminado correctamente.');
       this.documentoPendingDelete = null;
     } catch (err: any) {
       this.error = this.getErrorMessage(err, 'No se pudo eliminar el tipo de documento.');
@@ -108,6 +118,12 @@ export class DocumentacionComponent implements OnInit {
       return;
     }
 
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.error = validationError;
+      return;
+    }
+
     this.saving = true;
     const documento = this.getFullDocumentoFromForm();
 
@@ -115,11 +131,11 @@ export class DocumentacionComponent implements OnInit {
       if (this.isEditing && this.selectedDocumento) {
         await this.putDocumento({ ...this.selectedDocumento, ...documento });
         await this.loadDocumentos();
-        this.success = 'Tipo de documento actualizado correctamente.';
+        this.showSuccess('Tipo de documento actualizado correctamente.');
       } else {
         await this.postDocumento(documento);
         await this.loadDocumentos();
-        this.success = 'Tipo de documento creado correctamente.';
+        this.showSuccess('Tipo de documento creado correctamente.');
       }
 
       this.cancel();
@@ -131,10 +147,27 @@ export class DocumentacionComponent implements OnInit {
   }
 
   cancel() {
+    this.error = null;
     this.formVisible = false;
     this.isEditing = false;
     this.selectedDocumento = null;
     this.form = this.createEmptyForm();
+  }
+
+  onCodigoChange(value: string) {
+    this.form.codigo = String(value || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, '')
+      .slice(0, this.fieldMaxLengths.codigo);
+  }
+
+  dismissError() {
+    this.error = null;
+  }
+
+  dismissSuccess() {
+    this.success = null;
+    this.clearSuccessMessageTimeout();
   }
 
   private createEmptyForm(): Partial<TipoDocumentoView> {
@@ -221,12 +254,64 @@ export class DocumentacionComponent implements OnInit {
   private clearMessages() {
     this.error = null;
     this.success = null;
+    this.clearSuccessMessageTimeout();
+  }
+
+  private showSuccess(message: string) {
+    this.success = message;
+    this.clearSuccessMessageTimeout();
+    this.successMessageTimeout = setTimeout(() => {
+      this.success = null;
+      this.successMessageTimeout = null;
+    }, 4000);
+  }
+
+  private clearSuccessMessageTimeout() {
+    if (this.successMessageTimeout) {
+      clearTimeout(this.successMessageTimeout);
+      this.successMessageTimeout = null;
+    }
   }
 
   private getErrorMessage(err: any, fallback: string) {
     if (err?.status === 0) {
       return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+  }
+
+  private validateForm() {
+    const codigo = String(this.form.codigo || '').trim();
+    const nombre = String(this.form.nombre || '').trim();
+
+    if (codigo.length > this.fieldMaxLengths.codigo) {
+      return `El campo código no puede superar ${this.fieldMaxLengths.codigo} caracteres.`;
+    }
+
+    if (nombre.length > this.fieldMaxLengths.nombre) {
+      return `El campo nombre no puede superar ${this.fieldMaxLengths.nombre} caracteres.`;
+    }
+
+    if (!/^[A-Z0-9_-]+$/i.test(codigo)) {
+      return 'El código solo puede contener letras, números, guion y guion bajo.';
+    }
+
+    return null;
+  }
+
+  private sanitizeBackendMessage(message: string) {
+    const text = String(message || '').trim();
+    const jsonStart = text.indexOf('{');
+
+    if (jsonStart >= 0) {
+      try {
+        const parsed = JSON.parse(text.slice(jsonStart));
+        return parsed?.message || text.slice(0, jsonStart).trim() || text;
+      } catch {
+        return text.slice(0, jsonStart).trim() || text;
+      }
+    }
+
+    return text;
   }
 }
