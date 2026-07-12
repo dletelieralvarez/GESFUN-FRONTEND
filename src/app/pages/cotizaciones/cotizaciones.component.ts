@@ -139,7 +139,9 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
     this.success = null;
     try {
       const token = await this.auth.getAccessToken();
-      const response = await lastValueFrom(this.http.get(`${bffApiUrl}/api/cotizaciones`, {
+      const url = `${bffApiUrl}/api/cotizaciones`;
+      console.info('Consultando cotizaciones', { url });
+      const response = await lastValueFrom(this.http.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       }));
       this.cotizaciones = this.extractPayload(response)
@@ -148,7 +150,13 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
       this.estadosSeleccionados = Object.fromEntries(
         this.cotizaciones.map(item => [item.uuid, item.estadoUuid])
       );
+      console.info('Cotizaciones recibidas', { total: this.cotizaciones.length });
     } catch (err: any) {
+      console.error('Error real al cargar cotizaciones', {
+        status: err?.status,
+        url: err?.url,
+        error: err?.error
+      });
       this.error = this.getErrorMessage(err, 'No se pudieron cargar las cotizaciones.');
     } finally {
       this.loading = false;
