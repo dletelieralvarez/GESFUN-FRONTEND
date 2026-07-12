@@ -79,11 +79,11 @@ async function prepararCatalogo(page: Page, options: { errorPlanes?: boolean } =
     window.localStorage.setItem('gesfun.e2eAccessToken', 'playwright-token');
   });
 
-  await page.route('http://localhost:8081/api/servicios', async route => {
+  await page.route('http://localhost:8080/api/servicios', async route => {
     await route.fulfill({ json: { payload: [] } });
   });
 
-  await page.route('http://localhost:8081/api/planes', async route => {
+  await page.route('http://localhost:8080/api/planes', async route => {
     if (options.errorPlanes) {
       await route.fulfill({
         status: 500,
@@ -95,11 +95,11 @@ async function prepararCatalogo(page: Page, options: { errorPlanes?: boolean } =
     await route.fulfill({ json: { payload: planes } });
   });
 
-  await page.route('http://localhost:8081/api/productos-servicios', async route => {
+  await page.route('http://localhost:8080/api/productos-servicios', async route => {
     await route.fulfill({ json: { payload: productosServicios } });
   });
 
-  await page.route('http://localhost:8081/api/plan-kit/plan/plan-basico', async route => {
+  await page.route('http://localhost:8080/api/plan-kit/plan/plan-basico', async route => {
     await route.fulfill({
       json: {
         payload: [
@@ -109,7 +109,7 @@ async function prepararCatalogo(page: Page, options: { errorPlanes?: boolean } =
     });
   });
 
-  await page.route('http://localhost:8081/api/plan-kit/plan/plan-familiar', async route => {
+  await page.route('http://localhost:8080/api/plan-kit/plan/plan-familiar', async route => {
     await route.fulfill({
       json: {
         payload: [

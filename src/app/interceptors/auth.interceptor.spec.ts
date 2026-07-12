@@ -14,8 +14,12 @@ describe('AuthInterceptor', () => {
     return { handler, get handledRequest() { return handledRequest; } };
   };
 
-  it('should not add authorization header for non BFF urls', async () => {
-    const auth: any = { BFF_URL: 'http://localhost:8081', getAccessToken: jasmine.createSpy('getAccessToken') };
+  it('should not add authorization header for non system urls', async () => {
+    const auth: any = {
+      API_URL: '/api',
+      BFF_URL: '',
+      getAccessToken: jasmine.createSpy('getAccessToken')
+    };
     const interceptor = new AuthInterceptor(auth);
     const wrapped = createHandler();
 
@@ -25,31 +29,54 @@ describe('AuthInterceptor', () => {
     expect(wrapped.handledRequest?.headers.has('Authorization')).toBeFalse();
   });
 
-  it('should add authorization header for BFF urls', async () => {
-    const auth: any = { BFF_URL: 'http://localhost:8081', getAccessToken: () => Promise.resolve('token-123') };
+  it('should add authorization header for relative API urls', async () => {
+    const auth: any = {
+      API_URL: '/api',
+      BFF_URL: '',
+      getAccessToken: () => Promise.resolve('token-123')
+    };
     const interceptor = new AuthInterceptor(auth);
     const wrapped = createHandler();
 
-    await firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), wrapped.handler));
+    await firstValueFrom(interceptor.intercept(new HttpRequest('GET', '/api/me'), wrapped.handler));
+
+    expect(wrapped.handledRequest?.headers.get('Authorization')).toBe('Bearer token-123');
+  });
+
+  it('should add authorization header for local development API urls', async () => {
+    const auth: any = {
+      API_URL: 'http://localhost:8080/api',
+      BFF_URL: 'http://localhost:8080',
+      getAccessToken: () => Promise.resolve('token-123')
+    };
+    const interceptor = new AuthInterceptor(auth);
+    const wrapped = createHandler();
+
+    await firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8080/api/me'), wrapped.handler));
 
     expect(wrapped.handledRequest?.headers.get('Authorization')).toBe('Bearer token-123');
   });
 
   it('should not send the request when token retrieval fails', async () => {
-    const auth: any = { BFF_URL: 'http://localhost:8081', getAccessToken: () => Promise.reject(new Error('boom')) };
+    const auth: any = {
+      API_URL: '/api',
+      BFF_URL: '',
+      getAccessToken: () => Promise.reject(new Error('boom'))
+    };
     const interceptor = new AuthInterceptor(auth);
     const wrapped = createHandler();
 
     await expectAsync(
-      firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), wrapped.handler))
+      firstValueFrom(interceptor.intercept(new HttpRequest('GET', '/api/me'), wrapped.handler))
     ).toBeRejectedWithError('boom');
 
     expect(wrapped.handledRequest).toBeNull();
   });
 
-  it('should mark session as expired when the BFF returns 401', async () => {
+  it('should mark session as expired when the system returns 401', async () => {
     const auth: any = {
-      BFF_URL: 'http://localhost:8081',
+      API_URL: '/api',
+      BFF_URL: '',
       getAccessToken: () => Promise.resolve('token-123'),
       handleSessionExpired: jasmine.createSpy('handleSessionExpired').and.resolveTo(undefined)
     };
@@ -59,7 +86,7 @@ describe('AuthInterceptor', () => {
     };
 
     await expectAsync(
-      firstValueFrom(interceptor.intercept(new HttpRequest('GET', 'http://localhost:8081/api/me'), handler))
+      firstValueFrom(interceptor.intercept(new HttpRequest('GET', '/api/me'), handler))
     ).toBeRejected();
 
     expect(auth.handleSessionExpired).toHaveBeenCalled();

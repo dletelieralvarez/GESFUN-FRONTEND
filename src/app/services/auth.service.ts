@@ -4,11 +4,12 @@ import { MsalService } from '@azure/msal-angular';
 import { AccountInfo, InteractionRequiredAuthError } from '@azure/msal-browser';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
-import { bffApiScope, bffApiUrl, loginRequest, redirectUri, tenantId } from '../auth-config';
+import { apiUrl, bffApiScope, bffApiUrl, loginRequest, redirectUri, tenantId } from '../auth-config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   readonly BFF_URL = bffApiUrl;
+  readonly API_URL = apiUrl;
   private readonly sessionExpiredKey = 'gesfun.sessionExpired';
   private initialized = false;
   private redirectHandled = false;
@@ -123,7 +124,7 @@ export class AuthService {
   }
 
   getProfile() {
-    return this.http.get(`${this.BFF_URL}/api/me`);
+    return this.http.get(`${this.API_URL}/me`);
   }
 
   async handleRedirectResponse() {

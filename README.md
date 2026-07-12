@@ -919,17 +919,19 @@ Se definieron:
 - `tenantId`
 - `clientId`
 - `bffApiScope`
+- `apiUrl`
 - `bffApiUrl`
 - `msalConfig`
 - `loginRequest`
 
-`bffApiUrl` y `redirectUri` se resuelven dinamicamente desde la URL donde se abre el frontend:
+`apiUrl` se toma desde los archivos de ambiente de Angular:
 
-- En desarrollo local, si se abre `http://localhost:4200`, el frontend llama a `http://localhost:8081`.
-- En EC2, si se abre `http://<host-ec2>:4200`, el frontend llama a `http://<host-ec2>:8081`.
-- El `redirectUri` usado por MSAL queda como el origen actual del navegador, por ejemplo `http://localhost:4200` o `http://<host-ec2>:4200`.
+- En desarrollo local: `http://localhost:8080/api`.
+- En produccion: `/api`.
 
-Para probar desde EC2, la URL publica del frontend debe estar registrada como Redirect URI en Microsoft Entra ID.
+`bffApiUrl` se conserva como prefijo de compatibilidad para componentes existentes que construyen rutas del tipo `${bffApiUrl}/api/...`. En produccion queda vacio, por lo que las llamadas resultantes son relativas, por ejemplo `/api/servicios`.
+
+El `redirectUri` usado por MSAL queda como el origen actual del navegador. Para produccion, la URL publica `https://gesfun.duckdns.org` debe estar registrada como Redirect URI en Microsoft Entra ID.
 
 El flujo actual usa:
 
@@ -965,14 +967,14 @@ Responsabilidades:
 - Consultar perfil en:
 
 ```text
-http://localhost:8081/api/me
+/api/me
 ```
 
 El endpoint se consume mediante:
 
 ```ts
 getProfile() {
-  return this.http.get(`${this.BFF_URL}/api/me`);
+  return this.http.get(`${this.API_URL}/me`);
 }
 ```
 
@@ -996,29 +998,38 @@ Responsabilidades:
 Authorization: Bearer <token>
 ```
 
-El proyecto no usa `MsalInterceptor` para el BFF en este momento. Las llamadas protegidas envian el header `Authorization` de forma explicita desde cada modulo que consume:
+El proyecto usa `AuthInterceptor` propio para adjuntar el header `Authorization` a las llamadas hacia la API configurada:
 
 ```text
-http://localhost:8081
+/api
 ```
 
-Este ajuste evita una doble adquisicion de token: una desde el componente y otra desde el interceptor. Esa doble adquisicion podia provocar errores de MSAL como `monitor_window_timeout`.
+En desarrollo local la API apunta a `http://localhost:8080/api`. En produccion apunta a `/api`, para que el navegador nunca llame directamente a puertos internos como `8080` o `8081`.
 
 ## 11. Configuracion esperada del backend BFF
 
-La aplicacion espera que exista un backend local en:
+En desarrollo local la aplicacion espera que exista un BFF en:
 
 ```text
-http://localhost:8081
+http://localhost:8080/api
 ```
 
-El endpoint usado para probar autenticacion es:
+En produccion la aplicacion debe consumir siempre una ruta relativa:
 
 ```text
-GET /api/me
+https://gesfun.duckdns.org/api/...
 ```
 
-La llamada debe aceptar un bearer token emitido por Microsoft Entra ID para el scope configurado en `bffApiScope`.
+Nginx de la EC2 publica HTTPS y enruta:
+
+```text
+/      -> frontend Docker en 127.0.0.1:8081
+/api/  -> BFF Docker en 127.0.0.1:8080/api/
+```
+
+El puerto `8081` corresponde al contenedor del frontend y no debe aparecer en llamadas del navegador.
+
+El endpoint usado para probar autenticacion es `GET /api/me`. La llamada debe aceptar un bearer token emitido por Microsoft Entra ID para el scope configurado en `bffApiScope`.
 
 Para el flujo SPA, el BFF debe aceptar tokens v2 de Microsoft Entra ID. Los valores reales de tenant, audience y cliente deben mantenerse en configuracion local o variables de entorno, no documentarse en el README:
 
@@ -1029,7 +1040,7 @@ client:   <frontend-client-id>
 scope:    access_as_user
 ```
 
-El frontend siempre debe llamar al BFF en `http://localhost:8081`; el BFF reenvia al backend real.
+El frontend siempre debe llamar al BFF mediante `environment.apiUrl`. En produccion ese valor es `/api`; el BFF reenvia al backend real.
 
 ## 11.1 Modulos conectados al BFF
 
@@ -1207,7 +1218,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 ## 14. Flujo recomendado para usar la aplicacion
 
 1. Instalar dependencias con `npm install`.
-2. Levantar el backend BFF en `http://localhost:8081`, si se quiere probar autenticacion real.
+2. Levantar el backend BFF en `http://localhost:8080/api`, si se quiere probar autenticacion real.
 3. Levantar el frontend con `npm run start`.
 4. Abrir `http://localhost:4200`.
 5. Iniciar sesion desde `/login`.
@@ -1299,7 +1310,7 @@ tests/helpers/bff.ts
 - Usuarios.
 - Tipos de documento.
 
-`tests/helpers/bff.ts` contiene un BFF simulado para las pruebas. Intercepta las llamadas HTTP a `http://localhost:8081` y responde con datos de prueba. Gracias a esto, los mantenedores se pueden probar sin levantar el backend real y sin iniciar sesion en Microsoft.
+`tests/helpers/bff.ts` contiene un BFF simulado para las pruebas. Intercepta las llamadas HTTP a `http://localhost:8080/api` y responde con datos de prueba. Gracias a esto, los mantenedores se pueden probar sin levantar el backend real y sin iniciar sesion en Microsoft.
 
 `tests/login.spec.ts` es la prueba de login real con Microsoft. Esta prueba solo se ejecuta si existen credenciales configuradas en variables de entorno.
 

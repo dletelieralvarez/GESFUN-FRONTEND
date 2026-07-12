@@ -9,7 +9,10 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private auth: AuthService) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler) {
-    if (!req.url.startsWith(this.auth.BFF_URL)) {
+    const isApiRequest = req.url.startsWith(this.auth.API_URL)
+      || (!!this.auth.BFF_URL && req.url.startsWith(this.auth.BFF_URL));
+
+    if (!isApiRequest) {
       return next.handle(req);
     }
 

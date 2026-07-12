@@ -89,7 +89,7 @@ describe('FacturacionComponent', () => {
   it('should hide technical status and url when only a generic error is returned', () => {
     const message = (component as any).getErrorMessage({
       status: 500,
-      url: 'http://localhost:8081/api/documentos-tributarios/emitir',
+      url: 'http://localhost:8080/api/documentos-tributarios/emitir',
       error: {
         message: 'Error al procesar la petición en el servicio de backend.'
       }

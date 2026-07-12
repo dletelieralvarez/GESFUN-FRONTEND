@@ -1,6 +1,6 @@
 import { Page, Route } from '@playwright/test';
 
-const API = 'http://localhost:8081/api';
+const API = 'http://localhost:8080/api';
 
 type Row = Record<string, any>;
 
@@ -157,7 +157,7 @@ export async function prepararBff(page: Page) {
     window.localStorage.setItem('gesfun.e2eAccessToken', `e2e.${payload}.token`);
   });
 
-  await page.route('http://localhost:8081/bff/me', async route => {
+  await page.route('http://localhost:8080/bff/me', async route => {
     await ok(route, { email: 'playwright@gesfun.local' });
   });
 

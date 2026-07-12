@@ -69,6 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          no-cache: true
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:latest
@@ -94,7 +95,8 @@ jobs:
 
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts || true
 
-      # Entra a EC2, descarga imagen y levanta contenedor en puerto 80
+      # Entra a EC2, descarga imagen y levanta contenedor en 8081:80.
+      # Nginx de la EC2 publica HTTPS y enruta / hacia este contenedor.
       - name: Desplegar Frontend en EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
@@ -109,10 +111,10 @@ jobs:
             docker stop gesfun-frontend || true
             docker rm gesfun-frontend || true
 
-            # Levanta Angular/Nginx en puerto 80
+            # Levanta Angular/Nginx en puerto interno 8081
             docker run -d --name gesfun-frontend \
               --restart always \
-              -p 80:80 \
+              -p 127.0.0.1:8081:80 \
               "${{ secrets.DOCKERHUB_USERNAME }}/gesfun-frontend:latest"
 
             # Muestra contenedores activos
