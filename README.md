@@ -923,6 +923,14 @@ Se definieron:
 - `msalConfig`
 - `loginRequest`
 
+`bffApiUrl` y `redirectUri` se resuelven dinamicamente desde la URL donde se abre el frontend:
+
+- En desarrollo local, si se abre `http://localhost:4200`, el frontend llama a `http://localhost:8081`.
+- En EC2, si se abre `http://<host-ec2>:4200`, el frontend llama a `http://<host-ec2>:8081`.
+- El `redirectUri` usado por MSAL queda como el origen actual del navegador, por ejemplo `http://localhost:4200` o `http://<host-ec2>:4200`.
+
+Para probar desde EC2, la URL publica del frontend debe estar registrada como Redirect URI en Microsoft Entra ID.
+
 El flujo actual usa:
 
 - `@azure/msal-angular`.
@@ -1174,13 +1182,13 @@ src/app/pages/auth-callback/auth-callback.component.ts
 
 Actualmente este componente esta declarado y registrado como ruta `/auth/callback`.
 
-El flujo principal usa `redirectUri` en:
+El flujo principal usa `redirectUri` dinamico segun el origen del navegador:
 
 ```text
-http://localhost:4200
+window.location.origin
 ```
 
-El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectResponse()` y redirige a `/dashboard` si existe cuenta activa.
+En local normalmente corresponde a `http://localhost:4200`. En EC2 corresponde a `http://<host-ec2>:4200`. El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectResponse()` y redirige a `/dashboard` si existe cuenta activa.
 
 ## 13. Scripts disponibles
 
