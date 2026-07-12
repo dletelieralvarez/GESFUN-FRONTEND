@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { Comuna, Empresa, Region, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 @Component({
   selector: 'app-clientes',
@@ -260,7 +261,7 @@ export class ClientesComponent implements OnInit {
         this.form.empresa_id = this.empresas[0].id;
       }
     } catch (error) {
-      console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
+      console.warn('No se pudieron cargar comunas/empresas', error);
     }
   }
 
@@ -381,10 +382,7 @@ export class ClientesComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private extractNombres(fullName: string) {

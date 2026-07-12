@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -149,7 +150,7 @@ export class UsuariosComponent implements OnInit {
 
       this.cancel();
     } catch (err: any) {
-      this.error = err?.error?.message || err?.message || 'No se pudo guardar el usuario.';
+      this.error = ErrorMessageService.userMessage(err, 'No se pudo guardar el usuario.');
     } finally {
       this.saving = false;
     }
@@ -163,9 +164,9 @@ export class UsuariosComponent implements OnInit {
     this.success = null;
   }
 
-  confirmDeleteUser() {
+  async confirmDeleteUser() {
     if (this.userPendingDelete) {
-      this.removeUser(this.userPendingDelete);
+      await this.removeUser(this.userPendingDelete);
     }
   }
 
@@ -231,7 +232,7 @@ export class UsuariosComponent implements OnInit {
       this.success = 'Usuario eliminado correctamente.';
       this.userPendingDelete = null;
     } catch (err: any) {
-      this.error = err?.error?.message || err?.message || 'No se pudo eliminar el usuario.';
+      this.error = ErrorMessageService.userMessage(err, 'No se pudo eliminar el usuario.');
     } finally {
       this.loading = false;
     }
@@ -257,26 +258,7 @@ export class UsuariosComponent implements OnInit {
   }
 
   private getLoadErrorMessage(err: any) {
-    if (err?.status === 401) {
-      const user = this.tokenInfo?.preferred_username || this.tokenInfo?.upn || 'usuario autenticado';
-      const audience = this.tokenInfo?.aud || 'audiencia no disponible';
-      const scopes = this.tokenInfo?.scp || 'scopes no disponibles';
-      const meStatus = this.tokenInfo?.meStatus === 'RECHAZADO'
-        ? ' Tambien fue rechazado por /bff/me, por lo que el problema esta en el token, audience, scope o validacion general del BFF.'
-        : ' /bff/me acepto el token, por lo que el problema probablemente esta en el backend o en la ruta proxied /api/usuarios.';
-
-      return `El BFF rechazo el token para ${user}. Audiencia: ${audience}. Scopes: ${scopes}.${meStatus}`;
-    }
-
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-
-    if (err?.status) {
-      return `No se pudieron cargar los usuarios. Codigo HTTP ${err.status}.`;
-    }
-
-    return 'No se pudieron cargar los usuarios.';
+    return ErrorMessageService.userMessage(err, 'No se pudieron cargar los usuarios.');
   }
 
   private async validateBffToken(token: string) {

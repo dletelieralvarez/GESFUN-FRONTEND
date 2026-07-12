@@ -1,10 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { ProveedoresComponent } from './proveedores.component';
 import { commonTestingImports, commonTestingProviders } from '../../testing/test-bed-utils';
+import { bffApiUrl } from '../../auth-config';
 
 describe('ProveedoresComponent', () => {
   let component: ProveedoresComponent;
   let fixture: ComponentFixture<ProveedoresComponent>;
+  let httpMock: HttpTestingController;
+  const flushAsync = () => new Promise(resolve => setTimeout(resolve, 0));
 
   const proveedor: any = {
     id: 1,
@@ -35,6 +39,11 @@ describe('ProveedoresComponent', () => {
 
     fixture = TestBed.createComponent(ProveedoresComponent);
     component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should create', () => {
@@ -198,5 +207,98 @@ describe('ProveedoresComponent', () => {
     const message = (component as any).getErrorMessage(error, 'No se pudo guardar el proveedor.');
 
     expect(message).toBe('La empresa ya tiene registrado un tercero con el rut indicado.');
+  });
+
+  async function flushCatalogos() {
+    httpMock.expectOne(`${bffApiUrl}/api/comunas`).flush({ payload: [
+      { id: 1, uuid: 'comuna-1', nombre: 'Santiago', region_id: 10 }
+    ] });
+    httpMock.expectOne(`${bffApiUrl}/api/regiones`).flush({ payload: [
+      { id: 10, uuid: 'region-1', nombre: 'Metropolitana' }
+    ] });
+    httpMock.expectOne(`${bffApiUrl}/api/empresas`).flush({ payload: [
+      { id: 1, uuid: 'empresa-1', razonSocial: 'Gesfun' }
+    ] });
+    await flushAsync();
+  }
+
+  it('should load proveedores from BFF with PROVEEDOR role mapping', async () => {
+    const pending = component.ngOnInit();
+    await flushAsync();
+
+    await flushCatalogos();
+    httpMock.expectOne(`${bffApiUrl}/api/proveedores`).flush({ payload: [{
+      id: 5,
+      uuid: 'proveedor-1',
+      rut: 76543210,
+      dv: '1',
+      razonSocial: 'Servicios Ltda',
+      nombreCompleto: 'Servicios Ltda',
+      email: 'proveedor@test.cl',
+      telefono: '456',
+      tipoPersona: 'J',
+      activo: 1,
+      comunaUuid: 'comuna-1',
+      empresaUuid: 'empresa-1'
+    }] });
+    await pending;
+
+    expect(component.proveedores.length).toBe(1);
+    expect(component.proveedores[0].rol).toBe('PROVEEDOR');
+    expect(component.proveedores[0].tipo_persona).toBe('empresa');
+  });
+
+  it('should create proveedor through BFF as juridical person', async () => {
+    component.comunas = [{ id: 1, uuid: 'comuna-1', nombre: 'Santiago', region_id: 10 } as any];
+    component.empresas = [{ id: 1, uuid: 'empresa-1', razon_social: 'Gesfun' } as any];
+    component.form = {
+      tipo_persona: 'empresa',
+      nombre_completo: 'Servicios Ltda',
+      ruc: '76543210',
+      dv: '1',
+      email: 'proveedor@test.cl',
+      telefono: '456',
+      region_id: 10,
+      comuna_id: 1,
+      empresa_id: 1
+    };
+
+    const pending = component.save();
+    await flushAsync();
+
+    const post = httpMock.expectOne(`${bffApiUrl}/api/proveedores`);
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual(jasmine.objectContaining({
+      tipoPersona: 'J',
+      rut: 76543210,
+      nombreCompleto: 'Servicios Ltda',
+      razonSocial: 'Servicios Ltda',
+      comunaUuid: 'comuna-1',
+      empresaUuid: 'empresa-1'
+    }));
+    post.flush({ payload: { uuid: 'proveedor-1' } });
+    await flushAsync();
+    httpMock.expectOne(`${bffApiUrl}/api/proveedores`).flush({ payload: [] });
+    await pending;
+
+    expect(component.success).toBe('Proveedor creado correctamente.');
+    expect(component.formVisible).toBeFalse();
+  });
+
+  it('should deactivate proveedor through BFF', async () => {
+    component.delete(proveedor);
+
+    const pending = component.confirmDeactivateProveedor();
+    await flushAsync();
+
+    const patch = httpMock.expectOne(`${bffApiUrl}/api/proveedores/proveedor-uuid/desactivar`);
+    expect(patch.request.method).toBe('PATCH');
+    patch.flush({});
+    await flushAsync();
+    httpMock.expectOne(`${bffApiUrl}/api/proveedores`).flush({ payload: [] });
+    await pending;
+
+    expect(component.success).toBe('Proveedor desactivado correctamente.');
+    expect(component.proveedorPendingDeactivate).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface TipoDocumentoView {
   id: number;
@@ -274,10 +275,7 @@ export class DocumentacionComponent implements OnInit, OnDestroy {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private validateForm() {
@@ -299,19 +297,4 @@ export class DocumentacionComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private sanitizeBackendMessage(message: string) {
-    const text = String(message || '').trim();
-    const jsonStart = text.indexOf('{');
-
-    if (jsonStart >= 0) {
-      try {
-        const parsed = JSON.parse(text.slice(jsonStart));
-        return parsed?.message || text.slice(0, jsonStart).trim() || text;
-      } catch {
-        return text.slice(0, jsonStart).trim() || text;
-      }
-    }
-
-    return text;
-  }
 }

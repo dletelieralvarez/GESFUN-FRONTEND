@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 import { CotizacionPdfData, CotizacionPdfService } from '../../services/cotizacion-pdf.service';
 import {
   Comuna,
@@ -743,14 +744,7 @@ export class CotizacionComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    const validation = err?.error?.errors;
-    if (Array.isArray(validation) && validation.length) {
-      return validation.map((item: any) => item.defaultMessage ?? item.message ?? item).join(' ');
-    }
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private addDays(date: Date, days: number) {

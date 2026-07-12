@@ -76,7 +76,7 @@ describe('FacturacionComponent', () => {
     expect(documento.tipoDocumentoNombre).toBe('Boleta');
   });
 
-  it('should show backend validation detail from bff wrapped errors', () => {
+  it('should show business validation detail from wrapped errors', () => {
     const message = (component as any).getErrorMessage({
       error: {
         message: 'Error al procesar la petición en el servicio de backend. { "status": 400, "message": "Tipo de documento tributario invalido. Use BOLETA o FACTURA." }'
@@ -86,7 +86,7 @@ describe('FacturacionComponent', () => {
     expect(message).toBe('Tipo de documento tributario invalido. Use BOLETA o FACTURA.');
   });
 
-  it('should include status and url when bff only returns generic error', () => {
+  it('should hide technical status and url when only a generic error is returned', () => {
     const message = (component as any).getErrorMessage({
       status: 500,
       url: 'http://localhost:8081/api/documentos-tributarios/emitir',
@@ -95,8 +95,9 @@ describe('FacturacionComponent', () => {
       }
     }, 'Error fallback');
 
-    expect(message).toContain('HTTP 500');
-    expect(message).toContain('/api/documentos-tributarios/emitir');
+    expect(message).toBe('Se produjo un error interno. Intente nuevamente mas tarde.');
+    expect(message).not.toContain('HTTP 500');
+    expect(message).not.toContain('/api/documentos-tributarios/emitir');
   });
 
   it('should register payment and emit dte in one action', async () => {
@@ -165,7 +166,7 @@ describe('FacturacionComponent', () => {
     expect(component.success).toContain('Pago registrado');
   });
 
-  it('should emit invoice through BFF without sending inventory items or calling inventory service', async () => {
+  it('should emit invoice without sending inventory items or calling inventory service', async () => {
     setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',
@@ -280,7 +281,7 @@ describe('FacturacionComponent', () => {
     expect(documentoPdf.generar).not.toHaveBeenCalled();
   });
 
-  it('should show the recommended stock message when BFF rejects DTE emission after inventory output fails', async () => {
+  it('should show the recommended stock message when DTE emission fails after inventory output fails', async () => {
     setCotizacionFacturable();
     component.pagoForm = {
       cotizacionUuid: 'cot-1',

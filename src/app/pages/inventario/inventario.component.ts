@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { CLP } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface CatalogoItem {
   uuid: string;
@@ -464,17 +465,7 @@ export class InventarioComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF y el microservicio de inventario estén disponibles.';
-    }
-    const validation = err?.error?.errors ?? err?.error?.validationErrors;
-    if (Array.isArray(validation) && validation.length) {
-      return validation.map((item: any) => item.defaultMessage ?? item.message ?? item).join(' ');
-    }
-    if (validation && typeof validation === 'object') {
-      return Object.values(validation).join(' ');
-    }
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private toDateInput(date: Date) {

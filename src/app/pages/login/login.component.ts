@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface ApiResponse<T> {
   payload?: T;
@@ -180,6 +181,6 @@ export class LoginComponent implements OnInit {
   }
 
   private getErrorMessage(error: any, fallback: string) {
-    return error?.errorMessage || error?.message || fallback;
+    return ErrorMessageService.userMessage(error, fallback);
   }
 }

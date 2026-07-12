@@ -5,6 +5,7 @@ import { CLP } from '../../data/ui-data';
 import { Servicio, Sucursal, SuscripcionPlan, Tercero } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface CatalogItem {
   id: number;
@@ -55,7 +56,7 @@ type ServicioView = Servicio & {
   styleUrls: ['./casos.component.css']
 })
 export class CasosComponent implements OnInit {
-  private backendAvailable = true;
+  private servicioDisponible = true;
   cases: ServicioView[] = [];
   clientes: Tercero[] = [];
   planes: SuscripcionPlan[] = [];
@@ -97,8 +98,8 @@ export class CasosComponent implements OnInit {
     return this.cases.filter(item => item.activo && !['COMPLETADO', 'ANULADO'].includes(item.estado)).length;
   }
 
-  get serviciosBackendReady() {
-    return this.backendAvailable;
+  get serviciosDisponibles() {
+    return this.servicioDisponible;
   }
 
   setTab(value: string) {
@@ -153,14 +154,14 @@ export class CasosComponent implements OnInit {
     this.clearMessages();
 
     try {
-      if (this.backendAvailable) {
+      if (this.servicioDisponible) {
         const token = await this.auth.getAccessToken();
         await lastValueFrom(this.http.patch(`${bffApiUrl}/api/servicios/${item.uuid}/desactivar`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         }));
         await this.loadServicios();
       } else {
-        this.error = 'No se puede desactivar el servicio porque el endpoint /api/servicios no esta disponible en el BFF.';
+        this.error = 'El servicio no se encuentra disponible temporalmente. Intente nuevamente mas tarde.';
         return;
       }
       this.success = 'Servicio funerario desactivado correctamente.';
@@ -188,7 +189,7 @@ export class CasosComponent implements OnInit {
     }
     const cotizacion = this.selectedCotizacion;
     if (!cotizacion?.clienteUuid || !cotizacion.sucursalUuid || !cotizacion.fallecido || !cotizacion.total) {
-      this.error = 'La cotizacion seleccionada no trae cliente, sucursal, fallecido o monto total. Revisa el detalle de la cotizacion en el BFF.';
+      this.error = 'La cotizacion seleccionada no tiene cliente, sucursal, fallecido o monto total. Revise el detalle de la cotizacion.';
       return;
     }
     if (this.cotizacionTieneAgendaProgramada(cotizacion.uuid) && !this.esCotizacionDelServicioActual(cotizacion.uuid)) {
@@ -200,8 +201,8 @@ export class CasosComponent implements OnInit {
     const item = this.getFullServicioFromForm();
 
     try {
-      if (!this.backendAvailable) {
-        this.error = 'No se puede guardar el servicio porque el endpoint /api/servicios no esta disponible en el BFF.';
+      if (!this.servicioDisponible) {
+        this.error = 'El servicio no se encuentra disponible temporalmente. Intente nuevamente mas tarde.';
         return;
       }
 
@@ -349,11 +350,11 @@ export class CasosComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` }
       }));
       this.cases = this.extractPayload<any>(response).map((item, index) => this.fromApiServicio(item, index));
-      this.backendAvailable = true;
+      this.servicioDisponible = true;
     } catch (err: any) {
-      this.backendAvailable = false;
+      this.servicioDisponible = false;
       this.cases = [];
-      this.error = `No se pudieron cargar servicios funerarios desde el BFF. ${this.getErrorMessage(err, 'Verifica que exista el endpoint /api/servicios.')}`;
+      this.error = this.getErrorMessage(err, 'No se pudieron cargar los servicios funerarios.');
     } finally {
       this.loading = false;
     }
@@ -583,8 +584,7 @@ export class CasosComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    return err?.error?.message || err?.error?.payload?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private normalizeEstado(value: any): Servicio['estado'] {

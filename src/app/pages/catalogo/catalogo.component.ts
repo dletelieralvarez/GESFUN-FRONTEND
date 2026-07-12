@@ -5,6 +5,7 @@ import { CLP } from '../../data/ui-data';
 import { ProductoServicio, SuscripcionPlan } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface CatalogPlan extends SuscripcionPlan {
   items: string[];
@@ -115,7 +116,6 @@ export class CatalogoComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 }

@@ -7,6 +7,7 @@ import { lastValueFrom, Subscription } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { CLP } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 import {
   CotizacionPdfData,
   CotizacionPdfDetalle,
@@ -600,12 +601,9 @@ export class CotizacionesComponent implements OnInit, OnDestroy {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
     if (err?.status === 404) {
       return 'No se encontró el detalle de la cotización para volver a imprimirla.';
     }
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 }

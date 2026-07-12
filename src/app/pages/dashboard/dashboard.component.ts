@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { CLP } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface CatalogoItem {
   uuid: string;
@@ -373,9 +374,6 @@ export class DashboardComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    return err?.error?.message || err?.message || fallback;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 }

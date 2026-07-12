@@ -1,6 +1,6 @@
 <div class="content-wrap">
   <app-page-head title="Servicios funerarios" sub="{{ cases.length }} servicios registrados · {{ activeCount }} activos">
-    <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" (click)="openNew()" [disabled]="loading || saving || !serviciosBackendReady">
+    <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" (click)="openNew()" [disabled]="loading || saving || !serviciosDisponibles">
       <i class="bi bi-plus-lg"></i>Nuevo servicio
     </button>
   </app-page-head>

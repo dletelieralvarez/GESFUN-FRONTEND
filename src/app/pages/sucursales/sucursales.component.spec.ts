@@ -71,7 +71,7 @@ describe('SucursalesComponent', () => {
     expect(component.error).toBe('Completa codigo, nombre, direccion y telefono.');
   });
 
-  it('should load catalogos and sucursales from BFF', async () => {
+  it('should load catalogos and sucursales', async () => {
     const pending = component.ngOnInit();
     await Promise.resolve();
 
@@ -142,7 +142,7 @@ describe('SucursalesComponent', () => {
 
     await pending;
 
-    expect(component.error).toBe('No se pudo conectar con el servidor. Verifica que el BFF esté disponible.');
+    expect(component.error).toBe('No fue posible establecer comunicacion con el sistema. Verifique su conexion e intente nuevamente.');
   });
 
   it('should require region comuna and empresa before saving', async () => {

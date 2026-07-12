@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { bffApiUrl } from '../../auth-config';
 import { CLP } from '../../data/ui-data';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 import {
   DocumentoTributarioPdfData,
   DocumentoTributarioPdfDetalle,
@@ -588,50 +589,15 @@ export class FacturacionComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    const detail = this.extractBackendMessage(err?.error?.message)
-      || this.extractBackendMessage(err?.message)
+    const detail = ErrorMessageService.sanitizeMessage(err?.error?.message)
+      || ErrorMessageService.sanitizeMessage(err?.message)
       || err?.error?.message
       || err?.message;
 
-    if (this.isStockError(detail)) {
+    if (ErrorMessageService.isStockError(detail)) {
       return 'No se pudo emitir la factura porque no hay stock suficiente para uno o más productos físicos de la cotización.';
     }
 
-    const generic = 'Error al procesar la petición en el servicio de backend.';
-    if (detail && detail !== generic) return detail;
-
-    const status = err?.status ? `HTTP ${err.status}` : '';
-    const url = err?.url ? ` en ${err.url}` : '';
-    return status ? `${generic} ${status}${url}.` : detail || fallback;
-  }
-
-  private extractBackendMessage(value: any) {
-    const text = String(value || '').trim();
-    if (!text) return '';
-
-    const jsonStart = text.indexOf('{');
-    if (jsonStart < 0) return text;
-
-    const jsonText = text.slice(jsonStart);
-    try {
-      const detail = JSON.parse(jsonText);
-      return detail?.message || text.slice(0, jsonStart).trim();
-    } catch {
-      const match = jsonText.match(/"message"\s*:\s*"([^"]+)"/);
-      return match?.[1] || text.slice(0, jsonStart).trim() || text;
-    }
-  }
-
-  private isStockError(value: any) {
-    const text = String(value || '').toLocaleLowerCase('es-CL');
-    return text.includes('stock') && (
-      text.includes('insuficiente')
-      || text.includes('no hay')
-      || text.includes('sin stock')
-      || text.includes('no disponible')
-    );
+    return ErrorMessageService.userMessage(err, fallback);
   }
 }

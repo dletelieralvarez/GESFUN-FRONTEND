@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { AG_COLOR } from '../../data/ui-data';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 interface CatalogoItem {
   uuid: string;
@@ -450,31 +451,6 @@ export class AgendaComponent implements OnInit {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF y el microservicio de agenda estén disponibles.';
-    }
-    const validation = err?.error?.errors ?? err?.error?.validationErrors;
-    if (Array.isArray(validation) && validation.length) {
-      return validation.map((item: any) => item.defaultMessage ?? item.message ?? item).join(' ');
-    }
-    if (validation && typeof validation === 'object') {
-      return Object.values(validation).join(' ');
-    }
-    return this.cleanBackendMessage(err?.error?.message || err?.message || fallback);
-  }
-
-  private cleanBackendMessage(message: string) {
-    const value = String(message || '').trim();
-    const jsonStart = value.indexOf('{');
-    if (jsonStart >= 0) {
-      try {
-        const parsed = JSON.parse(value.slice(jsonStart));
-        return parsed?.message || value.slice(0, jsonStart).trim() || value;
-      } catch {
-        const match = value.match(/"message"\s*:\s*"([^"]+)"/);
-        if (match?.[1]) return match[1];
-      }
-    }
-    return value;
+    return ErrorMessageService.userMessage(err, fallback);
   }
 }

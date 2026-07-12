@@ -839,7 +839,7 @@ Funcionalidad:
 - El PDF incluye folio, receptor, RUT, cotizacion asociada, montos, IVA, track ID, proveedor `DTEEMITE_SIMULADO` y datos de trazabilidad.
 - El PDF desglosa los productos o servicios de la cotizacion mediante `GET /api/cotizaciones/{cotizacionUuid}`.
 - Si no se puede obtener el detalle de la cotizacion, el PDF usa una linea de respaldo asociada al pago de la cotizacion.
-- Mejora los mensajes de error del BFF mostrando el mensaje interno o el estado HTTP con endpoint.
+- Muestra mensajes de error orientados al usuario final, sin exponer BFF, backend, HTTP, endpoints, tokens ni detalles tecnicos.
 
 Endpoints usados:
 
@@ -1194,7 +1194,7 @@ El callback delega el procesamiento a MSAL mediante `AuthService.handleRedirectR
 | `npm run test:coverage` | Ejecuta pruebas unitarias y genera reporte de cobertura |
 | `npm run ng` | Acceso directo al Angular CLI |
 
-El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 84 pruebas exitosas. La cobertura debe regenerarse con `npm run test:coverage` cuando se requiera un valor actualizado.
+El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona en git. La ultima validacion local dejo 147 pruebas exitosas con `npm run test:ci`. La cobertura debe regenerarse con `npm run test:coverage` cuando se requiera un valor actualizado.
 
 ## 14. Flujo recomendado para usar la aplicacion
 
@@ -1217,6 +1217,7 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - La agenda de servicios ya consulta recursos por sucursal y registra reservas mediante el BFF.
 - La creacion, listado, consulta y cambio de estado de cotizaciones ya pasan por el BFF.
 - Facturacion ya registra pagos y emite DTE simulado en una sola accion, anula pagos/documentos, filtra cotizaciones pagadas del selector y genera PDF de Boleta o Factura desde datos del BFF.
+- El frontend centraliza la presentacion de errores en `ErrorMessageService`, mostrando mensajes amigables al usuario final y dejando los detalles tecnicos solo para diagnostico en consola.
 - Los PDFs se generan en el navegador; no se almacenan actualmente como archivos en el backend.
 - La emision DTE usa el proveedor simulado `DTEEMITE_SIMULADO`; no integra aun SII ni proveedor tributario real.
 - El contrato contiene espacios de firma, pero no aplica una firma electronica avanzada.
@@ -1238,7 +1239,6 @@ El reporte de cobertura se genera en `coverage/gesfun-frontend` y no se versiona
 - Completar endpoints faltantes o contratos pendientes del BFF cuando algun microservicio no entregue toda la informacion requerida por pantalla.
 - Persistir y validar desde backend todos los flujos transaccionales que aun dependan de contratos parciales.
 - Agregar validaciones de formularios mas completas.
-- Agregar manejo centralizado de errores.
 - Agregar loading states por pantalla.
 - Agregar pruebas unitarias para calculos y filtros.
 - Agregar pruebas de integracion para autenticacion y consumo del BFF.

@@ -83,7 +83,7 @@ describe('CotizacionComponent', () => {
     expect(component.planTotal).toBe(100);
   }));
 
-  it('should create a complete quotation in the BFF and generate its PDF', fakeAsync(() => {
+  it('should create a complete quotation and generate its PDF', fakeAsync(() => {
     component.sucursales = [{ id: 1, uuid: 'suc-1', codigo: 'S1', nombre: 'Central', direccion: 'Av. Siempre Viva 123', telefono: '222222222', activo: true, empresa_id: 1, comuna_id: 1 }];
     component.planes = [{ id: 1, uuid: 'plan-1', nombre: 'Tradicional', descripcion: 'Plan base', valor: 0, activo: true, sucursal_id: 1, sucursal_uuid: 'suc-1' } as any];
     component.productosServicios = [
@@ -327,7 +327,7 @@ describe('CotizacionComponent', () => {
     expect(component.pagadorExistenteMessage).toContain('El cliente ya existe');
   }));
 
-  it('should show BFF connection errors when quotation catalogs cannot be loaded', fakeAsync(() => {
+  it('should show user friendly connection errors when quotation catalogs cannot be loaded', fakeAsync(() => {
     fixture.detectChanges();
     tick();
 
@@ -339,7 +339,7 @@ describe('CotizacionComponent', () => {
     httpMock.expectOne(`${bffApiUrl}/api/comunas`).flush({ payload: [] });
     tick();
 
-    expect(component.error).toBe('No se pudo conectar con el servidor. Verifica que el BFF esté disponible.');
+    expect(component.error).toBe('No fue posible establecer comunicacion con el sistema. Verifique su conexion e intente nuevamente.');
   }));
 
   afterEach(() => {

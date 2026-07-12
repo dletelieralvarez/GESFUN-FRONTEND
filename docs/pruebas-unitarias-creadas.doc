@@ -1,0 +1,299 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}{\f1 Consolas;}}
+{\colortbl;\red31\green78\blue121;\red90\green90\blue90;\red245\green247\blue250;}
+\paperw12240\paperh15840\margl1440\margr1440\margt1200\margb1200
+
+\fs32\b Documento de pruebas unitarias creadas\b0\par
+\fs22 Proyecto: gesfun-frontend\par
+Fecha de elaboracion: 07-07-2026\par
+Framework de pruebas: Angular TestBed, Jasmine, Karma, ChromeHeadlessCI\par
+Comando de ejecucion: \f1 npm run test:ci\f0\par
+Resultado validado: 117 pruebas exitosas.\par
+\par
+
+\fs28\b 1. Objetivo del documento\b0\par
+\fs22 Este documento describe las pruebas unitarias agregadas para cubrir flujos criticos de autenticacion, callback de Azure Entra ID y administracion de usuarios. Incluye la especificacion de cada archivo de prueba, que valida, que dependencias simula y como funciona internamente cada caso.\par
+\par
+
+\fs28\b 2. Archivos de pruebas unitarias creados\b0\par
+\fs22
+\bullet \tab \f1 src/app/pages/auth-callback/auth-callback.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/login/login.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/usuarios/usuarios.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/clientes/clientes.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/catalogo/catalogo.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/casos/casos.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/empleados/empleados.component.spec.ts\f0\par
+\bullet \tab \f1 src/app/pages/proveedores/proveedores.component.spec.ts\f0\par
+\par
+
+\fs28\b 3. AuthCallbackComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/auth-callback/auth-callback.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Validar que el componente encargado del callback de autenticacion procese correctamente la respuesta de redireccion entregada por MSAL/Azure Entra ID y luego devuelva al usuario al flujo normal de login.\par
+\par
+\b Dependencias simuladas\b0\par
+\bullet \tab \f1 AuthService\f0: se simula el metodo \f1 handleRedirectResponse()\f0 para representar una autenticacion resuelta con una cuenta valida.\par
+\bullet \tab \f1 Router\f0: se simula \f1 navigateByUrl()\f0 para verificar la navegacion sin usar el router real.\par
+\par
+\b Caso de prueba creado\b0\par
+\f1 should process the redirect response and return to login flow\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que al iniciar el componente se llama a \f1 auth.handleRedirectResponse()\f0.\par
+\bullet \tab Que despues de procesar el callback se navega a \f1 /login\f0.\par
+\par
+\b Como funciona\b0\par
+El test crea el componente con \f1 TestBed\f0, reemplaza \f1 AuthService\f0 y \f1 Router\f0 por spies de Jasmine, ejecuta \f1 fixture.detectChanges()\f0 para disparar el ciclo de vida del componente y espera la resolucion asincrona con \f1 fixture.whenStable()\f0. Finalmente comprueba que los metodos esperados fueron invocados.\par
+\par
+
+\fs28\b 4. LoginComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/login/login.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Cubrir el flujo de login posterior a Azure Entra ID, especialmente la validacion de existencia del usuario autenticado en backend y la creacion automatica del usuario interno cuando no existe en la tabla de usuarios.\par
+\par
+\b Dependencias simuladas\b0\par
+\bullet \tab \f1 AuthService\f0: simula sesion activa, respuesta de redireccion, cuenta activa, token de acceso, login y logout.\par
+\bullet \tab \f1 Router\f0: simula la navegacion hacia dashboard.\par
+\bullet \tab \f1 HttpTestingController\f0: intercepta llamadas HTTP al BFF sin usar red real.\par
+\bullet \tab \f1 commonTestingImports\f0: entrega modulos comunes usados por el componente durante las pruebas.\par
+\par
+\b Cuenta simulada\b0\par
+Se usa una cuenta de prueba con usuario \f1 ana@example.cl\f0 y nombre \f1 Ana Perez Soto\f0. Esto permite validar que el componente separa correctamente nombre, apellido paterno y apellido materno al crear el usuario backend.\par
+\par
+\b Caso 1: usuario autenticado ya existe en backend\b0\par
+\f1 should navigate to dashboard when the authenticated user exists in backend\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que el componente consulta \f1 /api/usuarios\f0 despues de procesar la autenticacion.\par
+\bullet \tab Que si el email autenticado existe en la respuesta del backend, no se muestra el modal de usuario faltante.\par
+\bullet \tab Que el usuario es redirigido a \f1 /dashboard\f0.\par
+\par
+\b Como funciona\b0\par
+El test ejecuta el ciclo de vida del componente, espera el procesamiento asincrono y responde la llamada HTTP \f1 GET /api/usuarios\f0 con un payload que contiene \f1 ana@example.cl\f0. Luego verifica que \f1 showMissingUserModal\f0 sea falso y que el router haya navegado al dashboard.\par
+\par
+\b Caso 2: usuario autenticado no existe y se crea con rol USER\b0\par
+\f1 should show missing user modal and create backend user with USER role\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que si \f1 /api/usuarios\f0 no devuelve el email autenticado, se levanta el modal de usuario no ingresado.\par
+\bullet \tab Que el usuario pendiente queda asociado a la cuenta autenticada.\par
+\bullet \tab Que al confirmar la creacion se realiza un \f1 POST /api/usuarios\f0.\par
+\bullet \tab Que el payload enviado contiene \f1 roles: 'USER'\f0 y \f1 tipoUsuario: 'USUARIO'\f0.\par
+\bullet \tab Que el nombre completo se separa como \f1 nombre: 'Ana'\f0, \f1 paterno: 'Perez'\f0 y \f1 materno: 'Soto'\f0.\par
+\bullet \tab Que despues de crear el usuario se cierra el modal y se navega a dashboard.\par
+\par
+\b Como funciona\b0\par
+El backend simulado responde inicialmente con una lista vacia. El componente activa el modal. Luego el test llama a \f1 confirmCreateUser()\f0, intercepta el \f1 POST /api/usuarios\f0, inspecciona el metodo HTTP y el body enviado, responde con un usuario creado y espera la resolucion de la promesa para validar el estado final.\par
+\par
+\b Caso 3: bloqueo de login interactivo durante inicializacion\b0\par
+\f1 should avoid interactive login while initializing\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que si \f1 initializing\f0 esta activo, el metodo \f1 login()\f0 no llama a \f1 auth.login()\f0.\par
+\bullet \tab Esto evita errores MSAL del tipo "Interaction is currently in progress" cuando aun hay una interaccion en curso.\par
+\par
+\b Como funciona\b0\par
+El test fuerza \f1 component.initializing = true\f0, llama a \f1 component.login()\f0 y verifica que el spy \f1 auth.login\f0 no haya sido ejecutado.\par
+\par
+\b Nota tecnica sobre asincronia\b0\par
+El spec usa el helper \f1 flushAsync()\f0 basado en \f1 setTimeout(..., 0)\f0 para esperar microtareas y macrotareas generadas por \f1 async/await\f0, \f1 lastValueFrom\f0 y el ciclo de vida del componente antes de inspeccionar requests HTTP.\par
+\par
+
+\fs28\b 5. UsuariosComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/usuarios/usuarios.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Validar el mantenedor de usuarios: carga inicial, diagnostico de token, creacion, edicion y eliminacion mediante BFF. Estas pruebas aseguran que el frontend envie payloads correctos, valide el token con \f1 /bff/me\f0 y actualice el estado visual despues de cada operacion.\par
+\par
+\b Dependencias simuladas\b0\par
+\bullet \tab \f1 HttpTestingController\f0: intercepta todas las llamadas al BFF.\par
+\bullet \tab \f1 commonTestingImports\f0 y \f1 commonTestingProviders\f0: entregan dependencias comunes del entorno de pruebas, incluido el servicio de autenticacion simulado.\par
+\par
+\b Helper principal\b0\par
+\f1 flushLoadUsers(users)\f0\par
+\par
+\b Que hace\b0\par
+\bullet \tab Responde primero la validacion de token \f1 GET /bff/me\f0 con un email valido.\par
+\bullet \tab Espera el avance asincrono del componente.\par
+\bullet \tab Responde luego \f1 GET /api/usuarios\f0 con la lista de usuarios entregada al helper.\par
+\bullet \tab Permite reutilizar la misma secuencia en carga inicial y recargas despues de crear, editar o eliminar.\par
+\par
+\b Caso 1: carga usuarios despues de validar token con BFF\b0\par
+\f1 should load users after validating token with BFF\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que el componente primero valida el token contra \f1 /bff/me\f0.\par
+\bullet \tab Que luego consulta \f1 /api/usuarios\f0.\par
+\bullet \tab Que transforma \f1 activo: 1\f0 del backend a \f1 activo: true\f0 en frontend.\par
+\bullet \tab Que el diagnostico interno marca \f1 meStatus: 'OK'\f0.\par
+\par
+\b Como funciona\b0\par
+El test dispara \f1 ngOnInit()\f0 mediante \f1 fixture.detectChanges()\f0, responde la validacion de token y la lista de usuarios, luego verifica la cantidad cargada, la normalizacion del campo activo y el estado del token.\par
+\par
+\b Caso 2: creacion de usuario mediante BFF\b0\par
+\f1 should create users through BFF and reload list\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que \f1 saveUser()\f0 en modo creacion ejecuta \f1 POST /api/usuarios\f0.\par
+\bullet \tab Que el payload incluye \f1 uuid\f0, \f1 email\f0, \f1 activo: 1\f0, \f1 roles: 'USER'\f0 y \f1 tipoUsuario: 'USUARIO'\f0.\par
+\bullet \tab Que el campo \f1 id\f0 no se envia al crear.\par
+\bullet \tab Que despues de crear se recarga la lista de usuarios.\par
+\bullet \tab Que se muestra el mensaje \f1 Usuario creado correctamente.\f0 y se cierra el formulario.\par
+\par
+\b Como funciona\b0\par
+El test abre el formulario con \f1 openCreate()\f0, asigna datos al \f1 userForm\f0, llama a \f1 saveUser()\f0, intercepta el POST, valida el body y simula una respuesta exitosa. Despues responde la recarga de usuarios y valida el estado final del componente.\par
+\par
+\b Caso 3: actualizacion de usuario mediante BFF\b0\par
+\f1 should update users through BFF including id in payload\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que en modo edicion se ejecuta \f1 PUT /api/usuarios/7\f0.\par
+\bullet \tab Que el payload de actualizacion incluye \f1 id\f0.\par
+\bullet \tab Que el cambio de rol se envia correctamente, por ejemplo \f1 roles: 'ADMIN'\f0.\par
+\bullet \tab Que despues de actualizar se recarga la lista.\par
+\bullet \tab Que se muestra el mensaje \f1 Usuario actualizado correctamente.\f0.\par
+\par
+\b Como funciona\b0\par
+El test precarga un usuario en \f1 component.users\f0, abre la edicion con \f1 openEdit(0)\f0, modifica el rol, ejecuta \f1 saveUser()\f0, intercepta el PUT, valida metodo y payload, simula respuesta del backend y responde la recarga de usuarios.\par
+\par
+\b Caso 4: eliminacion de usuario mediante BFF\b0\par
+\f1 should delete users through BFF and reload list\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que al confirmar la eliminacion se ejecuta \f1 DELETE /api/usuarios/7\f0.\par
+\bullet \tab Que el componente recarga la lista despues de eliminar.\par
+\bullet \tab Que se muestra el mensaje \f1 Usuario eliminado correctamente.\f0.\par
+\bullet \tab Que se limpia \f1 userPendingDelete\f0 al terminar.\par
+\par
+\b Como funciona\b0\par
+El test selecciona un usuario para eliminar con \f1 deleteUser(0)\f0, confirma con \f1 confirmDeleteUser()\f0, intercepta el DELETE, responde con \f1 204 No Content\f0, simula la recarga posterior y valida el mensaje de exito y la limpieza del estado pendiente.\par
+\par
+\b Ajuste tecnico relacionado\b0\par
+Para que esta prueba sea deterministica, \f1 confirmDeleteUser()\f0 fue ajustado para ser \f1 async\f0 y esperar internamente \f1 removeUser()\f0. Esto no cambia el comportamiento funcional para el usuario, pero permite que el test espere el fin real de la eliminacion.\par
+\par
+\b Caso 5: diagnostico de rechazo 401 del token\b0\par
+\f1 should explain 401 token rejection diagnostics\f0\par
+\par
+\b Que valida\b0\par
+\bullet \tab Que si \f1 /bff/me\f0 responde \f1 401 Unauthorized\f0, el componente informa un mensaje explicativo.\par
+\bullet \tab Que el mensaje indique que el BFF rechazo el token.\par
+\bullet \tab Que el mensaje agregue que tambien fue rechazado por \f1 /bff/me\f0, orientando el problema hacia audience, scope o validacion del token.\par
+\par
+\b Como funciona\b0\par
+El test dispara la carga inicial, responde \f1 /bff/me\f0 con estado 401, espera la resolucion asincrona y valida el contenido del mensaje \f1 component.error\f0.\par
+\par
+
+\fs28\b 6. ClientesComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/clientes/clientes.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Ampliar la cobertura del mantenedor de clientes, que anteriormente solo validaba la creacion del componente. Las pruebas nuevas verifican carga desde BFF, mapeo del rol \f1 CLIENTE\f0, creacion y desactivacion.\par
+\par
+\b Casos agregados\b0\par
+\bullet \tab Carga catalogos y clientes desde BFF, mapeando el cliente con rol \f1 CLIENTE\f0 y estado activo.\par
+\bullet \tab Crea un cliente por \f1 POST /api/clientes\f0, validando payload con \f1 tipoPersona: 'N'\f0, RUT numerico, nombre completo, nombres, apellido paterno, comuna y empresa.\par
+\bullet \tab Desactiva cliente por \f1 PATCH /api/clientes/{uuid}/desactivar\f0 y recarga la lista.\par
+\par
+\b Como funcionan\b0\par
+Se usa \f1 HttpTestingController\f0 para simular \f1 /api/comunas\f0, \f1 /api/regiones\f0, \f1 /api/empresas\f0 y \f1 /api/clientes\f0. Las pruebas inspeccionan metodo HTTP, URL, body enviado y estado final del componente.\par
+\par
+
+\fs28\b 7. CatalogoComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/catalogo/catalogo.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Validar la carga real del catalogo de planes y servicios desde BFF, incluyendo el kit asociado a cada plan activo.\par
+\par
+\b Casos agregados\b0\par
+\bullet \tab Carga planes activos desde \f1 /api/planes\f0 y productos/servicios desde \f1 /api/productos-servicios\f0.\par
+\bullet \tab Filtra servicios activos y excluye planes inactivos.\par
+\bullet \tab Consulta \f1 /api/plan-kit/plan/{planUuid}\f0 y arma items visibles como \f1 2 x Ceremonia\f0.\par
+\bullet \tab Recalcula el valor del plan desde el kit cuando corresponde.\par
+\bullet \tab Muestra error de conexion cuando el catalogo no puede cargarse.\par
+\par
+\b Como funcionan\b0\par
+Las pruebas ejecutan \f1 loadCatalogo()\f0 directamente, responden las llamadas paralelas del BFF y luego la llamada al kit del plan. Se valida que el estado final de \f1 plans\f0 y \f1 servicios\f0 represente solo datos activos y correctamente normalizados.\par
+\par
+
+\fs28\b 8. CasosComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/casos/casos.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Cubrir el flujo funcional de servicios funerarios/casos, que antes solo tenia prueba de creacion del componente.\par
+\par
+\b Casos agregados\b0\par
+\bullet \tab Carga catalogos auxiliares y servicios desde \f1 /api/servicios\f0.\par
+\bullet \tab Normaliza estados backend como \f1 EN_CURSO\f0 y valida su etiqueta visible \f1 En curso\f0.\par
+\bullet \tab Calcula correctamente el contador de casos activos.\par
+\bullet \tab Crea servicio por \f1 POST /api/servicios\f0 usando datos de la cotizacion seleccionada: cotizacion, tercero, sucursal, fallecido y monto total.\par
+\bullet \tab Bloquea el guardado si la cotizacion seleccionada no trae cliente, sucursal, fallecido o monto total.\par
+\par
+\b Como funcionan\b0\par
+El test simula las ocho cargas de catalogos que usa la pantalla y luego responde \f1 /api/servicios\f0. Para creacion, se configura una cotizacion valida en memoria y se verifica que el payload enviado al BFF derive los datos desde esa cotizacion, no desde campos manuales incompletos.\par
+\par
+
+\fs28\b 9. EmpleadosComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/empleados/empleados.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Completar cobertura del mantenedor de empleados con contratos HTTP contra BFF.\par
+\par
+\b Casos agregados\b0\par
+\bullet \tab Carga empleados desde \f1 /api/empleados\f0 despues de cargar comunas, regiones y empresas.\par
+\bullet \tab Mapea datos backend con rol \f1 EMPLEADO\f0 y estado activo.\par
+\bullet \tab Crea empleado por \f1 POST /api/empleados\f0 con payload de persona natural.\par
+\bullet \tab Desactiva empleado por \f1 PATCH /api/empleados/{uuid}/desactivar\f0 y recarga lista.\par
+\par
+\b Como funcionan\b0\par
+Se simulan catalogos requeridos y se valida que el body enviado convierta RUT a numero, envie \f1 tipoPersona: 'N'\f0, comuna y empresa por UUID, y separe nombre completo en nombres y apellido paterno.\par
+\par
+
+\fs28\b 10. ProveedoresComponent\b0\par
+\fs24\b Archivo:\b0 \f1 src/app/pages/proveedores/proveedores.component.spec.ts\f0\par
+\par
+\fs22\b Proposito\b0\par
+Completar cobertura del mantenedor de proveedores con carga, creacion juridica y desactivacion contra BFF.\par
+\par
+\b Casos agregados\b0\par
+\bullet \tab Carga proveedores desde \f1 /api/proveedores\f0 con rol \f1 PROVEEDOR\f0.\par
+\bullet \tab Mapea proveedor juridico con \f1 tipo_persona: 'empresa'\f0.\par
+\bullet \tab Crea proveedor por \f1 POST /api/proveedores\f0 enviando \f1 tipoPersona: 'J'\f0 y \f1 razonSocial\f0.\par
+\bullet \tab Desactiva proveedor por \f1 PATCH /api/proveedores/{uuid}/desactivar\f0 y recarga lista.\par
+\par
+\b Como funcionan\b0\par
+Las pruebas verifican los contratos HTTP de entrada y salida, incluyendo catalogos de comuna/region/empresa, transformacion de datos de proveedor y limpieza del estado pendiente despues de desactivar.\par
+\par
+
+\fs28\b 11. Estrategia general usada en las pruebas\b0\par
+\fs22\b Aislamiento\b0\par
+Las pruebas no dependen de servicios reales, Azure real ni BFF real. Todas las dependencias externas se reemplazan por spies o por \f1 HttpTestingController\f0.\par
+\par
+\b Verificacion HTTP\b0\par
+Cada llamada esperada al BFF se valida con \f1 expectOne()\f0, revisando metodo, URL y payload cuando corresponde. Al final de cada spec se ejecuta \f1 httpMock.verify()\f0 para asegurar que no queden requests abiertas.\par
+\par
+\b Manejo asincrono\b0\par
+Los flujos que usan promesas, \f1 async/await\f0 o \f1 lastValueFrom\f0 se sincronizan con \f1 fixture.whenStable()\f0 y \f1 flushAsync()\f0. Esto evita falsos negativos por inspeccionar requests o estados antes de que el componente termine de procesarlos.\par
+\par
+\b Cobertura funcional\b0\par
+La cobertura agregada se concentra en flujos con riesgo real para el sistema: login con MFA, alta automatica de usuario interno, validacion de token BFF y mantenedor de usuarios.\par
+\par
+
+\fs28\b 12. Resultado de ejecucion\b0\par
+\fs22 Se ejecuto el comando:\par
+\f1 npm run test:ci\f0\par
+\par
+Resultado:\par
+\f1 TOTAL: 117 SUCCESS\f0\par
+\par
+Tambien se ejecuto:\par
+\f1 npm run build\f0\par
+\par
+Resultado: compilacion exitosa. El build conserva advertencias existentes de bundle/CommonJS y archivos incluidos sin uso, pero no presenta errores.\par
+\par
+
+\fs28\b 13. Resumen ejecutivo\b0\par
+\fs22 Las pruebas creadas aseguran que el frontend maneje correctamente el retorno de autenticacion, detecte usuarios autenticados que aun no existen en backend, cree esos usuarios con rol \f1 USER\f0, evite interacciones MSAL duplicadas durante inicializacion, permita operar el mantenedor de usuarios contra el BFF con validacion previa de token y cubra flujos funcionales adicionales de clientes, catalogo, casos, empleados y proveedores.\par
+}

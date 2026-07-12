@@ -1,10 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { EmpleadosComponent } from './empleados.component';
 import { commonTestingImports, commonTestingProviders } from '../../testing/test-bed-utils';
+import { bffApiUrl } from '../../auth-config';
 
 describe('EmpleadosComponent', () => {
   let component: EmpleadosComponent;
   let fixture: ComponentFixture<EmpleadosComponent>;
+  let httpMock: HttpTestingController;
+  const flushAsync = () => new Promise(resolve => setTimeout(resolve, 0));
 
   const empleado: any = {
     id: 1,
@@ -34,6 +38,11 @@ describe('EmpleadosComponent', () => {
 
     fixture = TestBed.createComponent(EmpleadosComponent);
     component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should create', () => {
@@ -89,6 +98,7 @@ describe('EmpleadosComponent', () => {
       dv: '9',
       email: 'ana@test.cl',
       telefono: '123',
+      region_id: 1,
       comuna_id: 1,
       empresa_id: 1
     };
@@ -197,5 +207,97 @@ describe('EmpleadosComponent', () => {
     const message = (component as any).getErrorMessage(error, 'No se pudo guardar el empleado.');
 
     expect(message).toBe('La empresa ya tiene registrado un tercero con el rut indicado.');
+  });
+
+  async function flushCatalogos() {
+    httpMock.expectOne(`${bffApiUrl}/api/comunas`).flush({ payload: [
+      { id: 1, uuid: 'comuna-1', nombre: 'Santiago', region_id: 10 }
+    ] });
+    httpMock.expectOne(`${bffApiUrl}/api/regiones`).flush({ payload: [
+      { id: 10, uuid: 'region-1', nombre: 'Metropolitana' }
+    ] });
+    httpMock.expectOne(`${bffApiUrl}/api/empresas`).flush({ payload: [
+      { id: 1, uuid: 'empresa-1', razonSocial: 'Gesfun' }
+    ] });
+    await flushAsync();
+  }
+
+  it('should load empleados from BFF with EMPLEADO role mapping', async () => {
+    const pending = component.ngOnInit();
+    await flushAsync();
+
+    await flushCatalogos();
+    httpMock.expectOne(`${bffApiUrl}/api/empleados`).flush({ payload: [{
+      id: 7,
+      uuid: 'empleado-1',
+      rut: 11111111,
+      dv: '1',
+      nombreCompleto: 'Empleado Test',
+      email: 'empleado@test.cl',
+      telefono: '123',
+      tipoPersona: 'N',
+      activo: 1,
+      comunaUuid: 'comuna-1',
+      empresaUuid: 'empresa-1'
+    }] });
+    await pending;
+
+    expect(component.empleados.length).toBe(1);
+    expect(component.empleados[0].rol).toBe('EMPLEADO');
+    expect(component.empleados[0].activo).toBeTrue();
+  });
+
+  it('should create empleado through BFF and reload list', async () => {
+    component.comunas = [{ id: 1, uuid: 'comuna-1', nombre: 'Santiago', region_id: 10 } as any];
+    component.empresas = [{ id: 1, uuid: 'empresa-1', razon_social: 'Gesfun' } as any];
+    component.form = {
+      nombre_completo: 'Ana Perez Soto',
+      ruc: '12345678',
+      dv: '9',
+      email: 'ana@test.cl',
+      telefono: '123',
+      region_id: 10,
+      comuna_id: 1,
+      empresa_id: 1
+    };
+
+    const pending = component.save();
+    await flushAsync();
+
+    const post = httpMock.expectOne(`${bffApiUrl}/api/empleados`);
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual(jasmine.objectContaining({
+      tipoPersona: 'N',
+      rut: 12345678,
+      nombreCompleto: 'Ana Perez Soto',
+      nombres: 'Ana Perez',
+      apellidoPaterno: 'Soto',
+      comunaUuid: 'comuna-1',
+      empresaUuid: 'empresa-1'
+    }));
+    post.flush({ payload: { uuid: 'empleado-1' } });
+    await flushAsync();
+    httpMock.expectOne(`${bffApiUrl}/api/empleados`).flush({ payload: [] });
+    await pending;
+
+    expect(component.success).toBe('Empleado creado correctamente.');
+    expect(component.formVisible).toBeFalse();
+  });
+
+  it('should deactivate empleado through BFF', async () => {
+    component.delete(empleado);
+
+    const pending = component.confirmDeleteEmpleado();
+    await flushAsync();
+
+    const patch = httpMock.expectOne(`${bffApiUrl}/api/empleados/empleado-uuid/desactivar`);
+    expect(patch.request.method).toBe('PATCH');
+    patch.flush({});
+    await flushAsync();
+    httpMock.expectOne(`${bffApiUrl}/api/empleados`).flush({ payload: [] });
+    await pending;
+
+    expect(component.success).toBe('Empleado desactivado correctamente.');
+    expect(component.empleadoPendingDelete).toBeNull();
   });
 });

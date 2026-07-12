@@ -4,6 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { Comuna, Empresa, Region, Sucursal } from '../../data/models';
 import { bffApiUrl } from '../../auth-config';
 import { AuthService } from '../../services/auth.service';
+import { ErrorMessageService } from '../../services/error-message.service';
 
 type SucursalView = Sucursal & {
   comuna_uuid?: string;
@@ -291,7 +292,7 @@ export class SucursalesComponent implements OnInit, OnDestroy {
         this.empresas = empresas.map((empresa, index) => this.fromApiEmpresa(empresa, index));
       }
     } catch (error) {
-      console.warn('No se pudieron cargar comunas/empresas desde el BFF', error);
+      console.warn('No se pudieron cargar comunas/empresas', error);
     }
   }
 
@@ -422,10 +423,7 @@ export class SucursalesComponent implements OnInit, OnDestroy {
   }
 
   private getErrorMessage(err: any, fallback: string) {
-    if (err?.status === 0) {
-      return 'No se pudo conectar con el servidor. Verifica que el BFF esté disponible.';
-    }
-    return this.sanitizeBackendMessage(err?.error?.message || err?.message || fallback);
+    return ErrorMessageService.userMessage(err, fallback);
   }
 
   private getValidRelationUuid(uuid?: string) {
@@ -487,19 +485,4 @@ export class SucursalesComponent implements OnInit, OnDestroy {
     );
   }
 
-  private sanitizeBackendMessage(message: string) {
-    const text = String(message || '').trim();
-    const jsonStart = text.indexOf('{');
-
-    if (jsonStart >= 0) {
-      try {
-        const parsed = JSON.parse(text.slice(jsonStart));
-        return parsed?.message || text.slice(0, jsonStart).trim() || text;
-      } catch {
-        return text.slice(0, jsonStart).trim() || text;
-      }
-    }
-
-    return text;
-  }
 }
